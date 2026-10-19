@@ -2,7 +2,7 @@
 
 **Jade Vault 2.9.0** · [Documentation index](README-docs.md)
 
-This is the optional **inbound Android app API**, not a browser-hosting API, model-provider API, or Vector/Discord bridge. There is no dedicated `/v1/discord` route in 2.9.0. It runs the normal Jade chat/flows inside the app.
+This is the optional **inbound Android app API**, not a browser-hosting API, model-provider API, or Vector/Discord bridge. There is no dedicated `/v1/discord` route in 2.9.0. It runs the normal Pandora chat/rituals inside the app.
 
 ## Enable and secure
 
@@ -16,7 +16,7 @@ The server uses plain HTTP; bearer tokens and prompts are not encrypted in trans
 
 ## Protocol and authentication
 
-All application endpoints use **GET** and return JSON. `OPTIONS` is handled for CORS; POST and other application methods are rejected with 405. GET calls can have side effects, so never embed chat/flow URLs in pages, preloaders, or automatic link checkers.
+All application endpoints use **GET** and return JSON. `OPTIONS` is handled for CORS; POST and other application methods are rejected with 405. GET calls can have side effects, so never embed chat/ritual URLs in pages, preloaders, or automatic link checkers.
 
 Except for health/discovery (`/v1/health`, `/`, `/v1`), authenticate with:
 
@@ -43,8 +43,9 @@ curl -H "Authorization: Bearer $TOKEN" "$BASE/v1/status"
 | `/v1/chats` | Up to 100 chats, newest first, with id/title/updated/current |
 | `/v1/history` | Optional `session`; `limit` defaults to 20, clamped to 1–200; user/assistant text only |
 | `/v1/chat` | Submit a chat message; parameters below |
-| `/v1/flows` | Flows with trigger, validity, step count, last-run summary |
-| `/v1/flow` | Run a flow by `name` (or `flow`), optional JSON `input`; `steps=0` omits step summaries |
+| `/v1/rituals` | Rituals with trigger, validity, step count, last-run summary |
+| `/v1/ritual` | Run a ritual by `name` (or `ritual`), optional JSON `input`; `steps=0` omits step summaries |
+| `/v1/flows`, `/v1/flow` | Jade Vault's names for the two above; they still answer (`/v1/flows` lists under `flows`) |
 
 ### Chat parameters
 
@@ -86,16 +87,16 @@ Typical successful shape (illustrative values):
 
 Tool argument strings and result previews are truncated; they are not complete audit records. With `wait=0`, the 202 response indicates acceptance, not a final reply. Poll `/v1/status`, then read `/v1/history?session=ID`.
 
-### Run a flow
+### Run a ritual
 
 ```sh
 curl --get -H "Authorization: Bearer $TOKEN" \
   --data-urlencode 'name=Capture inbox' \
   --data-urlencode 'input={"text":"Review budget"}' \
-  "$BASE/v1/flow"
+  "$BASE/v1/ritual"
 ```
 
-The result has `ok`, `api`, and `run` containing id, flow, status, error, output, elapsed time, and optional step summaries. There is no remote flow-edit endpoint here; edit flows in the app/vault.
+The result has `ok`, `api`, and `run` containing id, ritual (also as `flow`), status, error, output, elapsed time, and optional step summaries. There is no remote ritual-edit endpoint here; edit rituals in the app/Atelier.
 
 ## Errors and retries
 
@@ -105,12 +106,12 @@ Error bodies generally include `ok:false` and `error:{code,message}`; applicatio
 | --- | --- |
 | 400 | Missing message/name, bad JSON/input, unsupported slash command |
 | 401 | Missing or invalid token |
-| 404 | Unknown route, chat, or flow |
+| 404 | Unknown route, chat, or ritual |
 | 405 | Unsupported method |
-| 409 | Jade is busy; chat accepts one message at a time |
+| 409 | Pandora is busy; chat accepts one message at a time |
 | 413 | Message exceeds 20,000 characters |
 | 500 | Internal failure/message not accepted |
-| 502 | Agent or flow failure |
+| 502 | Agent or ritual failure |
 | 503 | No model selected |
 | 504 | Native wait expired; work can continue inside the app |
 

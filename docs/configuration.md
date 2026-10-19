@@ -38,7 +38,7 @@ The configured primary provider is tried first, then the fallback providers in o
 
 ## Jade's gemstone themes
 
-Open Config → App → Jade companion, or click the gemstone label above the avatar. Choose from ten gemstone palettes—Jade, Ruby, Amethyst, Gold, Sapphire, Diamond, Rose Gold, Emerald, Obsidian, and Quartz—or use **Spectrum** to pick any accent color. **Custom Gradient** lets you choose two colors and a vertical, horizontal, or diagonal blend. Themes recolor Jade's green accents and coordinate the app highlights.
+Open Config → App → Pandora companion, or click the gemstone label above the avatar. Choose from ten gemstone palettes—Jade, Ruby, Amethyst, Gold, Sapphire, Diamond, Rose Gold, Emerald, Obsidian, and Quartz—or use **Spectrum** to pick any accent color. **Custom Gradient** lets you choose two colors and a vertical, horizontal, or diagonal blend. Themes recolor Jade's green accents and coordinate the app highlights.
 
 Under **Customize Jade's appearance**, hair, clothes, stockings, and boots can each keep their original colors, use a Spectrum color, or use an independent two-color gradient. Skin offers natural tones (Porcelain, Fair, Light, Medium, Tan, and Deep), Spectrum color picking, or a gradient. The color changes preserve shading and texture detail. Each selection is saved with app settings.
 

@@ -32,7 +32,7 @@ rep('PI NETRUNNER MOBILE · JADE CAT EDITION', 'PANDORA DEE · ATELIER OF THE ON
 rep("localStorage.getItem('pinet:' + k)", "localStorage.getItem('jvault:' + k)")
 rep("localStorage.setItem('pinet:' + k,", "localStorage.setItem('jvault:' + k,")
 rep("indexedDB.open('pi-netrunner', 1)", "indexedDB.open('jade-vault', 1)")
-rep("c.o(`Pi Netrunner shell — ", "c.o(`Jade Vault shell — ")
+rep("c.o(`Pi Netrunner shell — ", "c.o(`Pandora Dee shell — ")
 rep("<span>π Netrunner</span>", "<span>◆ Pandora</span>")
 rep("out.push('## Netrunner', '', m.content, '')", "out.push('## Pandora', '', m.content, '')")
 rep('placeholder="Read TODO.md and summarise what is left, then suggest the next step."', 'placeholder="Read Inbox.md and file each item into its own linked note."')
@@ -519,23 +519,23 @@ rep_between('const SEED = {', '\n/* =====', rd('seed.js') + '\n' + rd('vault_cor
 # ---------- shell builtins ----------
 OLD_PREV = s[s.index("  preview(c) { const p = c.P(c.argv[0] || 'index.html');"):s.index("  get open() { return this.preview; },") + len("  get open() { return this.preview; },")]
 NEW_BI = r'''  open(c) {
-    const a = c.argv.find(x => !x.startsWith('-')); if (!a) { c.e('usage: open <note name or path> [-e|-r]\n'); return 1; }
+    const a = c.argv.find(x => !x.startsWith('-')); if (!a) { c.e('usage: open <leaf name or path> [-e|-r]\n'); return 1; }
     const p = vfs.isFile(c.P(a)) ? c.P(a) : resolveNote(a, null);
-    if (!p) { c.e(`open: ${a}: no such note (create it with: touch "${a}.md")\n`); return 1; }
+    if (!p) { c.e(`open: ${a}: no such leaf (create it with: touch "${a}.md")\n`); return 1; }
     openFile(p, { mode: c.argv.includes('-e') ? 'edit' : c.argv.includes('-r') ? 'read' : undefined }); c.o(`Opened ${p}\n`); return 0;
   },
   get preview() { return this.open; },
   links(c) {
     const a = c.argv[0]; const p = a ? (vfs.isFile(c.P(a)) ? c.P(a) : resolveNote(a, null)) : null;
     const idx = vaultIndex();
-    if (!a) { let n = 0; for (const [q, set] of idx.out) for (const t of set) { c.o(`${q} -> ${t}\n`); n++; } for (const [q, set] of idx.missing) for (const m of set) c.o(`${q} -> [[${m}]] (missing)\n`); if (!n) c.o('no links yet\n'); return 0; }
-    if (!p) { c.e(`links: ${a}: no such note\n`); return 1; }
+    if (!a) { let n = 0; for (const [q, set] of idx.out) for (const t of set) { c.o(`${q} -> ${t}\n`); n++; } for (const [q, set] of idx.missing) for (const m of set) c.o(`${q} -> [[${m}]] (missing)\n`); if (!n) c.o('no threads yet\n'); return 0; }
+    if (!p) { c.e(`links: ${a}: no such leaf\n`); return 1; }
     for (const t of idx.out.get(p) || []) c.o(`-> ${t}\n`); for (const m of idx.missing.get(p) || []) c.o(`-> [[${m}]] (missing)\n`);
     for (const t of idx.back.get(p) || []) c.o(`<- ${t}\n`); return 0;
   },
   backlinks(c) {
-    const a = c.argv[0]; if (!a) { c.e('usage: backlinks <note>\n'); return 1; }
-    const p = vfs.isFile(c.P(a)) ? c.P(a) : resolveNote(a, null); if (!p) { c.e(`backlinks: ${a}: no such note\n`); return 1; }
+    const a = c.argv[0]; if (!a) { c.e('usage: backlinks <leaf>\n'); return 1; }
+    const p = vfs.isFile(c.P(a)) ? c.P(a) : resolveNote(a, null); if (!p) { c.e(`backlinks: ${a}: no such leaf\n`); return 1; }
     for (const t of vaultIndex().back.get(p) || []) c.o(t + '\n'); return 0;
   },
   tags(c) {
@@ -544,7 +544,7 @@ NEW_BI = r'''  open(c) {
     for (const [t, set] of [...idx.tags].sort((x, y) => y[1].size - x[1].size || x[0].localeCompare(y[0]))) c.o(`#${t}\t${set.size}\n`); return 0;
   },
   search(c) {
-    const q = c.argv.join(' '); if (!q) { c.e('usage: search <words | #tag>\n'); return 1; }
+    const q = c.argv.join(' '); if (!q) { c.e('usage: search <words | #sigil>\n'); return 1; }
     const r = searchNotes(q, 30); for (const h of r) c.o(`${h.path}\n  ${h.snippet}\n`); if (!r.length) c.o('no matches\n'); return r.length ? 0 : 1;
   },
   today(c) { openToday(); c.o(`Opened /daily/${todayStr()}.md\n`); return 0; },'''
@@ -552,8 +552,8 @@ s = s.replace(OLD_PREV, NEW_BI)
 rep("const JS_ONLY = new Set(['node', 'js', 'preview', 'clear', 'help', 'sh', 'bash', 'xargs', 'open']);",
     "const JS_ONLY = new Set(['node', 'js', 'preview', 'clear', 'help', 'sh', 'bash', 'xargs', 'open', 'links', 'backlinks', 'tags', 'search', 'today']);")
 rep("`No loops/if blocks: use node for scripting. Extra: node, preview <file.html>, xargs.\\n\\n`",
-    "`No loops/if blocks: use node for scripting. Extra: node, xargs.\\nVault: open <note>, links [note], backlinks <note>, tags [tag], search <words|#tag>, today.\\n\\n`")
-rep(r"for applets, \x1b[0m\x1b[33mpreview index.html\x1b[0m\x1b[2m to render HTML.", r"for applets, \x1b[0m\x1b[33msearch\x1b[0m\x1b[2m / \x1b[0m\x1b[33mtags\x1b[0m\x1b[2m / \x1b[0m\x1b[33mopen <note>\x1b[0m\x1b[2m for the vault.")
+    "`No loops/if blocks: use node for scripting. Extra: node, xargs.\\nAtelier: open <leaf>, links [leaf] (its threads), backlinks <leaf>, tags [sigil], search <words|#sigil>, today (the chronicle).\\n\\n`")
+rep(r"for applets, \x1b[0m\x1b[33mpreview index.html\x1b[0m\x1b[2m to render HTML.", r"for applets, \x1b[0m\x1b[33msearch\x1b[0m\x1b[2m / \x1b[0m\x1b[33mtags\x1b[0m\x1b[2m / \x1b[0m\x1b[33mopen <leaf>\x1b[0m\x1b[2m for the Atelier.")
 
 # ---------- tools ----------
 rep("Use `node file.js` for scripting and `preview file.html` to show a page to the user.'", "Use `node file.js` for scripting. Vault commands: search <words|#tag>, tags, links <note>, backlinks <note>.'")
@@ -1041,7 +1041,7 @@ rep("skill: a => a.name || '', memory:", "codemode: a => (String(a.code || '').s
 rep("function toolCaption(name, a = {}) {", "function toolCaption(name, a = {}) {\n  if (/^mcp__/.test(name)) { const [, srv, tool] = name.split('__'); return `${srv} › ${tool}`; }\n  if (name === 'codemode') return 'Running a codemode script'; if (name === 'tool_search') return `Searching MCP tools: ${String(a.query || '').slice(0, 60)}`;")
 rep("  today(c) { openToday(); c.o(`Opened /daily/${todayStr()}.md\\n`); return 0; },", "  today(c) { openToday(); c.o(`Opened /daily/${todayStr()}.md\\n`); return 0; },\n  async mcp(c) { try { return await mcpShell(c); } catch (e) { c.e(`mcp: ${e.message}\\n`); return 1; } },")
 rep("'search', 'today']);", "'search', 'today', 'mcp']);")
-rep("Vault: open <note>, links [note], backlinks <note>, tags [tag], search <words|#tag>, today.", "Vault: open <note>, links [note], backlinks <note>, tags [tag], search <words|#tag>, today.\\nMCP: mcp list | add <name> <url> | remove | reconnect | tools [server] | call <tool> '<json>'.")
+rep("Atelier: open <leaf>, links [leaf] (its threads), backlinks <leaf>, tags [sigil], search <words|#sigil>, today (the chronicle).", "Atelier: open <leaf>, links [leaf] (its threads), backlinks <leaf>, tags [sigil], search <words|#sigil>, today (the chronicle).\\nMCP: mcp list | add <name> <url> | remove | reconnect | tools [server] | call <tool> '<json>'.")
 rep("`}${steeringContext(steer)}`; };", "`}${steeringContext(steer)}${mcpPromptBlock()}`; };")
 rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- MCP servers are configured in /Pandora/mcp.json (streamable HTTP url, optional headers, exposure codemode|deferred|direct|hidden); the shell command mcp add/list/tools manages them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 rep("""      <section class="flex flex-col gap-3">

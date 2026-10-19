@@ -31,7 +31,7 @@ A model that supports tool calling is needed for normal agent workflows. AICord 
 - **Chat:** ask Jade to work with the vault; review tool activity and replies.
 - **Shell:** operate on the app's virtual files with BusyBox and browser-based runtimes.
 - **Schedule:** configure timed prompts, commands, or flows.
-- **Flows:** build and inspect multistep automations.
+- **Rituals:** build and inspect multistep automations.
 - **Apps:** use offline webxdc mini apps, including Jade Link.
 - **Config:** models, memory/steering, tools, integrations, backup, and platform settings.
 

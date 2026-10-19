@@ -243,7 +243,7 @@ chatEl.addEventListener('click', e => {
 });
 
 /* ---------- "/" suggestions above the composer ---------- */
-const SLASH_CMDS = [['/new', 'new chat'], ['/compact', 'summarise old turns'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'journal this chat'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
+const SLASH_CMDS = [['/new', 'new chat'], ['/compact', 'summarise old turns'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'write this chat into the quest log'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
 function updateSlashSuggest() {
   const box = $('#slashSuggest'); const v = input.value;
   if (!/^\/\S*$/.test(v)) { box.hidden = true; return; }

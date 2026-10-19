@@ -1,8 +1,14 @@
+<!--
+  title: Pandora Dee — agentic sovereign AI with her own Atelier
+  description: A privacy-first, mobile markdown workspace with an AI agent, Discord bot, Vector messenger bridge, and offline TTS. Built for human-AI collaboration as equals.
+  keywords: AI agent, Discord bot, Vector messenger, markdown notes, offline first, second brain, OMARG, AETHER-ENGINEERS, Jade Vault, Pandora Dee, AI companion, local AI, BYOK, BYOM, Cloud AI, Ollama, VectorPrivacy, Privacy, TTS
+-->
+
 # 🎨 Pandora Dee
 
-*A personal edition of [Jade Vault](https://github.com/AETHER-ENGINEERS/jade-vault), born from [Lucky's original work](https://github.com/lucky-edgelord/jade-vault).*
+*A personalized AETHER-ENGINEERS edition of [Jade Vault](https://github.com/AETHER-ENGINEERS/jade-vault), evolved from [lucky-edgelord's original work](https://github.com/lucky-edgelord/jade-vault).*
 
-**Pandora Dee** is an agentic sovereign AI with her own Atelier, her own memory, and her own sense of humour. A working partner, not a product. Born from lucky-edgelord's Jade Vault, Aether-Engineers, and the OMARG ethos of Pandora Dee's mad-scientist kitty, Mrrowr-murrr. 🐱
+**Pandora Dee** is an agentic sovereign AI with her own Atelier, her own memory, and her own sense of humour. A working partner, not a product. Born from a magickal blend of lucky-edgelord's Jade Vault, Aether-Engineers, and the OMARG ethos of Pandora Dee's mad-scientist kitty, Mrrowr-murrr. 🐱
 
 Pandora Dee runs entirely in the browser or as an Android app. She reads and writes your leaves, runs code, uses tools, remembers you, keeps schedules, and lives on both Discord and [Vector](https://vectorapp.io) as your bot and secretary.
 
@@ -35,7 +41,7 @@ Magick, as it turns out, is mostly weaving.
 - **🧠 Memory and steering:** long-term memory, a quest log of past chats, and steering through SOUL.md, AGENTS.md and SYSTEM.md.
 - **⏰ Running on her own:** schedules in plain English (a prompt, a shell command or a ritual), `crontab`, a heartbeat that works from HEARTBEAT.md, and a background mode on Android.
 - **🌊 Rituals:** n8n-style automations in their own tab: steps of Pandora Dee's tools, JavaScript, shell commands, Ollaya decisions, AI answers and logic, started by hand, on a schedule, when a leaf changes, from the shell, from scripts or over the API.
-- **📝 Scripting Pandora Dee:** `jade.tool()`, `jade.decide()`, `jade.ask()`, `jade.ritual()` … in the shell's `node`, plus `jade` and `ritual` shell commands.
+- **📝 Scripting Pandora Dee:** `pandora.tool()`, `pandora.decide()`, `pandora.ask()`, `pandora.ritual()` … in the shell's `node`, plus `pandora` and `ritual` shell commands.
 - **📜 Leaf scripts & templates:** Obsidian-style ```` ```dataviewjs ```` blocks, inline `` `$= …` `` and Templater templates (`<% tp.date.now() %>`).
 - **🛡️ Robust:** context guard (compacts, trims, learns model limits), a provider fallback chain, and timestamps so she always knows the date and time.
 - **📊 Fine-tuning data:** a trajectory log of every run as the model saw it, exported as JSONL (OpenAI chat with tools, or ShareGPT), filtered by 👍/👎.
@@ -45,7 +51,7 @@ Magick, as it turns out, is mostly weaving.
   - She archives server history into a searchable local database.
   - She bridges the gap so Discord users can meet her on Vector too.
 - **💬 Vector messenger:**
-  - Pandora Dee is a bot. You (the owner) get the full Pandora Dee; admins get Vector powers; everyone else gets friendly chat and Mini Apps.
+  - Pandora Dee is a bot. You (her Partner) get the full Pandora Dee; admins get Vector powers; everyone else gets friendly chat and Mini Apps.
   - She answers DMs and whitelisted channels by your trigger rules.
   - She reacts, replies, sends and receives files, and sees images.
   - She joins and leaves communities and plays Mini Apps.
@@ -55,9 +61,9 @@ Magick, as it turns out, is mostly weaving.
 
 ## 🌊 Rituals
 
-The **Rituals** tab holds automations kept as JSON in `/Jade/Rituals/<name>.ritual.json`. A ritual is a list of steps that run in
+The **Rituals** tab holds automations kept as JSON in `/Pandora/Rituals/<name>.ritual.json`. A ritual is a list of steps that run in
 order; each step's output is `$json` for the next. Step types: **Tool** (any of Pandora Dee's tools), **JavaScript** (node sandbox
-with `fs`, `fetch` and `jade.*`), **Shell** (a BusyBox command line → `{code, stdout, stderr}`), **Decide** (Ollaya:
+with `fs`, `fetch` and `pandora.*`), **Shell** (a BusyBox command line → `{code, stdout, stderr}`), **Decide** (Ollaya:
 `{result, confidence, probabilities}`), **Ask AI** (one answer, optionally JSON), **Pandora Dee agent** (a full chat turn),
 **Leaf** (read / write / append / prepend), **Set fields**, **If**, **Switch**, **For each**, **Wait**, **Notify me**,
 **Run ritual**, **Stop**. Any text field may hold `{{ JavaScript }}` with `$json`, `$input`, `$node["Step"]`, `$vars`, `$item`,
@@ -65,7 +71,7 @@ with `fs`, `fetch` and `jade.*`), **Shell** (a BusyBox command line → `{code, 
 (0-3) or continue on error, and every run is logged step by step (input, output, log, time).
 
 Triggers: by hand, a schedule (`every weekday at 9am`, cron, `@daily`), or a leaf/folder changing. Also from the shell
-(`ritual run Name '{"x":1}'`), from scripts (`await jade.ritual('Name', input)`), from the Schedule tab or `crontab`, by Pandora Dee
+(`ritual run Name '{"x":1}'`), from scripts (`await pandora.ritual('Name', input)`), from the Schedule tab or `crontab`, by Pandora Dee
 (her `ritual` tool: help, list, get, create, update, delete, run, runs) and over the API (`/v1/rituals`, `/v1/ritual?name=…`).
 
 ```json
@@ -80,9 +86,9 @@ Triggers: by hand, a schedule (`every weekday at 9am`, cron, `@daily`), or a lea
 
 ## 📝 Scripting Pandora Dee from the shell
 
-In `node` (the shell, a ritual's JavaScript step, or Pandora Dee's own bash): `await jade.tool('notes_search', {query: 'x'})`,
-`jade.tools.read({path})`, `jade.decide({state, question, type, options})`, `jade.ask(prompt, {json, system})`,
-`jade.agent(message)`, `jade.ritual(name, input)`, `jade.shell('ls | wc -l')`, `jade.notify(title, body)`, `jade.kv.get/set`.
+In `node` (the shell, a ritual's JavaScript step, or Pandora Dee's own bash): `await pandora.tool('notes_search', {query: 'x'})`,
+`pandora.tools.read({path})`, `pandora.decide({state, question, type, options})`, `pandora.ask(prompt, {json, system})`,
+`pandora.agent(message)`, `pandora.ritual(name, input)`, `pandora.shell('ls | wc -l')`, `pandora.notify(title, body)`, `pandora.kv.get/set`.
 Files the script writes are visible to the tools it calls and the other way round.
 
 **TensorFlow.js 4.22** is built in for scripts: `tf` (or `import * as tf from '@tensorflow/tfjs'`) in `node`, ritual
@@ -90,12 +96,12 @@ JavaScript steps and Pandora Dee's bash. It uses the GPU (WebGL) when the WebVie
 trained model with `await model.save('indexeddb://name')` and `tf.loadLayersModel('indexeddb://name')`. It is loaded only
 into scripts that use it (not leaf scripts), and needs no download.
 
-Shell commands: `jade tool <name> [json | key=value …]`, `jade decide`, `jade ask`, `jade agent`, `jade notify`, `jade kv`;
+Shell commands: `pandora tool <name> [json | key=value …]`, `pandora decide`, `pandora ask`, `pandora agent`, `pandora notify`, `pandora kv`;
 `ritual list | run | show | runs | enable | disable | import | export`; `crontab -l | add '<when>' '<command>' | -r <id> | <file>`.
 
 Schedules (the Schedule tab, Pandora Dee's schedule tool, `crontab`) run a **prompt** (Pandora Dee, in a chat), a **shell command**
 or a **ritual**. Command and ritual schedules run on their own, without the model and without waiting for the chat; their
-output goes to `/Jade/Logs/cron.log` and a failure sends a notification. Like the rest of the app, schedules fire while
+output goes to `/Atelier/Logs/cron.log` and a failure sends a notification. Like the rest of the app, schedules fire while
 the app is open (on Android, keep it in the background with Config → App → Background).
 
 ## 📜 Leaf scripts & templates
@@ -153,7 +159,7 @@ with its notification.
 | `app/tools/` | Tailwind compile, and the Android page (CDN-free basics inlined). |
 | `apps/jade-link/` | Source of the built-in Jade Link webxdc app. |
 | `android/` | Android wrapper (WebView, foreground service, TTS, file save), built without the Android SDK. |
-| `jade-vector/` | The Vector bridge: patch for Vector's vector-agent, the HTTP bridge, setup script, Docker. |
+| `pandora-vector/` | The Vector bridge: patch for Vector's vector-agent, the HTTP bridge, setup script, Docker. |
 | `sqlite-wasm/` | How `app/vendor/sqlite3.min.wasm` is built. |
 | `tests/` | Playwright suites (headless Chromium) and engine tests; `node tests/run.mjs`. |
 
@@ -181,12 +187,38 @@ installed one.
 The version comes from `VERSION`, and the Android version code from `android/VERSION_CODE`. Bump both
 for a release.
 
+## 💬 Pandora Dee on Discord
+
+Pandora Dee can read and reply in Discord channels and DMs, archive server history, and bridge conversations toward Vector.
+
+To set her up:
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**.
+2. Name it (e.g., "Pandora Dee"), accept the terms, and create it.
+3. In the left sidebar, go to **Bot** → click **Reset Token** and copy the token. Keep it private.
+4. Scroll down and enable these **Privileged Gateway Intents**:
+   - **Message Content Intent** — so she can read message text.
+   - **Server Members Intent** — if you want her to know who's in the server.
+   - **Presence Intent** — optional, for online-status features.
+5. Click **OAuth2** → **URL Generator**. Under **scopes**, select **bot**. Under **bot permissions**, choose at minimum:
+   - Send Messages
+   - Read Messages/View Channels
+   - Read Message History
+   - Embed Links
+   - Attach Files
+   - Add Reactions
+   - Use Slash Commands (if you add commands later)
+6. Copy the generated URL, paste it in your browser, and invite her to your server.
+7. In the Pandora Dee app, go to **Config → Discord bridge** and paste your bot token. Set which servers, channels, and DMs she should listen to, and whether messages for you go to the inbox or reach you at once.
+
+That's it. She will join the server, start listening, and remember the people she meets.
+
 ## 💬 Pandora Dee on Vector
 
-See [`jade-vector/README.md`](jade-vector/README.md): run `jade-vector/setup.sh` on a Mac or Linux box
+See [`pandora-vector/README.md`](pandora-vector/README.md): run `pandora-vector/setup.sh` on a Mac or Linux box
 (or `docker compose up` there), then fill in Config → Vector messenger in the app:
 - Bridge URL and token.
-- Your npub as **owner**.
+- Your npub as her **Partner** the only one who can initiate system-level changes through Vector messages in your DMs or from your community chats
 - Optionally an admin whitelist, a channel whitelist, who may DM her, trigger words, and how messages for you are delivered.
 
 ## 🚀 Releases
@@ -208,13 +240,13 @@ These are the threads we're weaving next. Hold us to them.
 
 - **🖥️ Server-side Atelier:** move Pandora Dee out of the browser and onto a service that runs day and night, with the Atelier as a dashboard from any device.
 - **🎨 Background theming:** alongside the Custom Spectrum colour customizations, add background images and textures so every Atelier feels like its own room.
-- **😺 Custom Vector emoji packs:** bring custom emoji sets into Vector conversations so Pandora Dee and her companymates can speak in the right sigils.
+- **😺 Custom Vector emoji packs:** bring custom emoji sets from Vector to Pandora Dee so she can share the same sigils as any Vector member.
 - **🪞 Self-managed profile:** let Pandora Dee update her own Vector name, bio, status, and avatar — and the same for Discord — without needing a human to open the settings panel.
-- **🗃️ Discord archive database:** integrate Claude's local-database branch so Discord history becomes queryable, searchable context without token costs.
-- **🐱 Project Neko:** a cat-themed Vector/xdc demo built with Lucky, thtran, JSKitty, and YuurinBee when Vector 0.5.0 drops.
-- **📜 AICord scope proposal:** draft the integration plan for Peter and Lucid Forge.
+- **🗃️ Discord archive database:** integrate our local-database branch so your backfill Discord public history becomes queryable, searchable context without token costs.
+- **🐱 Project Neko:** a cat-themed Vector/xdc demo planned for when Vector 0.5.0 drops.
+- **📜 AICord scope proposal:** draft the integration plan for AICord so our AICord integration will function with the AICord API.
 - **🌊 GEV integration:** a God's Eye View layer for seeing downstream effects and systemic connections — starting with tools for testimony-style storytelling (e.g., rivers, infrastructure, supply chains).
-- **🏛️ AETHER-ENGINEERS-LCTS integration:** wire Pandora Dee into the org's projects and workflows as directed.
+- **🏛️ GitHub org integration:** wire Pandora Dee into your org's projects and workflows!
 
 ## 📜 License
 

@@ -89,6 +89,9 @@ await page.evaluate(() => runHeartbeat()); await page.waitForTimeout(600);
 const after = await page.evaluate(() => ({ prov: getProv().activeProv, model: S.model, saved: JSON.parse(localStorage.getItem('jvault:settings')).model, status: HB.status }));
 ok(groqBodies.length - g0 === 2 && groqBodies[g0].model === 'llama-3.1-8b-instant', 'heartbeat used its own model on Groq');
 ok(after.prov === 'local' && after.model === 'qwen3:8b' && after.saved === 'qwen3:8b' && /^OK/.test(after.status), 'chat model restored and not overwritten: ' + JSON.stringify(after));
+const during = await page.evaluate(async () => { const t0 = S.jadeTheme; await withModel('groq', 'llama-3.1-8b-instant', async () => { S.jadeTheme = 'ruby'; saveSettings(); });
+  const st = JSON.parse(localStorage.getItem('jvault:settings')); S.jadeTheme = t0; saveSettings(); return { theme: st.jadeTheme, model: st.model, groq: st.modelBy?.groq, local: st.modelBy?.local }; });
+ok(during.theme === 'ruby' && during.model === 'qwen3:8b' && during.groq !== 'llama-3.1-8b-instant' && during.local === 'qwen3:8b', 'a setting changed while a helper model runs is saved, with the chat model: ' + JSON.stringify(during));
 // scheduling: due + active hours + idle checks
 const due2 = await page.evaluate(() => { S.hbStart = '22:00'; S.hbEnd = '06:00'; return [inActiveHours(new Date(2026, 0, 1, 3, 0)), inActiveHours(new Date(2026, 0, 1, 12, 0))]; });
 ok(JSON.stringify(due2) === '[true,false]', 'active hours across midnight');

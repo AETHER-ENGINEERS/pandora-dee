@@ -37,7 +37,7 @@ const idb = (() => {
 /* ---------------- settings ---------------- */
 const DEFAULTS = { provider: 'local', fallbacks: [], fallbackOrder: ['local', 'llamacpp', 'cloud', 'groq', 'openai'], lcppHost: 'http://localhost:8080', lcppKey: '', hbOn: false, hbEvery: 30, hbStart: '08:00', hbEnd: '22:00', hbChat: 'own', hbPrompt: '', hbProv: '', hbModel: '', auxProv: '', auxModel: '', bgMode: 'agent', bgNotify: true, groqKey: '', oaiHost: '', oaiKey: '', modelBy: {}, memoryOn: true, journalOn: true, compactAuto: true, compactAfter: 8, compactKeep: 2, compactPct: 85, jadeCompact: false, jadeShow: true, jadeVoice: false, voiceName: '', voicePitch: 1.25, voiceRate: 1.03, jadeFrame: 'portrait', ollayaOn: false, ollayaHost: 'http://localhost:11435', ollayaModel: '', ollayaKey: '', host: 'http://localhost:11434', model: '', temperature: 0.2, numCtx: 16384, think: false, maxTurns: 40, bbUrl: '', engine: 'auto', search: 'auto', ollamaKey: '', searx: '' };
 const S = Object.assign({}, DEFAULTS, ls.get('settings', {}));
-const saveSettings = () => { if (window.__restoring || window.__modelOverride) return; if (activeProv && S.model) (S.modelBy ||= {})[activeProv] = S.model; ls.set('settings', S); };
+const saveSettings = () => { if (window.__restoring) return; const o = window.__modelOverride, prov = o ? o.prov : activeProv, model = o ? o.model : S.model; if (prov && model) (S.modelBy ||= {})[prov] = model; ls.set('settings', o ? { ...S, model } : S); };
 
 /* =====================================================================
    JADE CAT — Live2D companion (pixi-live2d-display, Cubism 4)
@@ -3870,11 +3870,11 @@ function renderHbStatus() {
   const next = HB.last ? HB.last + hbEveryMs() : Date.now();
   el.textContent = !S.hbOn ? 'Off' : `${HB.last ? `Last ${clock(HB.last)}: ${HB.status || '—'}` : 'Not run yet'} · next ${inActiveHours(new Date(next)) ? clock(Math.max(next, Date.now())) : 'when active hours start'}${heartbeatBody() ? '' : ' · HEARTBEAT.md is empty, so it will skip'}`;
 }
-// run fn with another provider/model, restoring the chat model afterwards
+// run fn with another provider/model, restoring the chat model afterwards (saveSettings keeps saving the real one meanwhile)
 async function withModel(prov, model, fn) {
   if (!prov || !model || providerMissing(prov)) return fn();
   const saved = { client, activeProv, model: S.model, models };
-  try { if (prov !== activeProv) { client = makeClientFor(prov); activeProv = prov; } S.model = model; window.__modelOverride = true; return await fn(); }
+  try { if (prov !== activeProv) { client = makeClientFor(prov); activeProv = prov; } S.model = model; window.__modelOverride = { prov: saved.activeProv, model: saved.model }; return await fn(); }
   finally { client = saved.client; activeProv = saved.activeProv; S.model = saved.model; models = saved.models; window.__modelOverride = false; fillModelSelects(); }
 }
 const hbIsAck = (text) => {

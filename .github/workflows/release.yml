@@ -21,13 +21,13 @@ jobs:
     env:
       TAG: ${{ inputs.tag || github.event.release.tag_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.event.release.tag_name }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -43,8 +43,26 @@ jobs:
             echo "::warning::No signing secrets: the APK is not built. Attach a release-signed APK by hand, or add PANDORA_KEYSTORE_B64 / PANDORA_KEYSTORE_PASSWORD / PANDORA_KEY_ALIAS and re-run."
             exit 0
           fi
-          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
-          PANDORA_KEYSTORE="$RUNNER_TEMP/release.jks" bash android/build-apk.sh
+          echo "$KS_B64" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/release.jks" || { echo "::error::PANDORA_KEYSTORE_B64 is not valid base64: paste the whole text of the encoded keystore file."; exit 1; }
+          KS="$RUNNER_TEMP/release.jks"; P="$PANDORA_KEYSTORE_PASSWORD"; A="${PANDORA_KEY_ALIAS:-netrunner}"
+          [ -n "$P" ] || { echo "::error::PANDORA_KEYSTORE_PASSWORD is empty here. Add it under Settings → Secrets and variables → Actions → Secrets → Repository secrets (not as an Environment secret or a Variable)."; exit 1; }
+          [ -n "${PANDORA_KEY_ALIAS:-}" ] || echo "::warning::PANDORA_KEY_ALIAS is not a repository secret here, so the alias 'netrunner' is tried."
+          # Size and fingerprint of the decoded file (not secret), to compare with the keystore on your computer:
+          #   PowerShell: (Get-Item jade-release.jks).Length; (Get-FileHash jade-release.jks).Hash.Substring(0,16)
+          MAGIC=$(head -c4 "$KS" | od -An -tx1 | tr -d ' \n')
+          case "$MAGIC" in feedfeed) KT=JKS;; cececece) KT=JCEKS;; 30*) KT=PKCS12;; *) KT="unknown ($MAGIC)";; esac
+          echo "::notice::Decoded keystore: $(stat -c %s "$KS") bytes, type $KT, SHA-256 $(sha256sum "$KS" | cut -c1-16 | tr a-f A-F)…"
+          case "$KT" in JKS|JCEKS|PKCS12) ;; *) echo "::error::The keystore is not JKS or PKCS12 (it starts with bytes $MAGIC: maybe BKS or UBER from KeyStore Explorer). Make a new one with File → New → JKS, or convert it there with Tools → Change KeyStore Type → JKS, then update PANDORA_KEYSTORE_B64."; exit 1;; esac
+          [ "$P" = "$(printf %s "$P" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" ] || echo "::warning::PANDORA_KEYSTORE_PASSWORD starts or ends with a space or line break; if that was not meant, re-enter it without one."
+          # Check the three secrets against each other first, so a mismatch says which one (aliases are not secret).
+          echo "::notice::Password secret: ${#P} characters."
+          OUT=$(keytool -list -keystore "$KS" -storepass "$P" 2>&1) \
+            || { echo "::error::The keystore did not open with PANDORA_KEYSTORE_PASSWORD. keytool said: $(printf %s "$OUT" | grep -i -m1 -E 'error|exception' | cut -c1-300)"; exit 1; }
+          keytool -list -keystore "$KS" -storepass "$P" -alias "$A" >/dev/null 2>&1 \
+            || { echo "::error::No key named '$A' (PANDORA_KEY_ALIAS) in the keystore. Keys it holds: $(keytool -list -keystore "$KS" -storepass "$P" 2>/dev/null | grep -i 'PrivateKeyEntry' | cut -d, -f1 | paste -sd ';' -)"; exit 1; }
+          keytool -certreq -keystore "$KS" -storepass "$P" -alias "$A" -keypass "$P" -file /dev/null >/dev/null 2>&1 \
+            || { echo "::error::The key '$A' has a different password from the keystore. The build uses one password for both: set the key's password to PANDORA_KEYSTORE_PASSWORD (KeyStore Explorer: right-click the key, Set Password)."; exit 1; }
+          PANDORA_KEYSTORE="$KS" bash android/build-apk.sh || { echo "::error::The APK build failed after the key checks passed; see the step log."; exit 1; }
           rm -f "$RUNNER_TEMP/release.jks"
       - name: Bridge kit and checksums
         run: |

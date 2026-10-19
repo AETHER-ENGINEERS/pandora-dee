@@ -263,6 +263,9 @@ const sp2 = await page.evaluate(() => systemPrompt());
 ok(sp2.startsWith('# SYSTEM\n\nYou are Bob') || sp2.startsWith('# SYSTEM\nYou are Bob') || /^# SYSTEM\s+You are Bob/.test(sp2), 'SYSTEM.md replaces intro: ' + JSON.stringify(sp2.slice(0, 40)));
 ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
 await page.evaluate(() => vfs.rm('/Jade/SYSTEM.md'));
+ok(/^You are Jade, the keeper/.test(sp) && /Be concise/.test(sp), 'the stock soul keeps the notes-keeper intro');
+const sp3 = await page.evaluate(() => { const o = vfs.read('/Jade/SOUL.md'); vfs.write('/Jade/SOUL.md', '---\nname: Pandora Dee\n---\n# SOUL\nI keep the company house in order.'); const r = systemPrompt(); vfs.write('/Jade/SOUL.md', o); return r; });
+ok(/^You are Pandora Dee\. You live in Jade Vault/.test(sp3) && /as an equal/.test(sp3) && !/keeper of the user's personal knowledge vault|Be concise/.test(sp3) && /company house/.test(sp3) && /Vault conventions:/.test(sp3), 'a soul of their own leads: its name, no notes-assistant intro: ' + JSON.stringify(sp3.slice(0, 60)));
 // ---- v3: skills ----
 const sk = await page.evaluate(async () => { const t = async (n, a) => { try { return await runTool(n, a, null); } catch (e) { return 'ERR ' + e.message; } };
   return { n: listSkills().length, tool: await t('skill', { name: 'Daily Review' }), bad: await t('skill', { name: 'nope' }),

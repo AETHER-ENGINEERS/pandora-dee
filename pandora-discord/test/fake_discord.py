@@ -29,7 +29,7 @@ def user(id, username, global_name=None):
 
 
 USERS = {'10000000000000100': user(10000000000000100, 'owner', 'Sam'), '10000000000000111': user(10000000000000111, 'alice', 'Alice'), '10000000000000120': user(10000000000000120, 'mod', 'Mod'), '10000000000000222': user(10000000000000222, 'bob', 'Bob')}
-CHANNELS = {'80000000000000800': {'id': '80000000000000800', 'type': 0, 'guild_id': '70000000000000700', 'name': 'general', 'position': 0, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None},
+CHANNELS = {'80000000000000800': {'id': '80000000000000800', 'type': 0, 'guild_id': '70000000000000700', 'name': 'general', 'position': 0, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None, 'topic': 'Books we are reading this month'},
             '80000000000000801': {'id': '80000000000000801', 'type': 0, 'guild_id': '70000000000000700', 'name': 'offtopic', 'position': 1, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None},
             '80000000000000820': {'id': '80000000000000820', 'type': 15, 'guild_id': '70000000000000700', 'name': 'book-forum', 'position': 2, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None, 'available_tags': [], 'flags': 0}}
 THREADS = {'80000000000000810': {'id': '80000000000000810', 'type': 11, 'guild_id': '70000000000000700', 'name': 'Plot holes', 'parent_id': '80000000000000800',

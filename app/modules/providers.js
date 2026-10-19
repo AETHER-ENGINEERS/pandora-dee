@@ -16,7 +16,7 @@ class FetchOllama { // minimal ollama-js compatible surface (also used for ollam
   async chat(req) {
     const ctrl = new AbortController(); this.ctrls.add(ctrl);
     const r = await fetch(this.host + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.headers }, body: JSON.stringify(req), signal: ctrl.signal });
-    if (!r.ok) { let m = `HTTP ${r.status}`; try { m = (await r.json()).error || m; } catch {} if (r.status === 401) m = 'the API key was rejected (401)'; throw new Error(m); }
+    if (!r.ok) { let m = `HTTP ${r.status}`; try { m = (await r.json()).error || m; } catch {} if (r.status === 401) m = 'the API key was rejected (401)'; throw Object.assign(new Error(m), { status: r.status }); }
     const reader = r.body.getReader(); const self = this;
     return { abort: () => ctrl.abort(), async *[Symbol.asyncIterator]() { let buf = ''; try { for (;;) { const { value, done } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line) continue; const j = JSON.parse(line); if (j.error) throw new Error(j.error); yield j; } } if (buf.trim()) yield JSON.parse(buf); } finally { self.ctrls.delete(ctrl); } } };
   }
@@ -46,7 +46,7 @@ class OpenAICompat {
   constructor({ base, key, name }) { this.base = String(base || '').replace(/\/+$/, ''); this.key = key; this.name = name; this.ctrls = new Set(); }
   get headers() { const h = { 'Content-Type': 'application/json' }; if (this.key) h.Authorization = 'Bearer ' + this.key; return h; }
   abort() { for (const c of this.ctrls) c.abort(); this.ctrls.clear(); }
-  async err(r) { let m = `HTTP ${r.status}`; try { const j = await r.json(); m = j.error?.message || j.error || j.message || m; if (j.error?.failed_generation) m += ` (model output: ${String(j.error.failed_generation).slice(0, 200)})`; } catch {} if (r.status === 401) m = `${this.name} rejected the API key (401)`; if (r.status === 429) m = `${this.name} rate limit: ${m}`; return new Error(m); }
+  async err(r) { let m = `HTTP ${r.status}`; try { const j = await r.json(); m = j.error?.message || j.error || j.message || m; if (j.error?.failed_generation) m += ` (model output: ${String(j.error.failed_generation).slice(0, 200)})`; } catch {} if (r.status === 401) m = `${this.name} rejected the API key (401)`; if (r.status === 429) m = `${this.name} rate limit: ${m}`; return Object.assign(new Error(m), { status: r.status }); }
   async list() {
     const r = await fetch(this.base + '/models', { headers: this.headers }); if (!r.ok) throw await this.err(r);
     const j = await r.json(); const ids = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean)
@@ -186,6 +186,12 @@ const providerName = () => activeProv === 'local' ? `Ollama at ${S.host || DEFAU
 let models = [];
 const PREF_ORDER = [/gpt-oss.?120b/i, /gpt-oss/i, /qwen3/i, /kimi-k2/i, /llama-?3\.3|llama-?4/i, /deepseek/i, /glm-4/i, /mistral|devstral/i, /llama-?3\.[12]/i, /granite|qwen2\.5-coder/i];
 const pickModel = list => { for (const re of PREF_ORDER) { const m = list.find(x => re.test(x)); if (m) return m; } return list[0] || ''; };
+// a provider whose quota ran out rests a while: connect and the switch-back skip it, so a used-up
+// Ollama Cloud plan is not retried (and failed) before every message
+const PROV_REST = {};
+const isQuotaErr = (e, msg) => (e?.status ?? e?.status_code) === 429 || /\b429\b|usage limit|quota|too many requests|limit (?:reached|exceeded)|rate.?limit/i.test(msg || String(e?.message || e || ''));
+function restProvider(p, ms = 30 * 60000) { PROV_REST[p] = Date.now() + ms; }
+const provResting = p => (PROV_REST[p] || 0) > Date.now();
 const providerChain = () => { const prim = S.provider || 'local'; return [prim, ...(Array.isArray(S.fallbacks) ? S.fallbacks : []).filter((p, i, a) => p !== prim && PROVIDERS[p] && a.indexOf(p) === i)]; };
 function activateProvider(p, res) {
   client = res.c; activeProv = p; models = res.models;
@@ -199,7 +205,8 @@ function activateProvider(p, res) {
 async function connect({ skip = null, quiet = false } = {}) {
   setOllamaChip('busy', 'LINKING…');
   const chain = providerChain(); const errs = [];
-  for (const p of chain) {
+  const awake = chain.filter(p => !provResting(p));
+  for (const p of (awake.length ? awake : chain)) {
     if (skip?.has(p)) continue;
     try {
       const res = await tryProvider(p); activateProvider(p, res); lastConnErr = null;
@@ -216,7 +223,7 @@ async function failover(tried) { tried.add(activeProv); return (await connect({ 
 // when running on a fallback, quietly check whether the main provider is back before each prompt
 async function maybeRestorePrimary() {
   const prim = S.provider || 'local';
-  if (activeProv === prim || running) return;
+  if (activeProv === prim || running || provResting(prim)) return;
   try { const res = await withTimeout(tryProvider(prim), 3000, PROVIDERS[prim].label); activateProvider(prim, res); renderEmpty(); toast(`${esc(PROVIDERS[prim].label)} is back: switched to it.`, 'ok'); } catch {}
 }
 // one-shot (non-streaming) completion for compaction and the journal, on whatever provider is active

@@ -16,7 +16,7 @@ await ctx.addInitScript(() => {
 await ctx.addInitScript(() => { if (!localStorage.getItem('jvault:settings')) localStorage.setItem('jvault:settings', JSON.stringify({ model: 'qwen3:8b', fallback: 'groq', groqKey: 'gsk_test', ollamaKey: 'olk_test', journalOn: false })); });
 const page = autoTabs(await ctx.newPage());
 page.on('pageerror', e => fail.push('[pageerror] ' + e.message));
-let localUp = false, cloudDown = false, groq429 = 0; const groqBodies = [], cloudReqs = [];
+let localUp = false, cloudDown = false, groq429 = 0, localQuota = false, localChats = 0; const groqBodies = [], cloudReqs = [];
 const sse = (objs) => objs.map(o => 'data: ' + JSON.stringify(o) + '\n\n').join('') + 'data: [DONE]\n\n';
 await page.route('**/*', async route => {
   const req = route.request(); const url = req.url();
@@ -29,6 +29,8 @@ await page.route('**/*', async route => {
   if (url.startsWith('http://localhost:11434/')) {
     if (!localUp) return route.abort('connectionrefused');
     if (url.endsWith('/api/tags')) return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'qwen3:8b' }] }) });
+    if (url.endsWith('/api/chat')) localChats++;
+    if (url.endsWith('/api/chat') && localQuota) return route.fulfill({ status: 429, headers: CORS, contentType: 'application/json', body: JSON.stringify({ error: 'you (mrrowr) have reached your weekly usage limit, upgrade for higher limits' }) });
     if (url.endsWith('/api/chat')) return route.fulfill({ headers: CORS, contentType: 'application/x-ndjson', body: JSON.stringify({ message: { role: 'assistant', content: 'Local Jade here.' }, done: false }) + '\n' + JSON.stringify({ message: { role: 'assistant', content: '' }, done: true }) + '\n' });
   }
   if (url === 'https://api.groq.com/openai/v1/models') {
@@ -124,6 +126,23 @@ await page.fill('#input', '/new'); await page.tap('#btnSend'); await page.waitFo
 await page.fill('#input', 'rate limit me'); await page.tap('#btnSend');
 await page.waitForFunction(() => !running && document.querySelectorAll('#chat .msg-ai').length, null, { timeout: 30000 }); await page.waitForTimeout(300);
 ok(await page.evaluate(() => getProv().activeProv) === 'cloud' && /Cloud Jade reporting/.test(await page.textContent('#chat')), 'Groq 429 → continued on next provider (cloud)');
+// ---- Ollama Cloud quota through your own Ollama: fail over, and let it rest instead of retrying every message ----
+await page.evaluate(() => { S.provider = 'local'; S.fallbacks = ['groq']; });
+localUp = true; localQuota = true;
+await page.evaluate(() => connect()); await page.waitForTimeout(300);
+ok(await page.evaluate(() => getProv().activeProv) === 'local', 'own Ollama answers the model list while its cloud quota is spent');
+await page.fill('#input', '/new'); await page.tap('#btnSend'); await page.waitForTimeout(300);
+await page.fill('#input', 'quota one'); await page.tap('#btnSend');
+await page.waitForFunction(() => !running && document.querySelectorAll('#chat .msg-ai').length, null, { timeout: 30000 }); await page.waitForTimeout(300);
+ok(await page.evaluate(() => getProv().activeProv) === 'groq' && /Graph View|explains the graph/.test(await page.textContent('#chat')) && !/usage limit/.test(await page.textContent('#chat .msg-ai')), 'a usage-limit 429 fails over to the next provider');
+const lc = localChats;
+await page.fill('#input', 'quota two'); await page.tap('#btnSend');
+await page.waitForFunction(() => !running && document.querySelectorAll('#chat .msg-ai').length >= 2, null, { timeout: 30000 }); await page.waitForTimeout(300);
+ok(localChats === lc && await page.evaluate(() => getProv().activeProv) === 'groq', 'the spent provider rests: the next message does not try it again');
+await page.evaluate(() => { PROV_REST.local = 0; }); localQuota = false;
+await page.fill('#input', 'quota three'); await page.tap('#btnSend');
+await page.waitForFunction(() => !running && document.querySelectorAll('#chat .msg-ai').length >= 3, null, { timeout: 30000 }); await page.waitForTimeout(300);
+ok(await page.evaluate(() => getProv().activeProv) === 'local' && /Local Jade here/.test(await page.textContent('#chat')), 'after its rest it is the main provider again');
 // ---- compaction model on another provider ----
 await page.evaluate(() => { S.auxProv = 'groq'; S.auxModel = 'llama-3.1-8b-instant'; });
 const nBefore = groqBodies.length;

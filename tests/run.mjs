@@ -46,7 +46,12 @@ for (const s of suites) {
   process.stdout.write(`${s.padEnd(16)} `);
   const r = await run(s);
   console.log(`${r.ok ? 'pass' : 'FAIL'}  ${(r.ms / 1000).toFixed(0)}s`);
-  if (!r.ok) { bad++; console.log((r.fails.length ? r.fails : r.out.split('\n').slice(-15)).map(l => '    ' + l.slice(0, 300)).join('\n')); }
+  if (!r.ok) {
+    bad++; const lines = r.fails.length ? r.fails : r.out.split('\n').slice(-15);
+    console.log(lines.map(l => '    ' + l.slice(0, 300)).join('\n'));
+    // On GitHub Actions, also as annotations, so the failure shows on the run's summary page without opening the log.
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=${s} failed::` + lines.slice(0, 15).map(l => l.slice(0, 1400).replace(/%/g, '%25').replace(/\r/g, '').replace(/\n/g, ' ')).join('%0A'));
+  }
 }
 console.log(`\n${suites.length - bad}/${suites.length} suites passed`);
 process.exit(bad ? 1 : 0);

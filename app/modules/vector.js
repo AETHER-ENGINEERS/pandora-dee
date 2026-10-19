@@ -46,17 +46,20 @@ async function vcall(name, args = {}, opts = {}) {
 const vjson = (t, d = null) => { try { return JSON.parse(t); } catch { return d; } };
 async function vecConnect() {
   vecStop();
+  // A newer attempt (or a stop) bumps VEC.gen: an older attempt that finishes late must not touch the state the newer one set.
+  const gen = VEC.gen, stale = () => gen !== VEC.gen;
   if (!S.vecUrl) { VEC.error = 'no bridge URL'; renderVecSettings(); return false; }
   VEC.client = new McpHttpClient('vector', { url: S.vecUrl.trim(), headers: S.vecToken ? { Authorization: 'Bearer ' + S.vecToken.trim() } : {}, timeout: 90 });
   try {
-    await VEC.client.initialize();
-    VEC.npub = (await vcall('my_npub')).trim(); VEC.connected = true; VEC.error = '';
+    await VEC.client.initialize(); if (stale()) return false;
+    const npub = (await vcall('my_npub')).trim(); if (stale()) return false;
+    VEC.npub = npub; VEC.connected = true; VEC.error = '';
     vecRefreshCommunities().catch(() => {});
     bgSync(); renderVecSettings(); vecSchedule(500);
     return true;
-  } catch (e) { VEC.connected = false; VEC.error = e.message; VEC.client = null; renderVecSettings(); return false; }
+  } catch (e) { if (stale()) return false; VEC.connected = false; VEC.error = e.message; VEC.client = null; renderVecSettings(); return false; }
 }
-function vecStop() { clearTimeout(VEC.timer); VEC.timer = 0; VEC.connected = false; try { VEC.client?.close(); } catch {} VEC.client = null; bgSync(); }
+function vecStop() { VEC.gen = (VEC.gen || 0) + 1; clearTimeout(VEC.timer); VEC.timer = 0; VEC.connected = false; try { VEC.client?.close(); } catch {} VEC.client = null; bgSync(); }
 function vecSchedule(ms) { clearTimeout(VEC.timer); if (S.vecOn && VEC.client) VEC.timer = setTimeout(vecPoll, ms ?? Math.max(2, +S.vecPoll || 5) * 1000); }
 async function vecRefreshCommunities() {
   const list = vjson(await vcall('list_communities'), []) || [];

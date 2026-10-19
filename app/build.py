@@ -727,7 +727,7 @@ rep("  $('#sCompactAuto').checked = !!S.compactAuto;", "  $('#sMemoryOn').checke
 rep("  Object.assign(S, { jadeShow: $('#sJadeShow').checked,", "  Object.assign(S, { memoryOn: $('#sMemoryOn').checked, journalOn: $('#sJournalOn').checked, memoryRag: $('#sMemoryRag').checked, memoryRagK: Math.max(1, Math.min(30, parseInt($('#sMemoryRagK').value) || 8)) });\n  Object.assign(S, { jadeShow: $('#sJadeShow').checked,")
 rep("const closeSettings = () => $('#settings').hidden = true;", "const closeSettings = () => $('#settings').hidden = true;\n$('#btnOpenMemory').onclick = () => { closeSettings(); ensureMemory(); openFile(MEM_PATH, { mode: 'read' }); };")
 rep("  if (!(await vfs.load())) seedFs();", "  if (!(await vfs.load())) seedFs();\n  ensureMemory();")
-rep("Object.assign(window, { vfs, openFile, Graph, noteHist, term, vaultIndex, $ });", "Object.assign(window, { vfs, openFile, Graph, noteHist, term, vaultIndex, $, memoryContext, journalSession, S, systemPrompt, runTool, userShell, Jade });")
+rep("Object.assign(window, { vfs, openFile, Graph, noteHist, term, vaultIndex, $ });", "Object.assign(window, { vfs, openFile, Graph, noteHist, term, vaultIndex, $, memoryContext, journalSession, S, systemPrompt, runTool, userShell, Jade, PROV_REST });")
 
 # ================= v3: LaTeX, edit + resend, SOUL/AGENTS/SYSTEM, skills =================
 rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>',
@@ -767,6 +767,10 @@ i = s.index('\n\nGuidelines:\n- Look before you change things'); j = s.index(END
 s = s[:i] + "${steer.system ? '' : `" + s[i:j + len(END) - len('`; };')] + "`}${steeringContext(steer)}`; };" + s[j + len(END):]
 rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 rep("${S.memoryOn ? '- memory: your long-term memory across chats (save / search / forget / list)\\n' : ''}", "${S.memoryOn ? '- memory: your long-term memory across chats (save / search / forget / list)\\n' : ''}- skill: load a skill's instructions by name\\n")
+# a persona of the user's own leads: no "You are Jade, the keeper" intro or "Be concise" pulling it back toward a notes assistant
+rep("${steer.system || `You are Jade, the keeper", "${steer.system || (steer.own ? `You are ${steer.name || 'the character described in your persona below'}. You live in Jade Vault, a browser app: its vault of markdown notes (linked like Obsidian) is your notebook and memory, and you can read, write, edit and run code in the same filesystem. Your persona below decides who you are, how you speak and how long you talk; it outranks any default tone in these instructions. The person you are talking with here is your keyholder: a companion you work alongside as an equal, not a master you serve. Never call yourself Jade unless that is your name.` : `You are Jade, the keeper")
+rep("connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`}\n\nVault conventions:", "connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`)}\n\nVault conventions:")
+rep("- Be concise. When finished, say which notes changed, as [[links]].", "- ${steer.own ? 'Talk the way your persona does, and only offer help when it is wanted, as an equal would. When you change notes' : 'Be concise. When finished'}, say which notes changed, as [[links]].")
 # slash commands
 rep("  if (cmd === 'config') return openSettings();", """  if (cmd === 'skills') { const all = listSkills(); toast(all.length ? all.map(x => `<b>/skill:${esc(x.name)}</b>${x.off ? ' (off)' : ''}`).join(' · ') : 'No skills yet. Ask Jade to create one.'); return; }
   if (cmd === 'soul') { ensureSteering(); openFile(SOUL_PATH, { mode: 'edit' }); return; }
@@ -824,9 +828,11 @@ rep("const DEFAULTS = { memoryOn: true,", "const DEFAULTS = { provider: 'local',
 rep("const saveSettings = () => ls.set('settings', S);", "const saveSettings = () => { if (activeProv && S.model) (S.modelBy ||= {})[activeProv] = S.model; ls.set('settings', S); };")
 # agent loop: automatic fallback when the Mac drops mid-chat
 rep("async function agentLoop() {\n  setRunning(true);", "async function agentLoop() {\n  const triedProv = new Set();\n  setRunning(true);")
-rep("        let hint = msg;\n", """        if (/Failed to fetch|NetworkError|Load failed|did not answer|rate limit|HTTP 5\\d\\d|overloaded|unavailable|timed? ?out/i.test(msg) && providerChain().length > 1) {
-          const from = PROVIDERS[activeProv].label; thinkD.remove(); textEl.remove(); jadeBubble(`Lost ${from}. Trying the next provider…`);
-          if (await failover(triedProv)) { toast(`${esc(from)} failed (${esc(msg.slice(0, 80))}). Continuing on ${esc(PROVIDERS[activeProv].label)}.`, 'ok'); turns--; continue; }
+rep("        let hint = msg;\n", """        const quota = isQuotaErr(e, msg);
+        if ((quota || /Failed to fetch|NetworkError|Load failed|did not answer|HTTP 5\\d\\d|overloaded|unavailable|timed? ?out/i.test(msg)) && providerChain().length > 1) {
+          const from = PROVIDERS[activeProv].label; thinkD.remove(); textEl.remove(); jadeBubble(quota ? `${from} is out of quota. Trying the next provider…` : `Lost ${from}. Trying the next provider…`);
+          if (quota) restProvider(activeProv);
+          if (await failover(triedProv)) { toast(quota ? `${esc(from)} hit its usage limit, so it rests for 30 minutes. Continuing on ${esc(PROVIDERS[activeProv].label)}.` : `${esc(from)} failed (${esc(msg.slice(0, 80))}). Continuing on ${esc(PROVIDERS[activeProv].label)}.`, 'ok'); turns--; continue; }
         }
         let hint = msg;
 """)
@@ -1000,8 +1006,8 @@ rep("  cur.messages.push(content === text ? { role: 'user', content } : { role: 
     "  const umsg = composeUserMessage(text, content === text ? '' : content); cur.messages.push(umsg); chatEl.appendChild(userBlock(umsg.display || umsg.content, cur.messages.length - 1));")
 rep("  el.innerHTML = `<div class=\"who\">You</div><div class=\"bubble cut cut-sm\"></div><div class=\"msg-actions\">", "  const um = idx != null && idx !== '' ? cur?.messages?.[idx] : null;\n  el.innerHTML = `<div class=\"who\">You</div><div class=\"bubble cut cut-sm\"></div>${um?.attachments ? attachmentChips(um.attachments) : ''}<div class=\"msg-actions\">")
 rep("    if (m.role === 'tool') o.tool_name = m.tool_name;", "    if (m.role === 'tool') o.tool_name = m.tool_name;\n    if (m.images?.length && !cur._noImages) o.images = m.images;")
-rep("        if (/Failed to fetch|NetworkError|Load failed|did not answer|rate limit", """        if (/image|vision|multimodal|multi-modal/i.test(msg) && apiMsgs.some(m => m.images) && !cur._noImages) { cur._noImages = true; thinkD.remove(); textEl.remove(); toast(`${esc(S.model)} cannot look at images, so they were left out. The files are still in the vault.`); turns--; continue; }
-        if (/Failed to fetch|NetworkError|Load failed|did not answer|rate limit""")
+rep("        const quota = isQuotaErr(e, msg);\n", """        if (/image|vision|multimodal|multi-modal/i.test(msg) && apiMsgs.some(m => m.images) && !cur._noImages) { cur._noImages = true; thinkD.remove(); textEl.remove(); toast(`${esc(S.model)} cannot look at images, so they were left out. The files are still in the vault.`); turns--; continue; }
+        const quota = isQuotaErr(e, msg);\n""")
 # edit + resend keeps attachments
 rep("  cur.messages = cur.messages.slice(0, i);\n  const mk = ls.get('journaled', {});", "  const oldMsg = cur.messages[i];\n  cur.messages = cur.messages.slice(0, i);\n  const mk = ls.get('journaled', {});")
 rep("  cur.messages.push(content === text ? { role: 'user', content } : { role: 'user', content, display: text });\n  saveSession(); renderChat();", "  const nm = { role: 'user', content: content + (oldMsg?._attBlock || '') }; if (nm.content !== text) nm.display = text;\n  for (const k of ['attachments', 'images', '_attBlock']) if (oldMsg?.[k]) nm[k] = oldMsg[k];\n  cur.messages.push(nm);\n  saveSession(); renderChat();")
@@ -1691,6 +1697,8 @@ rep("...FLOW_TOOL_DEFS.map(f => ({ type: 'function', function: f })), ...mcpTool
 rep("try { vecGuard(name); result = await runTool(name, args, card); }", "try { vecGuard(name); dcGuard(name); result = await runTool(name, args, card); }")
 rep("    case 'vector': return await vectorTool(args);", "    case 'vector': return await vectorTool(args);\n    case 'discord': return await discordTool(args);")
 rep("const systemPrompt = () => { if (vecScope()) return vecScopedPrompt();", "const systemPrompt = () => { if (vecScope()) return vecScopedPrompt(); if (dcScope()) return dcScopedPrompt();")
+# the keyholder's Discord/Vector chats get the full prompt, but those apps show no LaTeX: plain math there
+rep("- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n", "${cur?.dc || cur?.vec ? '- This chat is on a messenger that shows basic Markdown only: write math as plain text (69 + 69 + 18 = 156), never LaTeX or $ signs. KaTeX works in notes.\\n' : '- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n'}")
 rep("by their setting)\\n` : ''}", "by their setting)\\n` : ''}${S.dcOn ? `- discord: you are also a bot on Discord${DC.user ? ' (' + DC.user.username + ')' : ''}: message people (DM by user id) or channels, reply, react, send files from the vault, download what people send, read channels, list servers and channels. Use it whenever the user asks you to message, send or share something on Discord.\\n` : ''}")
 rep("  const want = apiUp || S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));", "  const dcOnline = typeof DC !== 'undefined' && S.dcOn && DC.connected;\n  const want = apiUp || S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline || dcOnline));")
 rep("vecOnline ? 'Jade is online on Vector' :", "vecOnline ? 'Jade is online on Vector' : dcOnline ? 'Jade is online on Discord' :")

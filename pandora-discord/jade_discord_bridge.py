@@ -696,7 +696,9 @@ class Bridge:
 
     async def t_list_channels(self, a):
         g = await self._guild(a)
-        return [{'id': str(c.id), 'name': c.name, 'type': str(c.type)} for c in g.channels if getattr(c, 'send', None) or c.type.name in ('forum',)]
+        return [{'id': str(c.id), 'name': c.name, 'type': str(c.type), 'topic': getattr(c, 'topic', None) or '',
+                 'category': getattr(getattr(c, 'category', None), 'name', '') or ''}
+                for c in sorted(g.channels, key=lambda c: (getattr(c, 'position', 0), c.id)) if getattr(c, 'send', None) or c.type.name in ('forum',)]
 
     async def t_list_members(self, a):
         g = await self._guild(a)
@@ -773,7 +775,7 @@ TOOLS = {
     'download_attachment': 'Download attachment index of message_id as base64.',
     'get_user': 'Look a user up by id.',
     'list_guilds': 'Servers the bot is in.',
-    'list_channels': "A server's channels.",
+    'list_channels': "A server's channels: id, name, type, topic and category.",
     'list_members': "A server's members (needs the Server Members Intent).",
     'kick': 'Kick user_id from guild_id.',
     'ban': 'Ban user_id from guild_id.',

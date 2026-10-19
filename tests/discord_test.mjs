@@ -90,7 +90,13 @@ await set('#sDcUrl', `http://127.0.0.1:${DBP}/mcp`); await set('#sDcToken', 'bad
 await page.selectOption('#sDcNotify', 'urgent');
 await page.check('#sDcOn'); await page.waitForTimeout(1500);
 ok(/Not connected/.test(await page.textContent('#dcStatus')) && /token/i.test(await page.textContent('#dcStatus')), 'wrong bridge token is refused: ' + (await page.textContent('#dcStatus')).slice(0, 90));
-await set('#sDcToken', DTOKEN); await page.waitForFunction(() => DC.connected, null, { timeout: 25000 });
+await set('#sDcToken', DTOKEN); await page.waitForFunction(() => DC.connected, null, { timeout: 25000 }).catch(async e => {
+  // Say why before failing: the app's status line and the bridge's own log (CI shows only the last lines of a failed suite).
+  console.log('dcStatus: ' + (await page.textContent('#dcStatus').catch(() => '?')).slice(0, 200));
+  console.log('bridge stderr: ' + dbridge.err.slice(-1200).replace(/\n/g, ' | '));
+  console.log('fake discord stderr: ' + fake.err.slice(-600).replace(/\n/g, ' | '));
+  throw e;
+});
 ok(/Online/.test(await page.textContent('#dcStatus')) && /JadeBot/.test(await page.textContent('#dcStatus')), 'connects with the token, shows her name');
 const ids = (await fd('/_state')).identifies;
 ok(ids.length === 2 && (ids[0] & 32768) && !(ids[1] & 32768), 'Message Content Intent off in the portal (close 4014): the bridge reconnects without it: ' + JSON.stringify(ids));
@@ -118,6 +124,8 @@ await settle();
 const c1 = calls.find(c => /tell your boss/.test(c.u));
 ok(c1 && JSON.stringify([...c1.tools].sort()) === '["discord","notify_owner","web_search"]', 'stranger gets only chat tools: ' + JSON.stringify(c1?.tools));
 ok(c1 && !/Vault conventions|Long-term memory/.test(c1.sys) && /not your owner|private/i.test(c1.sys) && /@Jade/.test(c1.u), 'scoped prompt without vault or memory; <@id> shown as @Jade: ' + c1?.u.slice(0, 120));
+ok(c1 && /channel topic: "Books we are reading this month"/.test(c1.u) && /Channels in Book Club/.test(c1.u) && /#offtopic/.test(c1.u), 'she sees the channel topic, and the server\'s channels at the start of a conversation: ' + c1?.u.slice(0, 400));
+ok(c1 && /keyholder/.test(c1.sys) && !/owned by/.test(c1.sys) && /Size it to the moment/.test(c1.sys) && /no LaTeX/.test(c1.sys), 'Discord rules: keyholder wording, reply length follows the persona');
 let S1 = await sent();
 const reply1 = S1.find(r => r.chat_id === C_GEN && /passed it on/.test(r.content || ''));
 ok(reply1 && reply1.reply_to == m1.id && JSON.stringify(reply1.allowed_mentions) === '{"parse":[],"replied_user":false}', 'answer is a threaded reply and never pings anyone: ' + JSON.stringify(reply1));
@@ -158,7 +166,7 @@ await fd('/_reset', {});
 const own1 = await inject({ channel_id: C_GEN, author: OWNER, content: `<@${BOT}> send the inbox note to alice and thumbs-up`, mention_bot: true });
 await settle();
 const c6 = calls.find(c => /send the inbox note/.test(c.u));
-ok(c6 && ['read', 'write', 'bash', 'discord', 'vector', 'apps'].every(t => c6.tools.includes(t)) && /Vault conventions/.test(c6.sys), 'owner on Discord gets the full Jade');
+ok(c6 && ['read', 'write', 'bash', 'discord', 'vector', 'apps'].every(t => c6.tools.includes(t)) && /Vault conventions/.test(c6.sys) && /math as plain text/.test(c6.sys) && !/Math renders with KaTeX/.test(c6.sys), 'owner on Discord gets the full Jade, with plain math (Discord shows no LaTeX)');
 const st6 = await fd('/_state');
 ok(st6.sent.some(r => r.chat_id === C_GEN && r.file === 'Inbox.md' && r.file_len > 20) && st6.reactions.some(r => r.id == own1.id && r.emoji === '👍'), 'owner: file uploaded from the vault + reaction on the right message');
 // ---- 7. @everyone never pings ----

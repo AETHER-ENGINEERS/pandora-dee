@@ -5,6 +5,7 @@
 #   ./setup.sh            build + install + start the service
 #   ./setup.sh --no-service   build + install only (run ./run.sh yourself)
 #   ./setup.sh --uninstall    stop and remove the service (keeps ~/.jade-vector)
+#   JADE_VECTOR_HOST=127.0.0.1 ./setup.sh   on a public server: listen on the server itself only
 set -euo pipefail
 
 VECTOR_REPO="${VECTOR_REPO:-https://github.com/VectorPrivacy/Vector.git}"
@@ -12,6 +13,7 @@ VECTOR_REF="${VECTOR_REF:-44fdb873464a99d8256ecdce7a1cfd1ddc2b45c4}"   # the com
 HERE="$(cd "$(dirname "$0")" && pwd)"
 HOME_DIR="${JADE_VECTOR_HOME:-$HOME/.jade-vector}"
 PORT="${JADE_VECTOR_PORT:-8787}"
+HOST="${JADE_VECTOR_HOST:-0.0.0.0}"   # 127.0.0.1 on a public server (a VPS): reach it through SSH or Tailscale
 OS="$(uname -s)"
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mError:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -75,7 +77,7 @@ install -m 755 "$HERE/jade_vector_bridge.py" "$HOME_DIR/bin/jade_vector_bridge.p
 cat > "$HOME_DIR/run.sh" <<RUN
 #!/usr/bin/env bash
 export JADE_VECTOR_HOME="$HOME_DIR"
-exec python3 "$HOME_DIR/bin/jade_vector_bridge.py" --agent "$HOME_DIR/bin/vector-agent" --port "\${JADE_VECTOR_PORT:-$PORT}" "\$@"
+exec python3 "$HOME_DIR/bin/jade_vector_bridge.py" --agent "$HOME_DIR/bin/vector-agent" --port "\${JADE_VECTOR_PORT:-$PORT}" --host "\${JADE_VECTOR_HOST:-$HOST}" "\$@"
 RUN
 chmod 755 "$HOME_DIR/run.sh"
 TOKEN="$(JADE_VECTOR_HOME="$HOME_DIR" python3 "$HOME_DIR/bin/jade_vector_bridge.py" --print-token)"
@@ -121,6 +123,6 @@ fi
 IP="$( (ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}') || true)"
 echo
 say "Done. In Jade Vault → Config → Vector messenger:"
-echo "    Bridge URL:   http://${IP:-THIS-COMPUTER-IP}:$PORT/mcp"
+if [ "$HOST" = 127.0.0.1 ]; then echo "    Bridge URL:   http://127.0.0.1:$PORT/mcp   (on this server; elsewhere, through an SSH tunnel or Tailscale)"; else echo "    Bridge URL:   http://${IP:-THIS-COMPUTER-IP}:$PORT/mcp"; fi
 echo "    Bridge token: $TOKEN"
 echo "    The bot's key is in $HOME_DIR/nsec (back it up; anyone with it can read and send as the bot)."

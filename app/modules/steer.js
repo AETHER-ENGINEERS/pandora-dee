@@ -169,7 +169,10 @@ function findSkill(name) {
 }
 function steering() {
   const sys = vfs.isFile(SYSTEM_PATH) ? stripComments(parseFront(vfs.read(SYSTEM_PATH)).body) : '';
-  return { system: sys, soul: readCap(SOUL_PATH, 6000).replace(/^---[\s\S]*?---\s*/, '').replace(/^# SOUL\s*/i, ''), agents: agentsFiles().map(p => ({ p, t: readCap(p, 6000).replace(/^# AGENTS\s*/i, '') })).filter(a => a.t), skills: listSkills().filter(s => !s.off) };
+  const raw = vfs.isFile(SOUL_PATH) ? vfs.read(SOUL_PATH) : '';
+  const own = !!raw.trim() && raw.trim() !== STEER_SEED[SOUL_PATH].trim();
+  const name = own ? ((parseFront(raw).meta || {}).name || '').toString().trim() : '';
+  return { own, name, system: sys, soul: readCap(SOUL_PATH, 6000).replace(/^---[\s\S]*?---\s*/, '').replace(/^# SOUL\s*/i, ''), agents: agentsFiles().map(p => ({ p, t: readCap(p, 6000).replace(/^# AGENTS\s*/i, '') })).filter(a => a.t), skills: listSkills().filter(s => !s.off) };
 }
 function steeringContext(st) {
   let out = '';

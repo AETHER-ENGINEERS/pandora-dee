@@ -218,7 +218,7 @@ That's it. She will join the server, start listening, and remember the people sh
 See [`pandora-vector/README.md`](pandora-vector/README.md): run `pandora-vector/setup.sh` on a Mac or Linux box
 (or `docker compose up` there), then fill in Config → Vector messenger in the app:
 - Bridge URL and token.
-- Your npub identifies you as her **Partner** are the only one who can initiate system-level changes through Vector messages in your DMs or from your community chats
+- Your npub identifies you as her **Partner** and the only voice who can initiate system-level changes through Vector messages in your DMs or from your community chats
 - Optionally an admin whitelist, a channel whitelist, who may DM her, trigger words, and how messages for you are delivered.
 
 ## 🚀 Releases

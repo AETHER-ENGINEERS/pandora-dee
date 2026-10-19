@@ -1,12 +1,12 @@
 /* =====================================================================
    LONG-TERM MEMORY
-   - /Jade/Memory.md: durable facts, one bullet per line, under sections.
+   - /Pandora/Memory.md: durable facts, one bullet per line, under sections.
      Injected into every chat's instructions; Jade edits it with the memory tool.
-   - /Jade/Journal/YYYY-MM-DD.md: episodic memory. When you leave a chat (or it is
+   - /Pandora/Journal/YYYY-MM-DD.md: episodic memory. When you leave a chat (or it is
      compacted) the model writes a short entry, and new durable facts it noticed
      are added to Memory.md. Both are ordinary notes you can read and edit.
    ===================================================================== */
-const MEM_PATH = '/Jade/Memory.md', JOURNAL_DIR = '/Jade/Journal';
+const MEM_PATH = '/Pandora/Memory.md', JOURNAL_DIR = '/Pandora/Journal';
 const MEM_SECTIONS = { about: 'About you', preferences: 'Preferences', projects: 'Projects & people', notes: 'Notes to self', learned: 'Learned from chats' };
 const MEM_TEMPLATE = `# Memory
 
@@ -27,7 +27,7 @@ chat journal in [[Journal]] adds facts it learns. #memory
 const memKey = s => String(s).toLowerCase().replace(/\(\d{4}-\d{2}-\d{2}\)/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function ensureMemory() {
   if (!vfs.isFile(MEM_PATH)) vfs.write(MEM_PATH, MEM_TEMPLATE, { mkdirs: true });
-  if (!vfs.isFile('/Jade/Journal.md')) vfs.write('/Jade/Journal.md', `# Journal\n\nJade's diary of past chats, one note per day in the Journal folder. She searches it with the memory tool to recall earlier conversations. #memory\n`, { mkdirs: true });
+  if (!vfs.isFile('/Pandora/Journal.md')) vfs.write('/Pandora/Journal.md', `# Journal\n\nJade's diary of past chats, one note per day in the Journal folder. She searches it with the memory tool to recall earlier conversations. #memory\n`, { mkdirs: true });
 }
 function memoryLines() {
   if (!vfs.isFile(MEM_PATH)) return [];

@@ -60,11 +60,13 @@ Known secret fields absent from a backup can retain current values during restor
 
 ### Discord and Vector data
 
-A full app backup includes their chat sessions through the main app database, and ordinary vault files such as `/Jade/Discord Inbox.md`, `/Jade/Vector Inbox.md`, and saved attachments. A config-only export is not an inbox/chat archive. Discord's bot token never belongs in the app settings; the bridge's `bot_token`/`token` files or Docker volume need separate secure preservation. See [Discord](discord.md#security-and-backup) and [Vector](vector.md).
+A full app backup includes their chat sessions through the main app database, and ordinary vault files such as `/Pandora/Discord Inbox.md`, `/Pandora/Vector Inbox.md`, and saved attachments. A config-only export is not an inbox/chat archive. Discord's bot token never belongs in the app settings; the bridge's `bot_token`/`token` files or Docker volume need separate secure preservation. See [Discord](discord.md#security-and-backup) and [Vector](vector.md).
 
 ## Migration and upgrades
 
 To move between browser origins, profiles, phones, or browser/Android, export from the old installation and restore into the new one. Keep the old installation/export until verification succeeds. A source-code update or APK installation is not a backup.
+
+**Coming from Jade Vault.** Pandora Dee's own files live in `/Pandora` (Jade Vault kept them in `/Jade`), and flows are now rituals in `/Pandora/Rituals/<name>.ritual.json`. Moving day happens by itself: on every start, anything still in `/Jade` moves to `/Pandora` (flows to `/Pandora/Rituals`), and restoring a Jade Vault backup puts its `/Jade` files straight into `/Pandora`. Settings that pointed into `/Jade` (the templates folder, for example) and ritual run history follow. If `/Pandora` already has a different copy of a file, both are kept and the old one is named `… (from Jade Vault)`. Every move is written to `/Pandora/Logs/migration.log`. Old paths keep working: scripts, schedules and crontab lines that say `/Jade/...` read and write `/Pandora/...`, and `.flow.json` files still load (they save back as `.ritual.json`). Backups keep Jade Vault's format and browser storage keys, so they also restore into Jade Vault.
 
 For Android updates, use the same application id/signing key and a higher version code. Uninstalling to bypass a signing conflict can erase app data; export first. See [APK instructions](android-apk.md).
 

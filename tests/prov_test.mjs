@@ -175,12 +175,12 @@ await page.evaluate(() => { if ($('#settings').hidden) $('#btnSettings').click()
 await page.tap('#btnExportAll'); await page.waitForTimeout(1200);
 const saved = await page.evaluate(() => window.__saved);
 const bk = JSON.parse(saved[2]);
-ok(/^pandora-dee-backup-\d{4}-\d\d-\d\d\.json$/.test(saved[0]) && bk.kind === 'full' && bk.vault.files['/Welcome.md'] && bk.vault.files['/Jade/SOUL.md'] && bk.db.sessions?.length >= 2 && Array.isArray(bk.db.schedules ?? []), 'full export: files, chats, settings (' + Object.keys(bk.vault.files).length + ' files, ' + (bk.db.sessions || []).length + ' chats)');
+ok(/^pandora-dee-backup-\d{4}-\d\d-\d\d\.json$/.test(saved[0]) && bk.kind === 'full' && bk.vault.files['/Welcome.md'] && bk.vault.files['/Pandora/SOUL.md'] && bk.db.sessions?.length >= 2 && Array.isArray(bk.db.schedules ?? []), 'full export: files, chats, settings (' + Object.keys(bk.vault.files).length + ' files, ' + (bk.db.sessions || []).length + ' chats)');
 ok(!('groqKey' in bk.settings) && !bk.includesKeys, 'keys left out unless asked');
 ok(/Full backup: \d+ files/.test(await page.textContent('#backupNote')), 'backup summary shown');
 await page.tap('#btnExportCfg'); await page.waitForTimeout(500);
 const cfg = JSON.parse(await page.evaluate(() => window.__saved[2]));
-ok(cfg.kind === 'config' && cfg.vault.files['/AGENTS.md'] && cfg.vault.files['/Jade/skills/daily-review/SKILL.md'] && !cfg.vault.files['/Welcome.md'] && !cfg.db, 'config export has only config files');
+ok(cfg.kind === 'config' && cfg.vault.files['/AGENTS.md'] && cfg.vault.files['/Pandora/skills/daily-review/SKILL.md'] && !cfg.vault.files['/Welcome.md'] && !cfg.db, 'config export has only config files');
 // import the full backup after wiping a note and changing a setting
 bk.vault.files['/Restored Note.md'] = '# Restored\n';
 bk.settings.temperature = 0.7;

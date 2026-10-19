@@ -1,12 +1,12 @@
 /* =====================================================================
    HEARTBEAT (Moltbot-style)
-   Every N minutes inside active hours, Jade wakes up, reads /Jade/HEARTBEAT.md and acts on it.
+   Every N minutes inside active hours, Jade wakes up, reads /Pandora/HEARTBEAT.md and acts on it.
    If nothing needs attention she answers HEARTBEAT_OK: that run is silent and pruned from the chat.
    Anything else is an alert: kept in the Heartbeat chat and sent as a notification.
    An effectively empty HEARTBEAT.md (only comments, headings, blank lines or empty checkboxes)
    skips the run without calling the model. It can use its own provider/model.
    ===================================================================== */
-const HB_PATH = '/Jade/HEARTBEAT.md';
+const HB_PATH = '/Pandora/HEARTBEAT.md';
 const HB_DEFAULT_PROMPT = 'Read HEARTBEAT.md (below). Follow it strictly. Do not infer or repeat old tasks from prior chats. Use your tools to check what it asks. If nothing needs attention, reply HEARTBEAT_OK.';
 const HB_SEED = `# HEARTBEAT
 

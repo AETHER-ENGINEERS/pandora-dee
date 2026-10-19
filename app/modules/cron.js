@@ -2,9 +2,9 @@
    SCHEDULES THAT RUN SHELL COMMANDS OR FLOWS (+ crontab)
    A schedule runs one of: a prompt (Jade does it in a chat, as before), a shell command, or a flow.
    Command and flow schedules run on their own, without the model and without waiting for the chat.
-   Their output goes to /Jade/Logs/cron.log; a failure sends a notification.
+   Their output goes to /Pandora/Logs/cron.log; a failure sends a notification.
    ===================================================================== */
-const CRON_LOG = '/Jade/Logs/cron.log';
+const CRON_LOG = '/Pandora/Logs/cron.log';
 const SchedBusy = new Set();
 const schedIsJob = s => s && (s.kind === 'shell' || s.kind === 'flow');
 const CRON_MACROS = { '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *', '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *', '@hourly': '0 * * * *' };
@@ -117,7 +117,7 @@ async function crontabShell(c) {
   try {
     if (!a.length || a[0] === '-h' || a[0] === '--help' || a[0] === 'help') { c.o(CRONTAB_HELP); return 0; }
     if (a[0] === '-l' || a[0] === 'list') { if (!Sched.list.length) { c.o('no schedules\n'); return 0; } for (const s of Sched.list) c.o(crontabLine(s) + '\n'); return 0; }
-    if (a[0] === '-e') { c.o(`Edit a file (for example /Jade/crontab) with lines like\n  */15 * * * * node /scripts/sync.js >> /Jade/Logs/sync.log\n  @daily flow run Digest\nthen install it: crontab /Jade/crontab\n`); return 0; }
+    if (a[0] === '-e') { c.o(`Edit a file (for example /Pandora/crontab) with lines like\n  */15 * * * * node /scripts/sync.js >> /Pandora/Logs/sync.log\n  @daily flow run Digest\nthen install it: crontab /Pandora/crontab\n`); return 0; }
     if (a[0] === '-r' || a[0] === 'rm' || a[0] === 'remove') {
       const id = String(a[1] || '').replace(/^#/, ''); if (!id) throw new Error('usage: crontab -r <id> | -r all');
       const gone = id === 'all' ? Sched.list.filter(s => s.src === 'crontab') : Sched.list.filter(s => s.id === id);

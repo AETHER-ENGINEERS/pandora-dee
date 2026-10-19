@@ -36,7 +36,7 @@ await page.waitForFunction(() => typeof memoryContext === 'function' && typeof u
 await page.waitForTimeout(1200);
 // seed Memory.md and fake a chat whose last user message is about coffee
 const ctxFor = (rag, msg) => page.evaluate(([rag, msg]) => {
-  vfs.write('/Jade/Memory.md', '# Memory\n\n## About you\n- Likes oat milk lattes\n- Sister Maya lives in Lisbon\n\n## Projects & people\n- Works on a Rust compiler project called Forge\n- Allergic to peanuts\n', { mkdirs: true });
+  vfs.write('/Pandora/Memory.md', '# Memory\n\n## About you\n- Likes oat milk lattes\n- Sister Maya lives in Lisbon\n\n## Projects & people\n- Works on a Rust compiler project called Forge\n- Allergic to peanuts\n', { mkdirs: true });
   S.memoryOn = true; S.memoryRag = rag; S.memoryRagK = 1;
   if (!cur) newSession?.();
   cur.messages = [{ role: 'user', content: msg }];

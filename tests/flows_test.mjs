@@ -137,7 +137,7 @@ ok(/"trigger"/.test(t) && /- decide \(Decide\)/.test(t) && /\$node/.test(t) && /
 t = await tool({ action: 'create', flow: { name: 'Bad', steps: [{ type: 'tool' }] } });
 ok(/^ERR not saved/.test(t) && /"tool" is required/.test(t), 'create refuses an invalid flow and says why');
 t = await tool({ action: 'create', flow: JSON.stringify({ name: 'Made by Jade', description: 'test', steps: [{ type: 'set', fields: { hello: '{{ $input.who }}' } }] }) });
-ok(/Created flow "Made by Jade"/.test(t) && await E(() => vfs.isFile('/Jade/Flows/Made by Jade.flow.json')), 'create saves /Jade/Flows/<name>.flow.json (flow given as an object or JSON text)');
+ok(/Created flow "Made by Jade"/.test(t) && await E(() => vfs.isFile('/Pandora/Rituals/Made by Jade.ritual.json')), 'create saves /Pandora/Rituals/<name>.ritual.json (flow given as an object or JSON text)');
 t = await tool({ action: 'create', flow: { name: 'made by jade', steps: [] } });
 ok(/already exists/.test(t), 'names are unique (case-insensitive)');
 t = await tool({ action: 'run', name: 'Made by Jade', input: { who: 'Sam' } });
@@ -145,7 +145,7 @@ ok(/Flow "Made by Jade" ok/.test(t) && /"hello": "Sam"/.test(t) && /✓/.test(t)
 t = await tool({ action: 'get', name: 'Made by Jade' });
 ok(JSON.parse(t).steps[0].id === 's1', 'get returns the JSON (steps get ids)');
 t = await tool({ action: 'update', name: 'Made by Jade', flow: { name: 'Renamed', steps: [{ type: 'set', fields: { v: 2 } }] } });
-ok(/Updated flow "Renamed"/.test(t) && await E(() => !vfs.isFile('/Jade/Flows/Made by Jade.flow.json') && vfs.isFile('/Jade/Flows/Renamed.flow.json')), 'update can rename (the old file goes)');
+ok(/Updated flow "Renamed"/.test(t) && await E(() => !vfs.isFile('/Pandora/Rituals/Made by Jade.ritual.json') && vfs.isFile('/Pandora/Rituals/Renamed.ritual.json')), 'update can rename (the old file goes)');
 t = await tool({ action: 'disable', name: 'Renamed' }); ok(/disabled/.test(t) && await E(() => flowFind('Renamed').enabled === false), 'disable / enable');
 t = await tool({ action: 'list' }); ok(/Renamed \(off\)/.test(t) && /Ticker/.test(t) && /⏰/.test(t), 'list shows triggers and on/off');
 t = await tool({ action: 'runs', name: 'Made by Jade' }); ok(/^ERR no flow/.test(t), 'runs of a renamed flow: unknown name is an error');
@@ -224,10 +224,10 @@ ok(/- \[ \] server on fire asap/.test(await read('/Urgent.md') || '') && !/buy m
 await page.screenshot({ path: 'flows_run.png' });
 await page.click('#flowsPanel [data-fa="back"]'); await page.waitForTimeout(150);
 // toggle and delete from the list
-await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] .sched-switch'); await page.waitForTimeout(150);
+await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] .sched-switch'); await page.waitForTimeout(150);
 ok(await E(() => flowFind('UI flow').enabled === false), 'the switch on a card turns a scheduled flow off');
-await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] [data-fa="del"]'); await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] [data-fa="del"]'); await page.waitForTimeout(150);
-ok(await E(() => !flowFind('UI flow') && !document.querySelector('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"]')), 'delete asks for a second tap, then removes the flow');
+await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] [data-fa="del"]'); await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] [data-fa="del"]'); await page.waitForTimeout(150);
+ok(await E(() => !flowFind('UI flow') && !document.querySelector('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"]')), 'delete asks for a second tap, then removes the flow');
 // unsaved changes guard
 await page.click('.fl-card [data-fa="edit"]'); await page.waitForTimeout(100);
 await page.fill('#flDesc', 'changed'); await page.click('#flBack');

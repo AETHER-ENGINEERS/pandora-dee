@@ -87,7 +87,7 @@ function contextReport() {
   const add = (label, chars) => { if (chars > 0) rows.push([label, tok(chars)]); };
   const soulC = st.soul.length, agC = st.agents.reduce((a, x) => a + x.t.length, 0), skC = st.skills.reduce((a, x) => a + x.name.length + x.description.length + 4, 0);
   const memC = memoryContext().length, mcpC = mcpPromptBlock().length, custom = st.system.length;
-  add(custom ? 'Custom system prompt (/Jade/SYSTEM.md)' : 'Built-in instructions', sp.length - soulC - agC - skC - memC - mcpC);
+  add(custom ? 'Custom system prompt (/Pandora/SYSTEM.md)' : 'Built-in instructions', sp.length - soulC - agC - skC - memC - mcpC);
   add('SOUL.md persona', soulC); for (const a of st.agents) add(`AGENTS: ${a.p}`, a.t.length); add(`Skills list (${st.skills.length})`, skC);
   add('Memory + journal', memC); add('MCP server list', mcpC);
   const tools = activeTools(); const builtin = tools.filter(t => !mcpHandles(t.function.name) && !/^mcp__/.test(t.function.name));

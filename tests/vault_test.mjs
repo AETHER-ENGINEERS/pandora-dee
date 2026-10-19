@@ -234,7 +234,7 @@ const mem = await page.evaluate(async () => { const t = async (a) => { try { ret
   r.s2 = await t({ action: 'save', text: 'the user loves synthwave and dark themes.' });
   r.s3 = await t({ action: 'save', text: 'Their cat is called Byte', section: 'about' });
   r.search = await t({ action: 'search', text: 'cat' });
-  r.prompt = systemPrompt(); r.f = await t({ action: 'forget', text: 'cat is called' }); r.after = vfs.read('/Jade/Memory.md'); return r; });
+  r.prompt = systemPrompt(); r.f = await t({ action: 'forget', text: 'cat is called' }); r.after = vfs.read('/Pandora/Memory.md'); return r; });
 ok(/Saved to memory under "Preferences"/.test(mem.s1) && /Already remembered/.test(mem.s2), 'memory save + dedupe');
 ok(/Byte/.test(mem.search), 'memory search');
 ok(/Long-term memory/.test(mem.prompt) && /synthwave/.test(mem.prompt) && /Byte/.test(mem.prompt), 'memory in system prompt');
@@ -243,7 +243,7 @@ ok(/Forgot 1/.test(mem.f) && !/Byte/.test(mem.after) && /synthwave/.test(mem.aft
 await page.evaluate(() => journalSession(window.__cur || null));
 await page.evaluate(async () => { const s = await (async () => { for (const k of Object.keys(window)) {} })(); });
 await page.tap('.tab[data-tab="chat"]'); await page.fill('#input', '/new'); await page.tap('#btnSend'); await page.waitForTimeout(1500);
-const jr = await page.evaluate(() => { const p = [...vfs.nodes.keys()].find(k => k.startsWith('/Jade/Journal/')); return { p, body: p ? vfs.read(p) : '', mem: vfs.read('/Jade/Memory.md') }; });
+const jr = await page.evaluate(() => { const p = [...vfs.nodes.keys()].find(k => k.startsWith('/Pandora/Journal/')); return { p, body: p ? vfs.read(p) : '', mem: vfs.read('/Pandora/Memory.md') }; });
 ok(jr.p && /Map of Content/.test(jr.body) && /organises notes by tag/.test(jr.mem), 'journal entry + learned fact: ' + jr.p);
 ok(!/- none/.test(jr.mem), 'journal "none" not saved');
 await shot('14_memory');
@@ -258,13 +258,13 @@ await shot('15_math'); await overflow('math note');
 const sp = await page.evaluate(() => systemPrompt());
 ok(/neon edge of Night City/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
 ok(/Skills \(instruction packs/.test(sp) && /daily-review:/.test(sp) && /skill-creator:/.test(sp), 'skills listed in prompt');
-await page.evaluate(() => vfs.write('/Jade/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
+await page.evaluate(() => vfs.write('/Pandora/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
 const sp2 = await page.evaluate(() => systemPrompt());
 ok(sp2.startsWith('# SYSTEM\n\nYou are Bob') || sp2.startsWith('# SYSTEM\nYou are Bob') || /^# SYSTEM\s+You are Bob/.test(sp2), 'SYSTEM.md replaces intro: ' + JSON.stringify(sp2.slice(0, 40)));
 ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
-await page.evaluate(() => vfs.rm('/Jade/SYSTEM.md'));
+await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
 ok(/^You are Jade, the keeper/.test(sp) && /Be concise/.test(sp), 'the stock soul keeps the notes-keeper intro');
-const sp3 = await page.evaluate(() => { const o = vfs.read('/Jade/SOUL.md'); vfs.write('/Jade/SOUL.md', '---\nname: Pandora Dee\n---\n# SOUL\nI keep the company house in order.'); const r = systemPrompt(); vfs.write('/Jade/SOUL.md', o); return r; });
+const sp3 = await page.evaluate(() => { const o = vfs.read('/Pandora/SOUL.md'); vfs.write('/Pandora/SOUL.md', '---\nname: Pandora Dee\n---\n# SOUL\nI keep the company house in order.'); const r = systemPrompt(); vfs.write('/Pandora/SOUL.md', o); return r; });
 ok(/^You are Pandora Dee\. You live in Jade Vault/.test(sp3) && /as an equal/.test(sp3) && !/keeper of the user's personal knowledge vault|Be concise/.test(sp3) && /company house/.test(sp3) && /Vault conventions:/.test(sp3), 'a soul of their own leads: its name, no notes-assistant intro: ' + JSON.stringify(sp3.slice(0, 60)));
 // ---- v3: skills ----
 const sk = await page.evaluate(async () => { const t = async (n, a) => { try { return await runTool(n, a, null); } catch (e) { return 'ERR ' + e.message; } };

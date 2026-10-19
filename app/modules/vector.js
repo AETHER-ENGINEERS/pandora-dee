@@ -12,7 +12,7 @@
    - is a secretary: notify_owner files a message in the inbox or tells you at once.
    ===================================================================== */
 const VEC = { client: null, connected: false, npub: null, error: '', timer: 0, busy: false, q: [], names: {}, chans: {}, xdc: {}, sentTo: null, lastPoll: 0, polling: false, log: [] };
-const VEC_INBOX = '/Jade/Vector Inbox.md';
+const VEC_INBOX = '/Pandora/Vector Inbox.md';
 const npubShort = n => n ? (n.length > 20 ? n.slice(0, 12) + '…' + n.slice(-4) : n) : '?';
 const vecList = s => String(s || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
 function vecRole(npub) {

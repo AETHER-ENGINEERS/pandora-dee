@@ -14,7 +14,7 @@
    - is a secretary: notify_owner files a message in the Discord inbox or tells you at once.
    ===================================================================== */
 const DC = { client: null, connected: false, user: null, error: '', warn: '', timer: 0, polling: false, busy: false, q: [], names: {}, chans: {}, guilds: {}, log: [], sentTo: null, lastPoll: 0 };
-const DC_INBOX = '/Jade/Discord Inbox.md';
+const DC_INBOX = '/Pandora/Discord Inbox.md';
 const dcList = s => String(s || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
 const dcShort = id => id ? String(id) : '?';
 function dcRole(id) {

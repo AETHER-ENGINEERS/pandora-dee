@@ -120,7 +120,7 @@ Tool lists are filtered and execution guards run again. Discord actions also hav
 The `discord` tool provides send/reply, typing, reaction, edit/delete, read/profile, server/channel lists, moderation, and owner file-transfer capabilities. Use real IDs obtained from the service, not invented examples. Numeric user targets can be expressed as `user:<id>` to disambiguate from channels. Ordinary assistant replies in a Discord session are sent back automatically; avoid sending a duplicate explicit tool reply.
 
 - `discord_history` searches the bridge's archive database (bridge started with `--archive`): one call returns a few compact lines, so recalling the server's past costs no context or rate limit. The owner searches every archived channel; everyone else only channels the whole server can see. Config → Discord → *What you call the archive* gives it your own name in the character's instructions. See the bridge README for the query syntax.
-- `notify_owner` in a Discord chat uses `/Jade/Discord Inbox.md`, not Vector's inbox.
+- `notify_owner` in a Discord chat uses `/Pandora/Discord Inbox.md`, not Vector's inbox.
 - Notification settings control inbox-only versus immediate owner notification/DM behavior; urgent requests are handled according to that policy.
 - Attachments saved to the vault use `/attachments/discord/<date>/...` by default. Image interpretation depends on a vision-capable model and image settings.
 - Jade Vault 2.9.0 limits outgoing vault file sends to **8 MiB**.

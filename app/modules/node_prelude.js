@@ -1,6 +1,8 @@
 
 const __out = []; let __files = {}; let __dirs = new Set(['/']); const __writes = {}; const __mk = new Set(); const __rmd = new Set(); let __cwd = '/';
-const __norm = (p) => { p = String(p); if (p.startsWith('file://')) p = p.slice(7); const parts = (p.startsWith('/') ? p : __cwd + '/' + p).split('/'); const o = []; for (const s of parts) { if (!s || s === '.') continue; if (s === '..') o.pop(); else o.push(s); } return '/' + o.join('/'); };
+// /Jade/... (Jade Vault's home) reads as /Pandora/..., and /Jade/Flows/<name>.flow.json as /Pandora/Rituals/<name>.ritual.json
+const __pd = (p) => { if (p !== '/Jade' && !p.startsWith('/Jade/')) return p; let r = p.slice(5); if (r === '/Flows' || r.startsWith('/Flows/')) { r = '/Rituals' + r.slice(6); if (r.endsWith('.flow.json')) r = r.slice(0, -10) + '.ritual.json'; } return '/Pandora' + r; };
+const __norm = (p) => { p = String(p); if (p.startsWith('file://')) p = p.slice(7); const parts = (p.startsWith('/') ? p : __cwd + '/' + p).split('/'); const o = []; for (const s of parts) { if (!s || s === '.') continue; if (s === '..') o.pop(); else o.push(s); } return __pd('/' + o.join('/')); };
 const __fmt = (a) => a.map(x => typeof x === 'string' ? x : (() => { try { return x instanceof Error ? (x.stack || String(x)) : x === undefined ? 'undefined' : typeof x === 'function' ? '[Function]' : JSON.stringify(x, (k, v) => v instanceof Set ? [...v] : v instanceof Map ? Object.fromEntries(v) : typeof v === 'bigint' ? String(v) : v, 2) ?? String(x); } catch { return String(x); } })()).join(' ');
 const __log = (k) => (...a) => { __out.push([k, __fmt(a) + '\n']); };
 const console = { log: __log('o'), info: __log('o'), debug: __log('o'), dir: __log('o'), table: __log('o'), warn: __log('e'), error: __log('e'), time() {}, timeEnd() {}, group() {}, groupEnd() {} };

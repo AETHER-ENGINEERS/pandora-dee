@@ -59,7 +59,7 @@ ok(!errs.length && await page.evaluate(() => /All done here/.test(document.query
 ok(await page.evaluate(() => { const l = ls.get('ctxLimits', {}); return Object.values(l).some(v => v === 40000); }), 'learned the model limit from the error');
 SERVER_MAX = Infinity;
 // ---- D: a giant SYSTEM.md -> warning + still fits; /context explains ----
-await page.evaluate(() => { localStorage.removeItem('jvault:ctxLimits'); S.numCtx = 16384; newSession(); vfs.write('/Jade/SYSTEM.md', '# SYSTEM\n\n' + 'Be helpful. '.repeat(60000)); });
+await page.evaluate(() => { localStorage.removeItem('jvault:ctxLimits'); S.numCtx = 16384; newSession(); vfs.write('/Pandora/SYSTEM.md', '# SYSTEM\n\n' + 'Be helpful. '.repeat(60000)); });
 sent.length = 0; await send('hi');
 ok(sent.every(x => x.len < 16384 * 3.3) && !await page.evaluate(() => cur.messages.some(m => m._error)), 'huge SYSTEM.md is cut to fit: ' + JSON.stringify(sent.map(x => x.len)));
 ok(await page.evaluate(() => /SYSTEM\.md/.test(contextReport().rows[0][0])), '/context names SYSTEM.md as the biggest part');
@@ -67,7 +67,7 @@ await page.fill('#input', '/context'); await page.evaluate(() => document.queryS
 const card = await page.evaluate(() => [...document.querySelectorAll('.compact-card')].at(-1)?.innerText || '');
 ok(/Context: ~[\d.]+k of 16\.4k/i.test(card) && /SYSTEM\.md/.test(card), '/context card: ' + card.slice(0, 200));
 await page.screenshot({ path: 'ctx_context.png' });
-await page.evaluate(() => vfs.rm('/Jade/SYSTEM.md'));
+await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
 // ---- E: normal small chat is untouched ----
 await page.evaluate(() => newSession()); sent.length = 0; await send('hello again');
 ok(sent.length === 2 && !sent.some(x => x.compact), 'small chats: no compaction, no trimming');

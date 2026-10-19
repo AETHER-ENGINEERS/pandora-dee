@@ -51,4 +51,4 @@ These guides cover **Jade Vault 2.9.0**. For platform requirements, network acce
 - [Jade Link protocol](../apps/jade-link/README.md).
 - [SQLite WebAssembly build reference](../sqlite-wasm/README.md).
 
-> Paths such as `/Jade/SOUL.md` are files **inside the app's virtual vault**, rather than paths in your computer's regular filesystem. Commands in build/development guides run on your computer; commands in scripting guides run inside Jade Vault unless explicitly stated otherwise.
+> Paths such as `/Pandora/SOUL.md` are files **inside the app's virtual vault**, rather than paths in your computer's regular filesystem. Commands in build/development guides run on your computer; commands in scripting guides run inside Jade Vault unless explicitly stated otherwise.

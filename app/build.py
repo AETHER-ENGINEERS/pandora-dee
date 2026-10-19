@@ -688,7 +688,7 @@ rep("Use `node file.js` for scripting. Vault commands:", "For scripts longer tha
 # memory module after the notes UI
 s = s.replace('/* =====================================================================\n   UI WIRING', rd('memory.js') + '\n/* =====================================================================\n   UI WIRING', 1)
 rep("const DEFAULTS = { compactAuto: true,", "const DEFAULTS = { memoryOn: true, memoryRag: false, memoryRagK: 8, journalOn: true, compactAuto: true,")
-rep("""  { name: 'notes_search', description:""", """  { name: 'memory', description: 'Your long-term memory across chats, kept in the note /Jade/Memory.md (you see it in your instructions every chat). save: remember one durable fact (who the user is, preferences, projects, people, decisions, or anything they ask you to remember). search: look through memory and your journal of past chats. forget: delete remembered lines containing text. list: show all of memory.',
+rep("""  { name: 'notes_search', description:""", """  { name: 'memory', description: 'Your long-term memory across chats, kept in the note /Pandora/Memory.md (you see it in your instructions every chat). save: remember one durable fact (who the user is, preferences, projects, people, decisions, or anything they ask you to remember). search: look through memory and your journal of past chats. forget: delete remembered lines containing text. list: show all of memory.',
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['save', 'search', 'forget', 'list'] }, text: { type: 'string', description: 'save: the fact, as one short sentence. search: words to look for. forget: text of the memory to delete.' }, section: { type: 'string', enum: ['about', 'preferences', 'projects', 'notes'], description: 'save: where it belongs (default notes)' } }, required: ['action'] } },
   { name: 'notes_search', description:""")
 rep("const activeTools = () => OLLAMA_TOOLS.filter(t => t.function.name !== 'decide' || (S.ollayaOn && S.ollayaModel));",
@@ -713,7 +713,7 @@ rep("<b>/schedule</b> scheduled prompts · <b>/config</b>", "<b>/schedule</b> sc
 rep("""      <section class="flex flex-col gap-3">
         <div class="pane-h">History compaction</div>""", """      <section class="flex flex-col gap-3">
         <div class="pane-h">Long-term memory</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Jade keeps what she learns about you in the note <span class="text-yl">Jade/Memory</span> and reads it at the start of every chat. When you leave a chat (or after a few quiet minutes) she writes a short entry in her journal under <span class="text-yl">Jade/Journal</span> and adds new facts to memory. Both are plain notes you can edit or delete.</p>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Jade keeps what she learns about you in the note <span class="text-yl">Pandora/Memory</span> and reads it at the start of every chat. When you leave a chat (or after a few quiet minutes) she writes a short entry in her journal under <span class="text-yl">Jade/Journal</span> and adds new facts to memory. Both are plain notes you can edit or delete.</p>
         <label class="flex items-center gap-2 text-sm" for="sMemoryOn"><input type="checkbox" id="sMemoryOn" class="accent-emerald-400 w-4 h-4"> Use long-term memory (memory tool + memory in every chat)</label>
         <label class="flex items-center gap-2 text-sm" for="sMemoryRag"><input type="checkbox" id="sMemoryRag" class="accent-emerald-400 w-4 h-4"> Rank memories with BM25: put only the lines that match your message in the prompt</label>
         <label class="flex items-center gap-2 text-sm" for="sMemoryRagK"><span>Memories to inject (BM25)</span><input type="number" id="sMemoryRagK" class="field" min="1" max="30" step="1" style="width:5rem"></label>
@@ -951,7 +951,7 @@ rep("$('#sOaiKey').value = S.oaiKey || '';", "$('#sOaiKey').value = S.oaiKey || 
 rep("""      <section class="flex flex-col gap-3">
         <div class="pane-h">Background</div>""", """      <section class="flex flex-col gap-3">
         <div class="pane-h">Heartbeat</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Every so often Jade wakes up, reads <span class="text-yl">Jade/HEARTBEAT.md</span> and checks what it lists. If all is well she answers HEARTBEAT_OK and stays quiet; otherwise you get a notification. An empty checklist costs nothing.</p>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Every so often Jade wakes up, reads <span class="text-yl">Pandora/HEARTBEAT.md</span> and checks what it lists. If all is well she answers HEARTBEAT_OK and stays quiet; otherwise you get a notification. An empty checklist costs nothing.</p>
         <label class="flex items-center gap-2 text-sm" for="sHbOn"><input type="checkbox" id="sHbOn" class="accent-emerald-400 w-4 h-4"> Heartbeat on</label>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
           <div><label class="lbl" for="sHbEvery">Every (minutes)</label><input id="sHbEvery" type="number" min="1" max="1440" class="field mt-1"></div>
@@ -991,7 +991,7 @@ rep("lcppKey: $('#sLcppKey')?.value.trim() || '',", "lcppKey: $('#sLcppKey')?.va
 
 rep("const saveSettings = () => { if (window.__restoring) return;", "const saveSettings = () => { if (window.__restoring || window.__modelOverride) return;")
 rep("  if (!S.journalOn || !sess || !S.model) return;", "  if (!S.journalOn || !sess || !S.model || sess._hb) return;")
-rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Your heartbeat checklist is /Jade/HEARTBEAT.md: when the user wants you to keep an eye on something regularly, add a short line under its Check heading (use schedule instead for exact times).\\n- Files the user attaches in chat are saved under /attachments/YYYY-MM-DD/; PDFs get a .pdf.md text note next to them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
+rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Your heartbeat checklist is /Pandora/HEARTBEAT.md: when the user wants you to keep an eye on something regularly, add a short line under its Check heading (use schedule instead for exact times).\\n- Files the user attaches in chat are saved under /attachments/YYYY-MM-DD/; PDFs get a .pdf.md text note next to them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 # composer: attach button + pending bar
 rep("""            <label for="input" class="sr-only">Message</label>""", """            <button type="button" class="icon-btn attach-btn" id="btnAttach" aria-label="Attach files"><svg viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7.1-7.1L13 4.3a3.3 3.3 0 014.7 4.7l-8.3 8.3a1.7 1.7 0 01-2.4-2.4l7.6-7.6"/></svg></button>
             <input type="file" id="attachInput" multiple hidden>
@@ -1043,11 +1043,11 @@ rep("  today(c) { openToday(); c.o(`Opened /daily/${todayStr()}.md\\n`); return 
 rep("'search', 'today']);", "'search', 'today', 'mcp']);")
 rep("Vault: open <note>, links [note], backlinks <note>, tags [tag], search <words|#tag>, today.", "Vault: open <note>, links [note], backlinks <note>, tags [tag], search <words|#tag>, today.\\nMCP: mcp list | add <name> <url> | remove | reconnect | tools [server] | call <tool> '<json>'.")
 rep("`}${steeringContext(steer)}`; };", "`}${steeringContext(steer)}${mcpPromptBlock()}`; };")
-rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- MCP servers are configured in /Jade/mcp.json (streamable HTTP url, optional headers, exposure codemode|deferred|direct|hidden); the shell command mcp add/list/tools manages them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
+rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- MCP servers are configured in /Pandora/mcp.json (streamable HTTP url, optional headers, exposure codemode|deferred|direct|hidden); the shell command mcp add/list/tools manages them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 rep("""      <section class="flex flex-col gap-3">
         <div class="pane-h">Heartbeat</div>""", """      <section class="flex flex-col gap-3" id="mcpSection">
         <div class="flex items-center justify-between gap-2"><div class="pane-h">MCP servers</div><span class="hint" id="mcpCount"></span></div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Works like pi: servers live in <span class="text-yl">Jade/mcp.json</span> and connect in the background. <b>codemode</b> (default) keeps their tools out of the prompt; Jade writes a short script that calls them. <b>deferred</b> loads tools on demand with tool_search, <b>direct</b> shows them like built-in tools, <b>hidden</b> turns them off. Streamable HTTP servers only; a stdio server needs an HTTP bridge such as <span class="mono text-yl">npx -y supergateway --stdio "…" --outputTransport streamableHttp</span>.</p>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Works like pi: servers live in <span class="text-yl">Pandora/mcp.json</span> and connect in the background. <b>codemode</b> (default) keeps their tools out of the prompt; Jade writes a short script that calls them. <b>deferred</b> loads tools on demand with tool_search, <b>direct</b> shows them like built-in tools, <b>hidden</b> turns them off. Streamable HTTP servers only; a stdio server needs an HTTP bridge such as <span class="mono text-yl">npx -y supergateway --stdio "…" --outputTransport streamableHttp</span>.</p>
         <div id="mcpList" class="flex flex-col gap-2"></div>
         <div class="mcp-add">
           <div class="lbl">Add a server</div>
@@ -1622,7 +1622,7 @@ rep("Runs a prompt on a schedule, in your local time.", "Runs a prompt, a shell 
 SNAME = '<div><label class="lbl" for="schedName">Name</label><input id="schedName" class="field mt-1" maxlength="60" placeholder="Morning standup"></div>'
 rep(SNAME, SNAME + """
             <div class="sched-row"><div><label class="lbl" for="schedKind">Run</label><select id="schedKind" class="field mt-1"><option value="prompt">A prompt (Jade does it in a chat)</option><option value="shell">A shell command</option><option value="flow">A flow</option></select></div><div id="schedFlowWrap" hidden><label class="lbl" for="schedFlow">Flow</label><select id="schedFlow" class="field mt-1"></select></div></div>
-            <div id="schedCmdWrap" hidden><label class="lbl" for="schedCmd">Command</label><input id="schedCmd" class="field mt-1 mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="node /scripts/sync.js >> /Jade/Logs/sync.log"><div class="hint mt-1">Runs in the shell on its own (no chat, no model). Output goes to /Jade/Logs/cron.log; a failure notifies you.</div></div>
+            <div id="schedCmdWrap" hidden><label class="lbl" for="schedCmd">Command</label><input id="schedCmd" class="field mt-1 mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="node /scripts/sync.js >> /Pandora/Logs/sync.log"><div class="hint mt-1">Runs in the shell on its own (no chat, no model). Output goes to /Pandora/Logs/cron.log; a failure notifies you.</div></div>
             <div id="schedInputWrap" hidden><label class="lbl" for="schedInput">Flow input (JSON, optional)</label><input id="schedInput" class="field mt-1 mono" autocapitalize="off" spellcheck="false" placeholder='{"folder": "/projects"}'></div>""")
 rep('<div><label class="lbl" for="schedPrompt">Prompt</label>', '<div id="schedPromptWrap"><label class="lbl" for="schedPrompt">Prompt</label>')
 rep("syncSchedForm(true); $('#schedName').focus();", "schedKindFill(s); syncSchedForm(true); $('#schedName').focus();")
@@ -1634,7 +1634,7 @@ rep("async function runSchedule({ s, why }) {", "async function runSchedule({ s,
 rep("runningNow = s.lastStatus === 'running' && Sched.draining;", "runningNow = (s.lastStatus === 'running' && Sched.draining) || SchedBusy.has(s.id);")
 rep('<div class="sched-prompt">${esc(s.prompt)}</div>', '<div class="sched-prompt${schedIsJob(s) ? \' mono\' : \'\'}">${esc(s.prompt)}</div>')
 rep("    const s = addSchedule({ name: a.name, when, prompt: a.prompt || a.message || a.task || a.name, chat: a.chat });", "    const s = (a.command || a.flow) ? addScheduleKind({ name: a.name, when, kind: a.command ? 'shell' : 'flow', command: a.command, flow: a.flow, input: a.input ?? null }) : addSchedule({ name: a.name, when, prompt: a.prompt || a.message || a.task || a.name, chat: a.chat });")
-rep("Each run sends the prompt to you as a new message.", "Each run sends the prompt to you as a new message; or it runs a shell command (\"command\", no chat, output in /Jade/Logs/cron.log) or one of your flows (\"flow\").")
+rep("Each run sends the prompt to you as a new message.", "Each run sends the prompt to you as a new message; or it runs a shell command (\"command\", no chat, output in /Pandora/Logs/cron.log) or one of your flows (\"flow\").")
 rep("prompt: { type: 'string', description: 'What to do or say each time, e.g. \"Remind the user to finish their projects\" (add)' },", "prompt: { type: 'string', description: 'What to do or say each time, e.g. \"Remind the user to finish their projects\" (add)' }, command: { type: 'string', description: 'add: run this shell command instead of a prompt, e.g. \"node /scripts/sync.js\"' }, flow: { type: 'string', description: 'add: run this flow (by name) instead of a prompt' }, input: { type: 'object', description: 'add with flow: the flow\\'s input' },")
 rep(r"- schedule: create/list/pause/delete scheduled prompts and reminders.", r"- schedule: create/list/pause/delete scheduled prompts and reminders, or scheduled shell commands (command) and flows (flow).")
 
@@ -1712,6 +1712,23 @@ rep("<b>/vector</b> bot settings ·", "<b>/vector</b> bot settings · <b>/discor
 rep("window.__vecSync?.();", "window.__vecSync?.(); window.__dcSync?.();")
 rep("'secrets', 'vecToken', 'aicKey'];", "'secrets', 'vecToken', 'aicKey', 'dcToken'];")
 rep("Object.assign(window, { tfjsSource,", "Object.assign(window, { DC, dcInviteUrl, dcConnect, dcStop, dcIncoming, dcPoll, dcCall, dcWake, dcScope, dcFilterTools, discordTool, dcInboxAdd, DC_INBOX, tfjsSource,")
+# ---------- v22: Pandora Dee's moving day: /Jade → /Pandora, flows → rituals; old paths still resolve ----------
+rep("    return '/' + out.join('/');\n  }\n  parent(p)", "    return pandoraPath('/' + out.join('/'));\n  }\n  parent(p)")
+s = s.replace('/* =====================================================================\n   BOOT', rd('migrate.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("  await applyPendingSettings();\n", "  await applyPendingSettings();\n  await movingDay();\n")
+# BusyBox runs on its own copy of the files: there /Jade is a folder of links into /Pandora (Flows → Rituals), gone again before the copy comes back
+rep("  try { FS.mkdirTree(cwd); } catch {} FS.chdir(cwd);", """  const alias = [];
+  if (entries.some(([p]) => p === '/Pandora') && !entries.some(([p]) => p === '/Jade' || p.startsWith('/Jade/'))) {
+    try { FS.mkdir('/Jade'); for (const n of FS.readdir('/Pandora')) if (n !== '.' && n !== '..') { FS.symlink('/Pandora/' + n, '/Jade/' + n); alias.push('/Jade/' + n); if (n === 'Rituals') { FS.symlink('/Pandora/Rituals', '/Jade/Flows'); alias.push('/Jade/Flows'); } } } catch {}
+  }
+  try { FS.mkdirTree(cwd); } catch {} FS.chdir(cwd);""")
+rep("  const res = [['/', { dir: true }]];", """  for (const q of alias) { try { FS.unlink(q); } catch {} }
+  if (alias.length) { try { FS.chdir('/'); FS.rmdir('/Jade'); } catch {} }
+  const res = [['/', { dir: true }]];""")
+rep("""  for (const [p, n] of entries) {
+    seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""", """  for (let [p, n] of entries) {
+    p = pandoraPath(p); seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""")
+rep("Object.assign(window, { DC,", "Object.assign(window, { pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w').write(s)

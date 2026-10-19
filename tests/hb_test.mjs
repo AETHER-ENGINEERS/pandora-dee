@@ -57,13 +57,13 @@ await page.goto(URL_);
 await page.waitForFunction(() => /BUSYBOX|JS APPLETS/.test(document.querySelector('#txtShell')?.textContent || '') && typeof runHeartbeat === 'function', null, { timeout: 90000 });
 await page.waitForTimeout(1200);
 // ---------- heartbeat ----------
-ok(await page.evaluate(() => vfs.isFile('/Jade/HEARTBEAT.md') && heartbeatBody() === ''), 'HEARTBEAT.md seeded and counts as empty');
+ok(await page.evaluate(() => vfs.isFile('/Pandora/HEARTBEAT.md') && heartbeatBody() === ''), 'HEARTBEAT.md seeded and counts as empty');
 const acks = await page.evaluate(() => [hbIsAck('HEARTBEAT_OK'), hbIsAck('**HEARTBEAT_OK**'), hbIsAck('All quiet. HEARTBEAT_OK'), hbIsAck('NO_REPLY'), hbIsAck('Inbox has 9 items, please sort.'), hbIsAck('x'.repeat(400) + ' HEARTBEAT_OK')]);
 ok(JSON.stringify(acks) === '[true,true,true,true,false,false]', 'HEARTBEAT_OK detection ' + JSON.stringify(acks));
 let n0 = chats.length;
 await page.evaluate(() => runHeartbeat({ manual: true })); await page.waitForTimeout(300);
 ok(chats.length === n0 && /skipped/.test(await page.evaluate(() => HB.status)), 'empty checklist skips without a model call');
-await page.evaluate(() => vfs.write('/Jade/HEARTBEAT.md', '# HEARTBEAT\n<!-- hi -->\n## Check\n- [ ] If /Inbox.md has more than 2 items, remind me to sort it.\n'));
+await page.evaluate(() => vfs.write('/Pandora/HEARTBEAT.md', '# HEARTBEAT\n<!-- hi -->\n## Check\n- [ ] If /Inbox.md has more than 2 items, remind me to sort it.\n'));
 ok(await page.evaluate(() => /Inbox\.md has more/.test(heartbeatBody())), 'checklist with content is used');
 // silent OK run: pruned, back to the chat we were in
 await page.fill('#input', 'hello there'); await page.tap('#btnSend');

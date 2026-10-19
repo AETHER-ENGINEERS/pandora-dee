@@ -48,7 +48,7 @@ See [scripting](scripting.md) and [note scripts/templates](note-scripts-and-temp
 - On Android, enable background mode and appropriate notifications/battery exemptions. Device policies can still stop work.
 - Check device clock/timezone, trigger configuration, enabled state, and catch-up settings.
 - Heartbeat silently skips an effectively empty HEARTBEAT file or acknowledges with `HEARTBEAT_OK`.
-- Inspect flow run details and `/Jade/Logs/cron.log` for command/flow schedules.
+- Inspect flow run details and `/Pandora/Logs/cron.log` for command/flow schedules.
 - “Jade is busy” can mean an agent-containing flow was called during another chat turn. Launch it manually or later.
 - Expression errors/timeouts: validate JavaScript and available `$json` shape; inspect the previous step's output.
 - Continued errors produce `{error:...}` rather than the expected success object; handle that explicitly.
@@ -58,7 +58,7 @@ See [automation](automation.md).
 
 ## Integrations
 
-**MCP:** validate `/Jade/mcp.json`, streamable HTTP transport (not stdio/legacy SSE), endpoint CORS, headers/secrets, enabled state, and tool exposure. Codemode/deferred tools are intentionally not all declared directly to the model.
+**MCP:** validate `/Pandora/mcp.json`, streamable HTTP transport (not stdio/legacy SSE), endpoint CORS, headers/secrets, enabled state, and tool exposure. Codemode/deferred tools are intentionally not all declared directly to the model.
 
 **Vector:** confirm bridge process/container, reachable URL/token, dedicated bot key, owner npub, DM/channel/trigger policy, and that Jade Vault is running. The bridge can stay online without the app generating replies. Protect logs that print the token.
 

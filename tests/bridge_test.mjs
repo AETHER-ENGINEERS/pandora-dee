@@ -126,8 +126,8 @@ await E(() => { window.__notes.length = 0; });
 const chatsBefore = model.chats.length, oneBefore = model.oneShot.length;
 await E(async () => { for (const s of Sched.list) s.nextRun = Date.now() - 1000; schedTick(); await new Promise(r => setTimeout(r, 2500)); });
 ok(await read('/out/cron.md') === 'cron-ran\n', 'a due shell schedule runs its command');
-const log = await read('/Jade/Logs/cron.log') || '';
-ok(/\$ echo cron-ran/.test(log) && /exit 0/.test(log) && /flow Double: ok/.test(log) && /"doubled":8/.test(log) && /ls \/does-not-exist/.test(log) && /exit [1-9]/.test(log), 'everything goes to /Jade/Logs/cron.log: ' + log.slice(0, 300).replace(/\n/g, ' | '));
+const log = await read('/Pandora/Logs/cron.log') || '';
+ok(/\$ echo cron-ran/.test(log) && /exit 0/.test(log) && /flow Double: ok/.test(log) && /"doubled":8/.test(log) && /ls \/does-not-exist/.test(log) && /exit [1-9]/.test(log), 'everything goes to /Pandora/Logs/cron.log: ' + log.slice(0, 300).replace(/\n/g, ' | '));
 s = await E(() => Sched.list.map(s => s.lastStatus));
 ok(s[0] === 'ok' && s[1] === 'ok' && /^error: exit [1-9]/.test(s[2]), 'last status per schedule: ' + JSON.stringify(s));
 ok(await E(() => window.__notes.length === 1 && /failed \(exit/.test(window.__notes[0][0])), 'only the failure sent a notification');
@@ -146,11 +146,11 @@ await page.click(`.sched-card[data-id="${await E(() => Sched.list[0].id)}"] [dat
 ok(await read('/out/cron.md') === 'cron-ran\ncron-ran\ncron-ran\n', '"Run now" on a command schedule runs it at once');
 ok(await E(() => /\$ echo cron-ran/.test(document.querySelector('#schedList').textContent) && document.querySelector('.sched-card .sched-prompt').classList.contains('mono')), 'the Schedule tab shows the command');
 // crontab files
-await write('/Jade/crontab', '# my jobs\n0 7 * * * echo morning >> /out/m.md\n@daily flow run Double\n\n*/10 * * * 1-5 node /scripts/bridge.js\n');
+await write('/Pandora/crontab', '# my jobs\n0 7 * * * echo morning >> /out/m.md\n@daily flow run Double\n\n*/10 * * * 1-5 node /scripts/bridge.js\n');
 r = await sh('crontab /Jade/crontab'); ok(r.code === 0 && /installed 3 lines/.test(r.out) && /replaced 3/.test(r.out), 'crontab <file> installs the file (replacing what crontab installed): ' + r.out.trim());
 s = await E(() => Sched.list.map(s => [s.kind, s.cron, s.command || s.flow]));
 ok(s.length === 3 && s[0][1] === '0 7 * * *' && s[1][0] === 'flow' && s[1][1] === '0 0 * * *' && s[2][1] === '*/10 * * * 1-5', 'cron lines, @daily and flow lines: ' + JSON.stringify(s));
-await write('/Jade/crontab2', 'every day echo nope\n');
+await write('/Pandora/crontab2', 'every day echo nope\n');
 r = await sh('crontab /Jade/crontab2'); ok(r.code === 1 && /line 1/.test(r.err) && await E(() => Sched.list.length === 3), 'a bad crontab file installs nothing and says which line');
 const pid = await E(() => addSchedule({ name: 'A prompt', when: 'every day at 8am', prompt: 'Say hi' }).id);
 r = await sh(`crontab -r ${await E(() => Sched.list[0].id)}`); ok(r.code === 0 && await E(() => Sched.list.length === 3), 'crontab -r <id>');
@@ -167,7 +167,7 @@ ok(/Created schedule/.test(t) && await E(() => Sched.list.at(-1).kind === 'flow'
 t = await tool({ action: 'add', when: 'every day at 6pm', flow: 'Nope' }); ok(/no flow named/.test(t), '…and refuses an unknown flow');
 t = await tool({ action: 'list' }); ok(/\$ echo synced/.test(t) && /flow Double/.test(t), 'the tool lists them with what they run');
 await E(async () => { const s = Sched.list.find(x => x.flow === 'Double' && x.input?.x === 3); s.nextRun = Date.now() - 1; schedTick(); await new Promise(r => setTimeout(r, 1200)); });
-ok(/"doubled":6/.test(await read('/Jade/Logs/cron.log')), 'a flow schedule passes its input');
+ok(/"doubled":6/.test(await read('/Pandora/Logs/cron.log')), 'a flow schedule passes its input');
 ok(await E(() => /shell command \("command"/.test(TOOL_DEFS.find(t => t.name === 'schedule').description) && 'command' in TOOL_DEFS.find(t => t.name === 'schedule').parameters.properties), 'the schedule tool describes command and flow');
 // the Schedule tab form
 await page.click('#btnSchedNew'); await page.waitForTimeout(100);

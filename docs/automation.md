@@ -6,7 +6,7 @@
 
 ## Flow storage and execution
 
-Flows are JSON files at `/Jade/Flows/<name>.flow.json`, editable in the Flows tab or through vault files/tools. Steps execute in order. Each output becomes `$json` for the next step; the original input remains `$input`.
+Flows are JSON files at `/Pandora/Rituals/<name>.ritual.json`, editable in the Flows tab or through vault files/tools. Steps execute in order. Each output becomes `$json` for the next step; the original input remains `$input`.
 
 A model-free example that appends a capture and notifies you:
 
@@ -26,7 +26,7 @@ A model-free example that appends a capture and notifies you:
 }
 ```
 
-Save/import this JSON as `/Jade/Flows/Capture inbox.flow.json`, then run it from Flows with input `{"text":"Review the project plan"}`. Back up first when testing flows that modify important notes.
+Save/import this JSON as `/Pandora/Rituals/Capture inbox.ritual.json`, then run it from Flows with input `{"text":"Review the project plan"}`. Back up first when testing flows that modify important notes.
 
 ### Top-level fields
 
@@ -101,11 +101,11 @@ crontab -l
 crontab add 'every day at 9am' 'echo daily-check'
 ```
 
-Remove by schedule id with `crontab -r <id>`, or load a crontab file with `crontab <file>`. Prompts use Jade/model chat. Commands and flow schedules run independently of the chat loop, although individual flow steps may still need a model. Command/flow cron output goes to `/Jade/Logs/cron.log`; failures notify the user. Inspect catch-up settings rather than assuming every missed occurrence will replay. Scheduling follows device time; verify timezone and clock.
+Remove by schedule id with `crontab -r <id>`, or load a crontab file with `crontab <file>`. Prompts use Jade/model chat. Commands and flow schedules run independently of the chat loop, although individual flow steps may still need a model. Command/flow cron output goes to `/Pandora/Logs/cron.log`; failures notify the user. Inspect catch-up settings rather than assuming every missed occurrence will replay. Scheduling follows device time; verify timezone and clock.
 
 ## Heartbeat
 
-Config's Heartbeat section periodically runs instructions from `/Jade/HEARTBEAT.md` during active hours (default interval 30 minutes). Example:
+Config's Heartbeat section periodically runs instructions from `/Pandora/HEARTBEAT.md` during active hours (default interval 30 minutes). Example:
 
 ```markdown
 # Checks

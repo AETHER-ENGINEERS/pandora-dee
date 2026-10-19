@@ -101,7 +101,7 @@ Shell commands: `pandora tool <name> [json | key=value …]`, `pandora decide`, 
 
 Schedules (the Schedule tab, Pandora Dee's schedule tool, `crontab`) run a **prompt** (Pandora Dee, in a chat), a **shell command**
 or a **ritual**. Command and ritual schedules run on their own, without the model and without waiting for the chat; their
-output goes to `/Atelier/Logs/cron.log` and a failure sends a notification. Like the rest of the app, schedules fire while
+output goes to `/Pandora/Logs/cron.log` and a failure sends a notification. Like the rest of the app, schedules fire while
 the app is open (on Android, keep it in the background with Config → App → Background).
 
 ## 📜 Leaf scripts & templates
@@ -171,7 +171,7 @@ Needs Node 20+, Python 3.9+, and for the APK a JDK 17+ (no Android SDK).
 npm install
 npx playwright install chromium     # for the tests
 npm run build                       # dist/pandora-dee.html, android/proj/assets/index.html
-npm test # 27 suites, ~13 minutes
+npm test # 28 suites, ~14 minutes
 bash android/build-apk.sh           # dist/pandora-dee-<version>.apk (debug key)
 ```
 

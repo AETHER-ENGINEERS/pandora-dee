@@ -1,5 +1,6 @@
 /* =====================================================================
-   FLOWS — small n8n-style automations. A flow is a JSON file in /Jade/Flows/<name>.flow.json:
+   FLOWS (rituals) — small n8n-style automations. A ritual is a JSON file in /Pandora/Rituals/<name>.ritual.json
+   (<name>.flow.json, from Jade Vault, still loads):
      { "name", "description", "enabled", "trigger": {"type": "manual"|"schedule"|"note", "when", "path"},
        "vars": {…}, "timeout": seconds, "steps": [ step, … ] }
    Steps run in order; each one's output is $json for the next. if / switch / each hold nested steps.
@@ -8,7 +9,8 @@
    Runs: by hand (Flows tab), on a schedule, when a note changes, from the shell (flow run), from
    JavaScript (jade.flow), by Jade (flow tool), from the Schedule tab / crontab, or over the HTTP API.
    ===================================================================== */
-const FLOW_DIR = '/Jade/Flows', FLOW_EXT = '.flow.json', FLOW_MAX_STEPS = 5000;
+const FLOW_DIR = '/Pandora/Rituals', FLOW_EXT = '.ritual.json', FLOW_EXT_OLD = '.flow.json', FLOW_MAX_STEPS = 5000;
+const flowExt = p => p.endsWith(FLOW_EXT) ? FLOW_EXT : p.endsWith(FLOW_EXT_OLD) ? FLOW_EXT_OLD : '';
 // field: [key, label, kind, placeholder, required]. kinds: tpl, area, code, expr, json, bool, num, sel:<a|b>, tool, flowsel, lines
 const FLOW_TYPES = {
   tool:   { label: 'Tool', icon: '🛠', help: 'Call one of Jade\'s tools. Output: what the tool returns (text).', fields: [['tool', 'Tool', 'tool', '', true], ['args', 'Arguments (JSON; strings may use {{ }})', 'json', '{"query": "{{ $json.topic }}"}'], ['parse', 'Parse the result as JSON', 'bool']] },
@@ -31,9 +33,13 @@ const FLOW_COMMON = ['id', 'type', 'name', 'onError', 'retries', 'disabled', 'th
 
 /* ---------- storage ---------- */
 const flowSafe = n => String(n || '').trim().replace(/[\\/:*?"<>|#^\[\]]+/g, '-').replace(/\s+/g, ' ').slice(0, 80) || 'Flow';
-function flowFiles() { return [...vfs.nodes.keys()].filter(p => p.startsWith(FLOW_DIR + '/') && p.endsWith(FLOW_EXT) && vfs.isFile(p)).sort((a, b) => a.localeCompare(b)); }
+// <name>.ritual.json wins over a <name>.flow.json left beside it
+function flowFiles() {
+  const all = [...vfs.nodes.keys()].filter(p => p.startsWith(FLOW_DIR + '/') && flowExt(p) && vfs.isFile(p));
+  return all.filter(p => !(p.endsWith(FLOW_EXT_OLD) && all.includes(p.slice(0, -FLOW_EXT_OLD.length) + FLOW_EXT))).sort((a, b) => a.localeCompare(b));
+}
 function flowRead(p) {
-  const base = vfs.base(p).slice(0, -FLOW_EXT.length);
+  const base = vfs.base(p).slice(0, -flowExt(p).length);
   try { const f = JSON.parse(vfs.read(p)); if (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error('not a JSON object'); return { ...f, name: String(f.name || base), _path: p }; }
   catch (e) { return { name: base, _path: p, _bad: e.message, steps: [] }; }
 }
@@ -41,7 +47,7 @@ function flowList() { return flowFiles().map(flowRead); }
 function flowFind(name) {
   const k = String(name ?? '').trim().toLowerCase(); if (!k) return null;
   const all = flowList();
-  return all.find(f => f.name.toLowerCase() === k) || all.find(f => f._path.toLowerCase() === k || vfs.base(f._path).toLowerCase() === k || vfs.base(f._path).toLowerCase() === k + FLOW_EXT) || null;
+  return all.find(f => f.name.toLowerCase() === k) || all.find(f => f._path.toLowerCase() === k || vfs.base(f._path).toLowerCase() === k || vfs.base(f._path).toLowerCase() === k + FLOW_EXT || vfs.base(f._path).toLowerCase() === k + FLOW_EXT_OLD) || null;
 }
 function flowWalk(steps, fn, path = 'steps') {
   (Array.isArray(steps) ? steps : []).forEach((st, i) => {
@@ -485,7 +491,7 @@ const FLOW_EXAMPLES = [
       { type: 'if', name: 'Urgent?', condition: '/urgent/i.test($json)', then: [{ type: 'note', name: 'File it', action: 'append', path: '/Urgent.md', content: '- [ ] {{ $item }}' }] }] },
     { type: 'notify', name: 'Done', title: 'Inbox triaged', body: '{{ $node["Each line"].length }} items checked' }] },
   { name: 'Daily digest', description: 'Every evening: what changed today, summarised into a note', trigger: { type: 'schedule', when: 'every day at 18:00' }, enabled: false, steps: [
-    { type: 'js', name: 'Changed today', code: "const out = [];\nfor (const f of fs.readdirSync('/', { recursive: true })) {\n  const p = '/' + f;\n  if (p.endsWith('.md') && !p.startsWith('/Jade/') && fs.statSync(p).mtimeMs > Date.now() - 864e5) out.push(p);\n}\nreturn out;" },
+    { type: 'js', name: 'Changed today', code: "const out = [];\nfor (const f of fs.readdirSync('/', { recursive: true })) {\n  const p = '/' + f;\n  if (p.endsWith('.md') && !p.startsWith('/Pandora/') && fs.statSync(p).mtimeMs > Date.now() - 864e5) out.push(p);\n}\nreturn out;" },
     { type: 'if', name: 'Anything?', condition: '$json.length > 0', else: [{ type: 'stop', value: 'nothing changed today' }] },
     { type: 'llm', name: 'Summary', prompt: 'In 3-6 bullets, what did I work on today? These notes changed:\n{{ $json.join("\\n") }}' },
     { type: 'note', name: 'Save', action: 'append', path: '/Journal/Digest.md', content: '## {{ $today }}\n{{ $json }}\n' }] },

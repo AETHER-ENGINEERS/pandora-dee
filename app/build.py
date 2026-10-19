@@ -1366,18 +1366,18 @@ rep("  if (last && sessions.find(s => s.id === last)) await openSession(last); e
 # ================= v16: Vector messenger bot =================
 s = s.replace('/* =====================================================================\n   BOOT', rd('vector.js') + '\n/* =====================================================================\n   BOOT', 1)
 VEC_HTML = """      <section class="flex flex-col gap-3" id="vecSection">
-        <div class="pane-h">Vector messenger (Jade as a bot)</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Jade lives on <span class="text-cy">Vector</span> as a bot account: she answers DMs and channels, reacts, sends files, sees images, plays Mini Apps, joins and leaves communities, and takes messages for you. Vector itself runs in the <b>Jade Vector bridge</b> on a computer that stays on (Mac, Linux or Docker: see the jade-vector folder), and this app connects to it like it does to Ollama.</p>
-        <label class="flex items-center gap-2 text-sm" for="sVecOn"><input type="checkbox" id="sVecOn" class="accent-emerald-400 w-4 h-4"> Run Jade on Vector</label>
+        <div class="pane-h">Vector messenger (Pandora as a bot)</div>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Pandora lives on <span class="text-cy">Vector</span> as a bot account: she answers DMs and channels, reacts, sends files, sees images, plays Mini Apps, joins and leaves communities, and takes messages for you. Vector itself runs in the <b>Pandora's Vector bridge</b> on a computer that stays on (Mac, Linux or Docker: see the pandora-vector folder), and this app connects to it like it does to Ollama.</p>
+        <label class="flex items-center gap-2 text-sm" for="sVecOn"><input type="checkbox" id="sVecOn" class="accent-emerald-400 w-4 h-4"> Run Pandora on Vector</label>
         <div id="vecStatus" class="text-sm"></div>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
           <div><label class="lbl" for="sVecUrl">Bridge URL</label><input id="sVecUrl" class="field mt-1" placeholder="http://192.168.1.20:8787/mcp" autocomplete="off" spellcheck="false"></div>
           <div><label class="lbl" for="sVecToken">Bridge token</label><input id="sVecToken" type="password" class="field mt-1" placeholder="printed by setup.sh" autocomplete="off"></div>
-          <div><label class="lbl" for="sVecOwner">Owner npub (absolute power)</label><input id="sVecOwner" class="field mt-1" placeholder="npub1… (your own Vector account)" autocomplete="off" spellcheck="false"></div>
-          <div><label class="lbl" for="sVecOwnerName">Your name (what Jade calls you to others)</label><input id="sVecOwnerName" class="field mt-1" placeholder="e.g. Sam"></div>
-          <div><label class="lbl" for="sVecAdmins">Admin whitelist (npubs)</label><textarea id="sVecAdmins" class="field mt-1" rows="2" placeholder="one per line: they can have Jade join, leave, invite, moderate and message people on Vector" spellcheck="false"></textarea></div>
-          <div><label class="lbl" for="sVecChannels">Channel whitelist</label><textarea id="sVecChannels" class="field mt-1" rows="2" placeholder="channel ids, community ids or names where Jade takes part" spellcheck="false"></textarea></div>
-          <div><label class="lbl" for="sVecDm">Who can DM her</label><select id="sVecDm" class="field mt-1"><option value="anyone">Anyone (general chat)</option><option value="known">Only owner + admins</option><option value="owner">Only me</option></select></div>
+          <div><label class="lbl" for="sVecOwner">Partner npub (absolute power)</label><input id="sVecOwner" class="field mt-1" placeholder="npub1… (your own Vector account)" autocomplete="off" spellcheck="false"></div>
+          <div><label class="lbl" for="sVecOwnerName">Your name (what Pandora calls you to others)</label><input id="sVecOwnerName" class="field mt-1" placeholder="e.g. Sam"></div>
+          <div><label class="lbl" for="sVecAdmins">Admin whitelist (npubs)</label><textarea id="sVecAdmins" class="field mt-1" rows="2" placeholder="one per line: they can have Pandora join, leave, invite, moderate and message people on Vector" spellcheck="false"></textarea></div>
+          <div><label class="lbl" for="sVecChannels">Channel whitelist</label><textarea id="sVecChannels" class="field mt-1" rows="2" placeholder="channel ids, community ids or names where Pandora takes part" spellcheck="false"></textarea></div>
+          <div><label class="lbl" for="sVecDm">Who can DM her</label><select id="sVecDm" class="field mt-1"><option value="anyone">Anyone (general chat)</option><option value="known">Only her Partner + admins</option><option value="owner">Only me</option></select></div>
           <div><label class="lbl" for="sVecTrigger">In channels she answers</label><select id="sVecTrigger" class="field mt-1"><option value="mention">When named or replied to</option><option value="all">Every message</option></select></div>
           <div><label class="lbl" for="sVecWords">Trigger words</label><input id="sVecWords" class="field mt-1" placeholder="jade, @jade, hey jade"></div>
           <div><label class="lbl" for="sVecNotify">Messages for you</label><select id="sVecNotify" class="field mt-1"><option value="inbox">Go to the inbox</option><option value="urgent">Inbox; urgent ones right away</option><option value="now">Tell me right away</option></select></div>
@@ -1386,33 +1386,33 @@ VEC_HTML = """      <section class="flex flex-col gap-3" id="vecSection">
         <label class="flex items-center gap-2 text-sm" for="sVecImages"><input type="checkbox" id="sVecImages" class="accent-emerald-400 w-4 h-4"> Let her see images people send</label>
         <label class="flex items-center gap-2 text-sm" for="sVecXdc"><input type="checkbox" id="sVecXdc" class="accent-emerald-400 w-4 h-4"> Wake her when a Mini App she joined gets new moves</label>
         <div class="flex gap-2 flex-wrap"><button type="button" class="btn btn-solid" id="btnVecTest">Connect</button><button type="button" class="btn" id="btnVecInbox">Open inbox</button><button type="button" class="btn" id="btnVecCopy">Copy her npub</button></div>
-        <p class="hint leading-relaxed">You (the owner) get the same Jade as in this app, with every tool. Admins get Vector powers but never your notes, memory or files. Everyone else can chat, play Mini Apps and leave you messages. Each Vector chat has its own chat here (💬). Keep the app running for her to answer: Config → Background mode keeps it alive on Android.</p>
+        <p class="hint leading-relaxed">You (her Partner) get the same Pandora as in this app, with every tool. Admins get Vector powers but never your leaves, memory or files. Everyone else can chat, play Mini Apps and leave you messages. Each Vector chat has its own chat here (💬). Keep the app running for her to answer: Config → Background mode keeps it alive on Android.</p>
       </section>
 
 """
 rep("""      <section class="flex flex-col gap-3" id="secretSection">""", VEC_HTML + """      <section class="flex flex-col gap-3" id="secretSection">""")
 DC_HTML = """      <section class="flex flex-col gap-3" id="dcSection">
-        <div class="pane-h">Discord (Jade as a bot)</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Jade lives on <span class="text-cy">Discord</span> as a bot: she answers DMs and channels, reacts, sends files, sees images, and takes messages for you. It works at the same time as Vector. The bot runs in the <b>Jade Discord bridge</b> (<span class="mono">jade-discord/</span>, built on discord.py) on a computer you keep on; paste its URL and token here. Create the bot at discord.com/developers/applications → <b>Bot</b>, give its token to the bridge (<span class="mono">--set-token</span>), and turn on <b>Message Content Intent</b>. Then use <b>Copy invite link</b> and open it to add her to your server.</p>
-        <label class="flex items-center gap-2 text-sm" for="sDcOn"><input type="checkbox" id="sDcOn" class="accent-emerald-400 w-4 h-4"> Run Jade on Discord</label>
+        <div class="pane-h">Discord (Pandora as a bot)</div>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Pandora lives on <span class="text-cy">Discord</span> as a bot: she answers DMs and channels, reacts, sends files, sees images, and takes messages for you. It works at the same time as Vector. The bot runs in the <b>Pandora's Discord bridge</b> (<span class="mono">pandora-discord/</span>, built on discord.py) on a computer you keep on; paste its URL and token here. Create the bot at discord.com/developers/applications → <b>Bot</b>, give its token to the bridge (<span class="mono">--set-token</span>), and turn on <b>Message Content Intent</b>. Then use <b>Copy invite link</b> and open it to add her to your server.</p>
+        <label class="flex items-center gap-2 text-sm" for="sDcOn"><input type="checkbox" id="sDcOn" class="accent-emerald-400 w-4 h-4"> Run Pandora on Discord</label>
         <div id="dcStatus" class="text-sm"></div>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
           <div><label class="lbl" for="sDcUrl">Bridge URL</label><input id="sDcUrl" class="field mt-1" placeholder="http://192.168.1.20:8788/mcp" autocomplete="off" spellcheck="false"></div>
           <div><label class="lbl" for="sDcToken">Bridge token</label><input id="sDcToken" type="password" class="field mt-1" placeholder="printed by the bridge (--print-token)" autocomplete="off" spellcheck="false"></div>
           <div><label class="lbl" for="sDcPoll">Check for messages every (seconds)</label><input id="sDcPoll" type="number" min="1" max="120" class="field mt-1" placeholder="3"></div>
-          <div><label class="lbl" for="sDcOwner">Owner user id (absolute power)</label><input id="sDcOwner" class="field mt-1" placeholder="your Discord user id (Developer Mode → Copy User ID)" autocomplete="off" spellcheck="false"></div>
-          <div><label class="lbl" for="sDcOwnerName">Your name (what Jade calls you to others)</label><input id="sDcOwnerName" class="field mt-1" placeholder="e.g. Sam"></div>
+          <div><label class="lbl" for="sDcOwner">Partner user id (absolute power)</label><input id="sDcOwner" class="field mt-1" placeholder="your Discord user id (Developer Mode → Copy User ID)" autocomplete="off" spellcheck="false"></div>
+          <div><label class="lbl" for="sDcOwnerName">Your name (what Pandora calls you to others)</label><input id="sDcOwnerName" class="field mt-1" placeholder="e.g. Sam"></div>
           <div><label class="lbl" for="sDcArchiveName">What you call the archive (optional)</label><input id="sDcArchiveName" class="field mt-1" placeholder="e.g. the Library"></div>
-          <div><label class="lbl" for="sDcAdmins">Admin whitelist (user ids)</label><textarea id="sDcAdmins" class="field mt-1" rows="2" placeholder="one per line: they can have Jade message people, kick, ban and leave servers" spellcheck="false"></textarea></div>
-          <div><label class="lbl" for="sDcChannels">Channel whitelist</label><textarea id="sDcChannels" class="field mt-1" rows="2" placeholder="channel ids, server ids or names, #channel-names where Jade takes part" spellcheck="false"></textarea></div>
-          <div><label class="lbl" for="sDcDm">Who can DM her</label><select id="sDcDm" class="field mt-1"><option value="anyone">Anyone (general chat)</option><option value="known">Only owner + admins</option><option value="owner">Only me</option></select></div>
+          <div><label class="lbl" for="sDcAdmins">Admin whitelist (user ids)</label><textarea id="sDcAdmins" class="field mt-1" rows="2" placeholder="one per line: they can have Pandora message people, kick, ban and leave servers" spellcheck="false"></textarea></div>
+          <div><label class="lbl" for="sDcChannels">Channel whitelist</label><textarea id="sDcChannels" class="field mt-1" rows="2" placeholder="channel ids, server ids or names, #channel-names where Pandora takes part" spellcheck="false"></textarea></div>
+          <div><label class="lbl" for="sDcDm">Who can DM her</label><select id="sDcDm" class="field mt-1"><option value="anyone">Anyone (general chat)</option><option value="known">Only her Partner + admins</option><option value="owner">Only me</option></select></div>
           <div><label class="lbl" for="sDcTrigger">In channels she answers</label><select id="sDcTrigger" class="field mt-1"><option value="mention">When @mentioned, named or replied to</option><option value="all">Every message</option></select></div>
           <div><label class="lbl" for="sDcWords">Trigger words</label><input id="sDcWords" class="field mt-1" placeholder="jade, hey jade"></div>
           <div><label class="lbl" for="sDcNotify">Messages for you</label><select id="sDcNotify" class="field mt-1"><option value="inbox">Go to the inbox</option><option value="urgent">Inbox; urgent ones right away</option><option value="now">Tell me right away</option></select></div>
         </div>
         <label class="flex items-center gap-2 text-sm" for="sDcImages"><input type="checkbox" id="sDcImages" class="accent-emerald-400 w-4 h-4"> Let her see images people send</label>
         <div class="flex gap-2 flex-wrap"><button type="button" class="btn btn-solid" id="btnDcTest">Connect</button><button type="button" class="btn" id="btnDcInbox">Open inbox</button><button type="button" class="btn" id="btnDcInvite">Copy invite link</button></div>
-        <p class="hint leading-relaxed">You (the owner) get the same Jade as in this app, with every tool. Admins get Discord powers but never your notes, memory or files. Everyone else can chat and leave you messages. Each Discord chat has its own chat here (🎮). Jade never pings @everyone or roles, and ignores other bots. Vector and Discord share one Jade: she answers one conversation at a time. Keep the app running for her to answer: Config → Background mode keeps it alive on Android.</p>
+        <p class="hint leading-relaxed">You (her Partner) get the same Pandora as in this app, with every tool. Admins get Discord powers but never your leaves, memory or files. Everyone else can chat and leave you messages. Each Discord chat has its own chat here (🎮). Jade never pings @everyone or roles, and ignores other bots. Vector and Discord share one Jade: she answers one conversation at a time. Keep the app running for her to answer: Config → Background mode keeps it alive on Android.</p>
       </section>
 
 """
@@ -1444,7 +1444,7 @@ rep("async function openSession(id) { if (cur?.messages?.length && cur.id !== id
 rep("const DEFAULTS = { provider: 'local',", "const DEFAULTS = { apiOn: false, apiPort: 8787, apiLan: false, apiToken: '', provider: 'local',")
 API_HTML = r"""      <section class="flex flex-col gap-3" id="apiSection">
         <div class="pane-h">API endpoint</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Let other apps and scripts talk to Jade. They send a GET request and get JSON back. A message sent this way goes through the normal chat: it appears in the app and Jade answers there.</p>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Let other apps and scripts talk to Pandora. They send a GET request and get JSON back. A message sent this way goes through the normal chat: it appears in the app and Pandora answers there.</p>
         <div id="apiNative" class="flex flex-col gap-3">
           <label class="flex items-center gap-2 text-sm" for="sApiOn"><input type="checkbox" id="sApiOn" class="accent-emerald-400 w-4 h-4"> Enable the API (stays running in the background while on)</label>
           <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
@@ -1505,7 +1505,7 @@ TABS = [('model', 'Model'), ('memory', 'Memory'), ('tools', 'Tools'), ('connect'
 TAB_OF = {'Model provider': 'model', 'Web search': 'model', 'Ollaya decisions': 'model',
           'Persona, instructions & skills': 'memory', 'Long-term memory': 'memory', 'History compaction': 'memory', 'Trajectory log (fine-tuning data)': 'memory',
           'MCP servers': 'tools', 'Secrets (API keys for Jade\'s HTTP requests)': 'tools', 'BusyBox WASM': 'tools',
-          'API endpoint': 'connect', 'Vector messenger (Jade as a bot)': 'connect', 'Discord (Jade as a bot)': 'connect',
+          'API endpoint': 'connect', 'Vector messenger (Pandora as a bot)': 'connect', 'Discord (Pandora as a bot)': 'connect',
           'Heartbeat': 'app', 'Background': 'app', 'Jade companion': 'app', 'Backup': 'app', 'Danger zone': 'app'}
 a = s.index('<div class="modal-bg" id="settings" hidden>'); b = s.index('<div class="flex justify-end gap-2"><button class="btn" id="btnCancel">', a)
 blk = s[a:b]; seen = set()

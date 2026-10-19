@@ -122,7 +122,7 @@ async function runNode(c) {
 function jadeToolList() { return activeTools().map(t => ({ name: t.function.name, description: String(t.function.description || '').slice(0, 240) })); }
 async function jadeBridge(op, a, ctx = {}) {
   if (ctx.off) throw new Error(`jade.${op} is not available here (${ctx.off})`);
-  if (ctx.allow && !ctx.allow.has(op)) throw new Error(ctx.allowWhy || `jade.${op} is off for note scripts. Turn on "Let note scripts call Jade's tools" in Config → Tools → Note scripts & templates`);
+  if (ctx.allow && !ctx.allow.has(op)) throw new Error(ctx.allowWhy || `pandora.${op} is off for leaf scripts. Turn on "Let leaf scripts and templates call Pandora's tools" in Config → Tools → Leaf scripts & templates`);
   switch (op) {
     case 'tool': {
       const name = String(a.name || '');
@@ -144,7 +144,7 @@ async function jadeBridge(op, a, ctx = {}) {
     }
     case 'flows': return flowList().filter(f => !f._bad).map(f => ({ name: f.name, description: f.description || '', enabled: f.enabled !== false, trigger: flowTriggerText(f) }));
     case 'shell': { const r = await runShellLine(a.command, { timeoutMs: 120000, echo: 'script' }); return { code: r.code, stdout: r.out, stderr: r.err }; }
-    case 'notify': { const t = String(a.title || 'Jade'), b = String(a.body || ''); schedNotify(t, b); toast(esc(t) + (b ? ': ' + esc(b.slice(0, 140)) : ''), 'ok'); return true; }
+    case 'notify': { const t = String(a.title || 'Pandora'), b = String(a.body || ''); schedNotify(t, b); toast(esc(t) + (b ? ': ' + esc(b.slice(0, 140)) : ''), 'ok'); return true; }
     case 'kv': return await kvOp(a);
     case 'ui.prompt': if (!ctx.ui) throw new Error('jade.prompt / tp.system.prompt only work in a template you insert (nobody is there to answer here)'); return await jvDialog({ title: 'Template', message: a.message, def: a.def });
     case 'ui.suggest': {
@@ -237,7 +237,7 @@ function jvDialog({ title, message = '', def = '', items = null, placeholder = '
   return new Promise(resolve => {
     const bg = document.createElement('div'); bg.className = 'modal-bg jv-dlg';
     bg.innerHTML = `<div class="frame cut w-full" style="max-width:460px;height:auto"><div class="inner p-4 flex flex-col gap-3">
-      <div class="pane-h">${esc(title || 'Jade')}</div>${message ? `<div class="text-sm leading-relaxed">${esc(message)}</div>` : ''}
+      <div class="pane-h">${esc(title || 'Pandora')}</div>${message ? `<div class="text-sm leading-relaxed">${esc(message)}</div>` : ''}
       ${items ? `<div class="flex flex-col gap-1" style="max-height:55vh;overflow:auto">${items.map((t, i) => `<button type="button" class="btn jv-dlg-item" data-i="${i}">${esc(t)}</button>`).join('') || '<div class="hint">Nothing to choose from.</div>'}</div>` : `<input class="field" autocomplete="off" value="${esc(def)}" placeholder="${esc(placeholder)}">`}
       <div class="flex justify-end gap-2"><button type="button" class="btn" data-x="cancel">Cancel</button>${items ? '' : '<button type="button" class="btn btn-solid cut cut-sm" data-x="ok">OK</button>'}</div></div></div>`;
     const done = v => { bg.remove(); resolve(v); };

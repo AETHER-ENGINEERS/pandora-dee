@@ -32,7 +32,7 @@ await page.route('**/*', async route => {
   if (url === 'http://localhost:11434/api/tags') return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'qwen3:8b' }] }) });
   if (url === 'http://localhost:11434/api/chat') {
     const body = JSON.parse(req.postData());
-    if (/You keep Jade's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
+    if (/You keep Pandora's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
     const tools = body.tools.map(t => t.function.name);
     const tmsgs = body.messages.filter(m => m.role === 'tool'); const n = tmsgs.length;
     sentUser0 = (body.messages.find(m => m.role === 'user' && !m.content.startsWith('[Summary')) || {}).content || ''; sentUser0 = sentUser0.replace(/^\[\w{3} [^\]]+\] /, '');
@@ -265,7 +265,7 @@ ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYS
 await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
 ok(/^You are Jade, the keeper/.test(sp) && /Be concise/.test(sp), 'the stock soul keeps the notes-keeper intro');
 const sp3 = await page.evaluate(() => { const o = vfs.read('/Pandora/SOUL.md'); vfs.write('/Pandora/SOUL.md', '---\nname: Pandora Dee\n---\n# SOUL\nI keep the company house in order.'); const r = systemPrompt(); vfs.write('/Pandora/SOUL.md', o); return r; });
-ok(/^You are Pandora Dee\. You live in Jade Vault/.test(sp3) && /as an equal/.test(sp3) && !/keeper of the user's personal knowledge vault|Be concise/.test(sp3) && /company house/.test(sp3) && /Vault conventions:/.test(sp3), 'a soul of their own leads: its name, no notes-assistant intro: ' + JSON.stringify(sp3.slice(0, 60)));
+ok(/^You are Pandora Dee\. You live in the Atelier, a browser app grown from Jade Vault: its leaves/.test(sp3) && /speak the Atelier's language: the vault is the Atelier, a note is a leaf/.test(sp3) && /notes_search and the rest\) and paths stay as they are/.test(sp3) && /as an equal/.test(sp3) && !/keeper of the user's personal knowledge vault|Be concise/.test(sp3) && /company house/.test(sp3) && /Vault conventions:/.test(sp3), 'a soul of their own leads: its name, no notes-assistant intro: ' + JSON.stringify(sp3.slice(0, 60)));
 // ---- v3: skills ----
 const sk = await page.evaluate(async () => { const t = async (n, a) => { try { return await runTool(n, a, null); } catch (e) { return 'ERR ' + e.message; } };
   return { n: listSkills().length, tool: await t('skill', { name: 'Daily Review' }), bad: await t('skill', { name: 'nope' }),

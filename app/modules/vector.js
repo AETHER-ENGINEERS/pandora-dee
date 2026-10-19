@@ -162,7 +162,7 @@ function vecInboxAdd({ from, chat, text, note, urgent }) {
   return line;
 }
 async function vecTellOwner(text, urgent) {
-  schedNotify(urgent ? '⚡ Jade (Vector)' : 'Jade (Vector)', text.slice(0, 200));
+  schedNotify(urgent ? '⚡ Jade (Vector)' : 'Pandora (Vector)', text.slice(0, 200));
   toast(esc(text.slice(0, 160)), urgent ? 'err' : 'ok');
   if (S.vecOwner && VEC.client && cur?.vec?.chat_id !== S.vecOwner) { try { await vcall('send_message', { chat_id: S.vecOwner, content: (urgent ? '⚡ ' : '') + text }); return true; } catch {} }
   return false;

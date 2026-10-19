@@ -96,8 +96,8 @@ async function runHeartbeat({ manual = false } = {}) {
     } else {
       const clean = reply.replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (m, a, b) => b || a).replace(/[`*#_>$]/g, '').replace(/\s+/g, ' ').trim();
       hbSetStatus('alert: ' + clean.slice(0, 80));
-      schedNotify('♥ Jade', clean.slice(0, 200)); toast('♥ Heartbeat: ' + esc(clean.slice(0, 140)), 'ok');
-      if (Jade.ready) jadeBubble(clean.slice(0, 160), 'Jade', 8000);
+      schedNotify('♥ Pandora', clean.slice(0, 200)); toast('♥ Heartbeat: ' + esc(clean.slice(0, 140)), 'ok');
+      if (Jade.ready) jadeBubble(clean.slice(0, 160), 'Pandora', 8000);
     }
   } catch (e) { hbSetStatus('error: ' + (e.message || e)); }
   finally { HB.running = false; renderSessions(); renderHbStatus(); }

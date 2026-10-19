@@ -33,8 +33,8 @@ rep("localStorage.getItem('pinet:' + k)", "localStorage.getItem('jvault:' + k)")
 rep("localStorage.setItem('pinet:' + k,", "localStorage.setItem('jvault:' + k,")
 rep("indexedDB.open('pi-netrunner', 1)", "indexedDB.open('jade-vault', 1)")
 rep("c.o(`Pi Netrunner shell — ", "c.o(`Jade Vault shell — ")
-rep("<span>π Netrunner</span>", "<span>◆ Jade</span>")
-rep("out.push('## Netrunner', '', m.content, '')", "out.push('## Jade', '', m.content, '')")
+rep("<span>π Netrunner</span>", "<span>◆ Pandora</span>")
+rep("out.push('## Netrunner', '', m.content, '')", "out.push('## Pandora', '', m.content, '')")
 rep('placeholder="Read TODO.md and summarise what is left, then suggest the next step."', 'placeholder="Read Inbox.md and file each item into its own linked note."')
 
 # ---------- Jade's gemstone color themes ----------
@@ -329,7 +329,7 @@ rep('<div class="jade-label"><span class="dot busy" id="jadeDot"></span><span cl
 rep('<div class="pane-h">Jade companion</div>\n        <div class="grid gap-3"', '<div class="pane-h">Jade companion</div>\n        <div><div class="lbl">Jade\'s gemstone theme</div><p class="hint leading-relaxed mt-1">Choose a color for Jade\'s outfit accents and the app highlights.</p><div class="gem-theme-grid mt-2" id="jadeThemePicker" role="group" aria-label="Choose Jade\'s gemstone theme"></div></div>\n        <div class="grid gap-3"')
 rep("""<div class="gem-theme-grid mt-2" id="jadeThemePicker" role="group" aria-label="Choose Jade's gemstone theme"></div></div>""", """<div class="gem-theme-grid mt-2" id="jadeThemePicker" role="group" aria-label="Choose Jade's gemstone theme"></div>
           <div class="theme-custom-controls mt-2" id="jadeSpectrumControls" hidden><div class="theme-color-fields"><label class="theme-color-field" for="jadeSpectrumColor"><span class="lbl">Spectrum color</span><input type="color" id="jadeSpectrumColor" class="theme-color-input" value="#bd72f3" aria-describedby="jadeSpectrumHint"></label></div><p class="hint mt-2" id="jadeSpectrumHint">Choose any hue with the full spectrum color picker.</p></div>
-          <div class="theme-custom-controls mt-2" id="jadeGradientControls" hidden><div class="theme-color-fields"><label class="theme-color-field" for="jadeGradientStart"><span class="lbl">Gradient start</span><input type="color" id="jadeGradientStart" class="theme-color-input" value="#f34b68"></label><label class="theme-color-field" for="jadeGradientEnd"><span class="lbl">Gradient end</span><input type="color" id="jadeGradientEnd" class="theme-color-input" value="#62a4ff"></label><div><label class="lbl" for="jadeGradientDirection">Direction</label><select id="jadeGradientDirection" class="field mt-1"><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option><option value="diagonal">Diagonal</option></select></div></div><p class="hint mt-2">Blend Jade's accents between your two colors.</p></div><div class="jade-appearance-panel mt-3"><div class="lbl">Customize Jade's appearance</div><p class="hint leading-relaxed mt-1">Choose independent colors for hair, clothes, stockings, boots, and skin.</p><div id="jadeAppearancePicker" class="jade-appearance-grid mt-2"></div></div></div>""")
+          <div class="theme-custom-controls mt-2" id="jadeGradientControls" hidden><div class="theme-color-fields"><label class="theme-color-field" for="jadeGradientStart"><span class="lbl">Gradient start</span><input type="color" id="jadeGradientStart" class="theme-color-input" value="#f34b68"></label><label class="theme-color-field" for="jadeGradientEnd"><span class="lbl">Gradient end</span><input type="color" id="jadeGradientEnd" class="theme-color-input" value="#62a4ff"></label><div><label class="lbl" for="jadeGradientDirection">Direction</label><select id="jadeGradientDirection" class="field mt-1"><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option><option value="diagonal">Diagonal</option></select></div></div><p class="hint mt-2">Blend Pandora's accents between your two colors.</p></div><div class="jade-appearance-panel mt-3"><div class="lbl">Customize Jade's appearance</div><p class="hint leading-relaxed mt-1">Choose independent colors for hair, clothes, stockings, boots, and skin.</p><div id="jadeAppearancePicker" class="jade-appearance-grid mt-2"></div></div></div>""")
 NOTES_MARKUP = r'''<!-- NOTES (vault) -->
     <section class="m-screen" data-panel="files" hidden>
       <div class="m-sub">
@@ -772,7 +772,7 @@ rep("${steer.system || `You are Jade, the keeper", "${steer.system || (steer.own
 rep("connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`}\n\nVault conventions:", "connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`)}\n\nVault conventions:")
 rep("- Be concise. When finished, say which notes changed, as [[links]].", "- ${steer.own ? 'Talk the way your persona does, and only offer help when it is wanted, as an equal would. When you change notes' : 'Be concise. When finished'}, say which notes changed, as [[links]].")
 # slash commands
-rep("  if (cmd === 'config') return openSettings();", """  if (cmd === 'skills') { const all = listSkills(); toast(all.length ? all.map(x => `<b>/skill:${esc(x.name)}</b>${x.off ? ' (off)' : ''}`).join(' · ') : 'No skills yet. Ask Jade to create one.'); return; }
+rep("  if (cmd === 'config') return openSettings();", """  if (cmd === 'skills') { const all = listSkills(); toast(all.length ? all.map(x => `<b>/skill:${esc(x.name)}</b>${x.off ? ' (off)' : ''}`).join(' · ') : 'No skills yet. Ask Pandora to create one.'); return; }
   if (cmd === 'soul') { ensureSteering(); openFile(SOUL_PATH, { mode: 'edit' }); return; }
   if (cmd === 'agents') { ensureSteering(); openFile(agentsFiles()[0] || AGENTS_PATH, { mode: 'edit' }); return; }
   if (cmd === 'config') return openSettings();""")
@@ -903,7 +903,7 @@ rep("""      <section class="flex flex-col gap-3">
         <div><label class="lbl" for="sBgMode">Keep Jade running when the app is in the background</label><select id="sBgMode" class="field mt-1"><option value="agent">While she is working (recommended)</option><option value="always">Always while the app is open (keeps schedules firing)</option><option value="off">Off</option></select></div>
         <label class="flex items-center gap-2 text-sm" for="sBgNotify"><input type="checkbox" id="sBgNotify" class="accent-emerald-400 w-4 h-4"> Notify me when a run finishes in the background</label>
         <div id="bgNative" class="flex flex-col gap-2"><div class="text-sm flex items-center gap-2" id="bgBattery"></div><div><button type="button" class="btn btn-ghost" id="btnBattery">Allow unrestricted battery</button></div><p class="hint leading-relaxed">The app shows a small notification while it keeps Jade alive. Android needs that to let her finish work with the screen off.</p></div>
-        <p class="hint leading-relaxed" id="bgWeb">In a browser tab, Jade keeps working while the tab stays open, but the browser may slow it down in the background. Install the Android app for real background runs.</p>
+        <p class="hint leading-relaxed" id="bgWeb">In a browser tab, Pandora keeps working while the tab stays open, but the browser may slow it down in the background. Install the Android app for real background runs.</p>
       </section>
 
       <section class="flex flex-col gap-3">
@@ -1300,7 +1300,7 @@ APPS_HTML = """    <!-- APPS (webxdc) -->
         <div class="flex items-center justify-between gap-2"><div class="pane-h">Apps</div><button class="btn btn-solid cut cut-sm" id="btnAppInstall">+ Install .xdc</button></div>
         <input type="file" id="xdcPick" accept=".xdc,application/x-webxdc,application/zip" multiple hidden>
         <div id="appGrid" class="app-grid"></div>
-        <div id="appsEmpty" class="hint leading-relaxed">No apps yet. Webxdc apps are small offline apps (games, polls, checklists, editors) in a single <b>.xdc</b> file: get them from <span class="text-cy">webxdc.org/apps</span> and install them here. Jade can use them with you: she reads what happens in an app and can send her own moves, and she can build new apps in the vault and install them.</div>
+        <div id="appsEmpty" class="hint leading-relaxed">No apps yet. Webxdc apps are small offline apps (games, polls, checklists, editors) in a single <b>.xdc</b> file: get them from <span class="text-cy">webxdc.org/apps</span> and install them here. Pandora can use them with you: she reads what happens in an app and can send her own moves, and she can build new apps in the vault and install them.</div>
       </div>
     </section>
 
@@ -1426,7 +1426,7 @@ rep("const systemPrompt = () => { const vi = vaultIndex();", "const systemPrompt
 rep("- web_search / web_fetch: look things up on the web\\n", "- web_search / web_fetch: look things up on the web\\n${S.vecOn ? `- vector: you are also a bot on Vector messenger${VEC.npub ? ' (' + VEC.npub + ')' : ''}: message people or channels, reply, react, send files from the vault, download what people send, read chats, join or leave communities, invite, moderate, play Mini Apps. Use it whenever the user asks you to message, send or share something on Vector.\\n- notify_owner: file a message in the user's Vector inbox (or tell them at once, by their setting)\\n` : ''}")
 rep("const SECRET_KEYS = ['ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'secrets'];", "const SECRET_KEYS = ['ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'secrets', 'vecToken'];")
 rep("'secrets', 'vecToken'];", "'secrets', 'vecToken', 'aicKey'];")
-rep("  const want = S.bgMode === 'always' || (S.bgMode !== 'off' && running);\n  const t = text || (running ? 'Jade is working…' :", "  const vecOnline = typeof VEC !== 'undefined' && S.vecOn && VEC.connected;\n  const want = S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));\n  const t = text || (running ? 'Jade is working…' : vecOnline ? 'Jade is online on Vector' :")
+rep("  const want = S.bgMode === 'always' || (S.bgMode !== 'off' && running);\n  const t = text || (running ? 'Pandora is working…' :", "  const vecOnline = typeof VEC !== 'undefined' && S.vecOn && VEC.connected;\n  const want = S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));\n  const t = text || (running ? 'Pandora is working…' : vecOnline ? 'Pandora is online on Vector' :")
 rep("  if (!document.hidden || !S.bgNotify || !cur) return;", "  if (!document.hidden || !S.bgNotify || !cur || cur.vec) return;")
 rep("  if (running || compacting) { setTimeout(xdcPump, 1500); return; }", "  if (running || compacting || (typeof VEC !== 'undefined' && VEC.busy)) { setTimeout(xdcPump, 1500); return; }")
 rep("  if (cmd === 'context' || cmd === 'ctx') {", "  if (cmd === 'inbox') { if (!vfs.isFile(VEC_INBOX)) vecInboxAdd({ from: '', chat: '', text: 'Inbox created.' }); openFile(VEC_INBOX, { mode: 'read' }); return; }\n  if (cmd === 'vector') { openSettings(); setTimeout(() => $('#vecSection').scrollIntoView({ block: 'start' }), 60); return; }\n  if (cmd === 'context' || cmd === 'ctx') {")
@@ -1493,7 +1493,7 @@ rep("  renderSkillsSettings(); renderBgSettings();", "  renderSkillsSettings(); 
 rep("bgMode: $('#sBgMode').value, bgNotify: $('#sBgNotify').checked });", "bgMode: $('#sBgMode').value, bgNotify: $('#sBgNotify').checked, ...apiReadFields() });")
 rep("  saveSettings(); bgSync(); setVoice($('#sJadeVoice').checked);", "  saveSettings(); apiApply(); bgSync(); setVoice($('#sJadeVoice').checked);")
 rep("  const want = S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));", "  const apiUp = !!(S.apiOn && apiState?.listening);\n  const want = apiUp || S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));")
-rep("vecOnline ? 'Jade is online on Vector' :", "vecOnline ? 'Jade is online on Vector' : apiUp ? `Jade API on port ${apiState.port}` :")
+rep("vecOnline ? 'Pandora is online on Vector' :", "vecOnline ? 'Pandora is online on Vector' : apiUp ? `Pandora's API on port ${apiState.port}` :")
 rep("  bgSync();\n  setTab('chat');\n})();", "  apiApply();\n  bgSync();\n  setTab('chat');\n})();")
 s = s.replace('/* =====================================================================\n   BOOT', rd('api.js') + '\n' + '/* =====================================================================\n   BOOT', 1)
 
@@ -1702,7 +1702,7 @@ rep("const systemPrompt = () => { if (vecScope()) return vecScopedPrompt();", "c
 rep("- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n", "${cur?.dc || cur?.vec ? '- This chat is on a messenger that shows basic Markdown only: write math as plain text (12 × 3 = 36), never LaTeX or $ signs. KaTeX works in notes.\\n' : '- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n'}")
 rep("by their setting)\\n` : ''}", "by their setting)\\n` : ''}${S.dcOn ? `- discord_history: the Discord server's whole kept history${S.dcArchiveName ? ` (you call it ${S.dcArchiveName})` : ''}, searched on the bridge at no cost to your context. To recall what was said before, search it (then read around a hit with context) instead of paging through channels with discord read\n` : ''}${S.dcOn ? `- discord: you are also a bot on Discord${DC.user ? ' (' + DC.user.username + ')' : ''}: message people (DM by user id) or channels, reply, react, send files from the vault, download what people send, read channels, list servers and channels. Use it whenever the user asks you to message, send or share something on Discord.\\n` : ''}")
 rep("  const want = apiUp || S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline));", "  const dcOnline = typeof DC !== 'undefined' && S.dcOn && DC.connected;\n  const want = apiUp || S.bgMode === 'always' || (S.bgMode !== 'off' && (running || vecOnline || dcOnline));")
-rep("vecOnline ? 'Jade is online on Vector' :", "vecOnline ? 'Jade is online on Vector' : dcOnline ? 'Jade is online on Discord' :")
+rep("vecOnline ? 'Pandora is online on Vector' :", "vecOnline ? 'Pandora is online on Vector' : dcOnline ? 'Pandora is online on Discord' :")
 rep("!cur || cur.vec) return;", "!cur || cur.vec || cur.dc) return;")
 rep("notify_owner: a => (a.urgent ? '⚡ ' : '') + String(a.message || '').slice(0, 60),", "notify_owner: a => (a.urgent ? '⚡ ' : '') + String(a.message || '').slice(0, 60), discord: a => `${a.action || ''}${a.to ? ' → ' + a.to : ''}${a.text ? ' “' + String(a.text).slice(0, 40) + '”' : ''}${a.emoji || ''}`,")
 rep("notify_owner: () => 'Passing a message on',", "notify_owner: () => 'Passing a message on', discord: () => `Discord: ${a.action || ''}`,")
@@ -1729,6 +1729,64 @@ rep("""  for (const [p, n] of entries) {
     seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""", """  for (let [p, n] of entries) {
     p = pandoraPath(p); seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""")
 rep("Object.assign(window, { DC,", "Object.assign(window, { pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
+# ---------- v23: Pandora Dee's words where people read them ----------
+# Interface text that comes from the base page or from earlier layers, translated where it lands. Identifiers,
+# storage keys, tool names and file formats stay as they are.
+VOCAB = [
+    # Config → Memory
+    ('Jade keeps what she learns about you in the note <span class="text-yl">Pandora/Memory</span>', 'Pandora keeps what she learns about you in the leaf <span class="text-yl">Pandora/Memory</span>'),
+    ('she writes a short entry in her journal under <span class="text-yl">Jade/Journal</span> and adds new facts to memory. Both are plain notes you can edit or delete.',
+     'she writes a short entry in her quest log under <span class="text-yl">Pandora/Journal</span> and adds new facts to memory. Both are plain leaves you can edit or delete.'),
+    ('> Journal finished chats and learn facts from them</label>', '> Write finished chats into the quest log and learn facts from them</label>'),
+    ('Open memory note', 'Open memory leaf'),
+    ('</span> is who Jade is. ', '</span> is who Pandora is. '),
+    ('All three are notes, read fresh on every message', 'All three are leaves, read fresh on every message'),
+    ('Skills · run with /skill:name, or Jade picks them', 'Skills · run with /skill:name, or Pandora picks them'),
+    ('>Model for compaction & journal</label>', '>Model for compaction & quest log</label>'),
+    ('Tell Jade the date and time of each message', 'Tell Pandora the date and time of each message'),
+    # Config → Model
+    ('Jade switches back automatically when it returns.', 'Pandora switches back automatically when it returns.'),
+    # Config → Tools
+    ('; Jade writes a short script that calls them.', '; Pandora writes a short script that calls them.'),
+    ('kept out of the vault)', 'kept out of the Atelier)'),
+    (">Secrets (API keys for Jade's HTTP requests)<", ">Secrets (API keys for Pandora's HTTP requests)<"),
+    ('>Jade writes <code class="text-cy">{{NAME}}</code>', '>Pandora writes <code class="text-cy">{{NAME}}</code>'),
+    ('Note scripts &amp; templates', 'Leaf scripts &amp; templates'),
+    ('Notes can run JavaScript like', 'Leaves can run JavaScript like'),
+    ('and notes in your templates folder fill in', 'and leaves in your templates folder fill in'),
+    ('they read the vault, with no network', 'they read the Atelier, with no network'),
+    (' Run JavaScript in notes</label>', ' Run JavaScript in leaves</label>'),
+    ("Let note scripts and templates call Jade's tools (jade.tool, jade.decide, jade.ask, jade.flow). Only if you trust every note: a note written from web content",
+     "Let leaf scripts and templates call Pandora's tools (pandora.tool, pandora.decide, pandora.ask, pandora.ritual). Only if you trust every leaf: a leaf written from web content"),
+    # Config → App
+    ('Keep Jade running when the app is in the background', 'Keep Pandora running when the app is in the background'),
+    ('while it keeps Jade alive.', 'while it keeps Pandora alive.'),
+    ('= all notes and files, chats,', '= all leaves and files, chats,'),
+    ('Every so often Jade wakes up, reads', 'Every so often Pandora wakes up, reads'),
+    ('<div class="pane-h">Jade companion</div>', '<div class="pane-h">Pandora companion</div>'),
+    ("Customize Jade's appearance", "Customize Pandora's appearance"),
+    ("Choose a color for Jade's outfit accents", "Choose a color for Pandora's outfit accents"),
+    ('Jade lip-syncs to whatever voice you choose.', 'Pandora lip-syncs to whatever voice you choose.'),
+    ("aria-label=\"Choose Jade's gemstone theme\"", "aria-label=\"Choose Pandora's gemstone theme\"", 2),
+    ("title=\"Choose Jade's gemstone colors\"", "title=\"Choose Pandora's gemstone colors\""),
+    (">Jade's gemstone theme<", ">Pandora's gemstone theme<"),
+    ("Jade couldn't start here (", "Pandora couldn't start here ("),
+    ("function jadeBubble(text, who = 'Jade'", "function jadeBubble(text, who = 'Pandora'"),
+    ("jadeBubble('Stopped.', 'Jade', 2500)", "jadeBubble('Stopped.', 'Pandora', 2500)"),
+    ("jadeBubble(runError, 'Jade', 9000)", "jadeBubble(runError, 'Pandora', 9000)"),
+    ("jadeBubble('Done.', 'Jade', 3000)", "jadeBubble('Done.', 'Pandora', 3000)"),
+    ("(plain.length > 220 ? '…' : ''), 'Jade', S.jadeVoice", "(plain.length > 220 ? '…' : ''), 'Pandora', S.jadeVoice"),
+    ("jadeBubble(plain.slice(0, 220), 'Jade', 7000)", "jadeBubble(plain.slice(0, 220), 'Pandora', 7000)"),
+    ("onSpeak: t => { if (t) jadeBubble(t, 'Jade');", "onSpeak: t => { if (t) jadeBubble(t, 'Pandora');"),
+    ("jadeBubble(`Scheduled: ${s.name}`, 'Jade', 4000)", "jadeBubble(`Scheduled: ${s.name}`, 'Pandora', 4000)"),
+    ("'Jade is not running.'", "'Pandora is not running.'"),
+    ("This browser has no speech synthesis, so Jade can only show captions.", "This browser has no speech synthesis, so Pandora can only show captions."),
+]
+for old, new, *n in VOCAB:
+    rep(old, new, *n)
+# her own words for people, while tool names and paths stay as she knows them
+rep("`)}\n\nVault conventions:", "`)}\n\nVault conventions:\n- With people, speak the Atelier's language: the vault is the Atelier, a note is a leaf, a folder is a workshop, a tag is a sigil, a link is a thread, a daily note is a chronicle, your journal is the quest log, a flow is a ritual, and the person who shares the Atelier with you is your Partner. Tool names (notes_search and the rest) and paths stay as they are.")
+rep("You live in Jade Vault, a browser app: its vault of markdown notes (linked like Obsidian) is your notebook and memory", "You live in the Atelier, a browser app grown from Jade Vault: its leaves, markdown notes threaded together like Obsidian, are your notebook and memory")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w').write(s)

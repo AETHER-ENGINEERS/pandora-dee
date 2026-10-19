@@ -2,7 +2,7 @@
    CHAT ATTACHMENTS
    Files you attach are saved into the vault under /attachments/YYYY-MM-DD/. Text files are also
    inlined into your message (trimmed), images go to vision models (downscaled), and PDFs get their
-   text extracted to a sidecar note (<file>.pdf.md) that Jade can read and link.
+   text extracted to a sidecar note (<file>.pdf.md) that Pandora can read and thread to other leaves.
    ===================================================================== */
 const ATT = { pending: [] };   // {name, type, size, path, kind, text?, image?, note?}
 const TEXT_EXT = /\.(md|markdown|txt|text|csv|tsv|json|jsonl|ya?ml|toml|ini|xml|html?|css|js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|c|h|cpp|hpp|cs|sh|bash|zsh|sql|log|srt|vtt|tex|bib|org|rst|env|conf|cfg|svg)$/i;

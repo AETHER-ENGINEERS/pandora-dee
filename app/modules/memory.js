@@ -178,7 +178,7 @@ function memoryContext() {
 }
 
 /* ---------- journal: summarise a finished chat into episodic memory ---------- */
-const JOURNAL_SYS = `You keep Jade's diary. Jade is an AI assistant that manages the user's markdown notes vault. Read the chat and reply in exactly this format:
+const JOURNAL_SYS = `You keep Pandora's diary (her quest log). Pandora is an AI assistant that manages the user's markdown notes vault. Read the chat and reply in exactly this format:
 
 SUMMARY:
 - 2 to 5 short bullets: what the user wanted, what was done or decided, which notes were created or changed (as [[Note Name]]), anything left open.
@@ -216,7 +216,7 @@ async function journalSession(sess, { reason = 'leave', summary = null, upto = n
     vfs.append(p, entry);
     let learned = 0; for (const f of facts) if (memorySave(f, 'learned').added) learned++;
     const marks = jMarks(); marks[sess.id] = end; ls.set('journaled', marks);
-    if (reason !== 'quiet') toast(`Jade wrote today's journal${learned ? ` and learned ${learned} new thing${learned > 1 ? 's' : ''}` : ''}`, 'ok');
+    if (reason !== 'quiet') toast(`Pandora wrote today's quest log${learned ? ` and learned ${learned} new thing${learned > 1 ? 's' : ''}` : ''}`, 'ok');
   } catch (e) { console.warn('journal failed', e); }
   finally { journaling.delete(sess.id); }
 }

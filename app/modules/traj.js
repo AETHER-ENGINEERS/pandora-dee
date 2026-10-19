@@ -107,7 +107,7 @@ function trajKeep(r, filter) {
 }
 async function exportTrajectories({ format = S.trajFormat || 'openai', filter = S.trajFilter || 'clean', thinking = !!S.trajThinking, meta = false } = {}) {
   const all = (await TrajDB.all()).sort((a, b) => a.started - b.started); const keep = all.filter(r => trajKeep(r, filter));
-  if (!keep.length) { toast(all.length ? `None of the ${all.length} logged runs match that filter.` : 'Nothing logged yet: chat with Jade first.', 'err'); return null; }
+  if (!keep.length) { toast(all.length ? `None of the ${all.length} logged runs match that filter.` : 'Nothing logged yet: chat with Pandora first.', 'err'); return null; }
   const line = r => { const o = format === 'sharegpt' ? trajToShareGPT(r, { thinking }) : trajToOpenAI(r, { thinking }); if (meta) o.metadata = { id: r.id, started: new Date(r.started).toISOString(), model: r.models?.join(',') || r.model, provider: r.provider, source: r.source, outcome: r.outcome, rating: r.rating, steps: r.steps }; return JSON.stringify(o); };
   const text = keep.map(line).join('\n') + '\n';
   const name = `jade-trajectories-${format}-${new Date().toISOString().slice(0, 10)}.jsonl`;

@@ -166,7 +166,7 @@ await page.evaluate(() => { window.__notes = []; S.bgMode = 'agent'; Object.defi
 await page.fill('#input', 'background run'); await page.tap('#btnSend');
 await page.waitForFunction(() => !running && (window.__notes || []).length, null, { timeout: 20000 }).catch(() => {});
 const notes = await page.evaluate(() => window.__notes || []);
-ok(notes.length === 1 && /Jade finished/.test(notes[0][0]) && notes[0][1].length > 5, 'finish notification when hidden: ' + JSON.stringify(notes[0] || null));
+ok(notes.length === 1 && /Pandora finished/.test(notes[0][0]) && notes[0][1].length > 5, 'finish notification when hidden: ' + JSON.stringify(notes[0] || null));
 await page.evaluate(() => Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }));
 // ---- backup export / import ----
 await page.evaluate(() => { S.groqKey = 'gsk_test'; });

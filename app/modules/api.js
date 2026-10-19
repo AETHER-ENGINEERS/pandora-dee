@@ -44,7 +44,7 @@ async function apiChat(q) {
   if (!message) return apiErr(400, 'missing_message', 'send the text in the message parameter, e.g. /v1/chat?message=hello');
   if (message.length > API_MAX_MESSAGE) return apiErr(413, 'message_too_long', `messages are limited to ${API_MAX_MESSAGE} characters`);
   if (message.startsWith('/') && !/^\/skill:/i.test(message)) return apiErr(400, 'slash_command', 'slash commands are not available over the API (only /skill:name)');
-  if (running || apiBusy || (typeof compacting !== 'undefined' && compacting)) return apiErr(409, 'busy', 'Jade is already working on something. Try again when she is done (see /v1/status).', { busy: true });
+  if (running || apiBusy || (typeof compacting !== 'undefined' && compacting)) return apiErr(409, 'busy', 'Pandora is already working on something. Try again when she is done (see /v1/status).', { busy: true });
   if (!S.model) return apiErr(503, 'no_model', 'No model is selected in the app (Config → Model provider).');
   apiBusy = true;
   const wait = q.wait === undefined ? true : apiTruthy(q.wait);
@@ -79,7 +79,7 @@ async function apiChat(q) {
     };
     if (!wait) {
       done.catch(() => {}).finally(() => { apiBusy = false; });
-      return { status: 202, body: { ok: true, api: API_VERSION, accepted: true, session: apiSessionInfo(sess), message: 'Jade is working on it in the app. Poll /v1/status, then read /v1/history.' } };
+      return { status: 202, body: { ok: true, api: API_VERSION, accepted: true, session: apiSessionInfo(sess), message: 'Pandora is working on it in the app. Poll /v1/status, then read /v1/history.' } };
     }
     const r = await result(); apiBusy = false; return r;
   } catch (e) { apiBusy = false; return apiErr(500, 'internal', String(e.message || e)); }

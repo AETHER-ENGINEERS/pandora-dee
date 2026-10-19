@@ -8,7 +8,7 @@
      Insert one with the {} button in the editor's toolbar, or run the tags already in a note.
    The code runs in the node sandbox with no network and no file writes. It can read the vault.
    Calling Jade's tools (jade.tool, jade.decide, jade.ask, jade.flow …) needs Config → Tools →
-   "Let note scripts call Jade's tools", because a note written from web content could otherwise run them.
+   "Let leaf scripts and templates call Pandora's tools", because a leaf written from web content could otherwise run them.
    ===================================================================== */
 const TPL_LANGS = ['dataviewjs', 'jade-js', 'jadejs'];
 const TplState = { stamp: 0, cache: new Map(), pages: null, pagesStamp: -1, queue: Promise.resolve() };

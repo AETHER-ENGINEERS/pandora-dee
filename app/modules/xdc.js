@@ -182,7 +182,7 @@ function openApp(idOrName) {
   const app = typeof idOrName === 'object' ? idOrName : xdcFind(idOrName); if (!app) { toast('No such app', 'err'); return null; }
   closeApp(true);
   const ov = document.createElement('div'); ov.className = 'xdc-ov'; ov.id = 'xdcOverlay';
-  ov.innerHTML = `<div class="xdc-bar"><button type="button" class="btn" data-x="back" aria-label="Back">←</button>${app.icon ? `<img class="xdc-ic" alt="" src="${app.icon}">` : '<span class="xdc-ic xdc-ic-x">▣</span>'}<div class="xdc-t min-w-0"><b></b><span class="hud"></span></div><button type="button" class="btn" data-x="jade" title="Ask Jade about this app">◆</button><button type="button" class="btn" data-x="reload" aria-label="Reload">⟳</button></div><div class="xdc-frame-wrap"><iframe sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe></div>`;
+  ov.innerHTML = `<div class="xdc-bar"><button type="button" class="btn" data-x="back" aria-label="Back">←</button>${app.icon ? `<img class="xdc-ic" alt="" src="${app.icon}">` : '<span class="xdc-ic xdc-ic-x">▣</span>'}<div class="xdc-t min-w-0"><b></b><span class="hud"></span></div><button type="button" class="btn" data-x="jade" title="Ask Pandora about this app">◆</button><button type="button" class="btn" data-x="reload" aria-label="Reload">⟳</button></div><div class="xdc-frame-wrap"><iframe sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe></div>`;
   ov.querySelector('.xdc-t b').textContent = app.name; ov.querySelector('.xdc-t .hud').textContent = app.summary || '';
   document.body.appendChild(ov);
   const frame = ov.querySelector('iframe');
@@ -206,7 +206,7 @@ window.addEventListener('message', async (e) => {
     else if (m.t === 'chat') {
       const files = []; if (m.data.file?.base64) { const b = Uint8Array.from(atob(m.data.file.base64), c => c.charCodeAt(0)); files.push(new File([b], m.data.file.name, { type: m.data.file.type || xmime(m.data.file.name) })); }
       closeApp(); setTab('chat'); if (files.length) await addAttachments(files); if (m.data.text) $('#input').value = m.data.text; $('#input').focus();
-      toast(`${esc(s.app.name)} shared ${files.length ? esc(files[0].name) : 'a message'}: press Send to pass it to Jade.`, 'ok'); reply(null);
+      toast(`${esc(s.app.name)} shared ${files.length ? esc(files[0].name) : 'a message'}: press Send to pass it to Pandora.`, 'ok'); reply(null);
     }
     else if (m.t === 'rt-join') { s.rt = true; if (XWAKE.cur === s.app.id) xdcRealtime(s.app.id, { jade: 'thinking' }); }
     else if (m.t === 'rt-leave') { s.rt = false; }
@@ -224,7 +224,7 @@ async function appMenu(id) {
   const d = document.createElement('div'); d.className = 'xdc-menu';
   d.innerHTML = `<div class="pane-h mb-2"></div><div class="mono text-xs text-dim mb-3"></div><div class="flex flex-col gap-2"><button class="btn" data-m="open">Open</button><button class="btn" data-m="ask">Ask Jade about it</button><button class="btn" data-m="wake"></button><button class="btn" data-m="export">Save .xdc to the vault</button><button class="btn" data-m="reset">Clear its data (updates + storage)</button><button class="btn btn-red" data-m="remove">Remove app</button><button class="btn btn-ghost" data-m="close">Close</button></div>`;
   d.querySelector('.pane-h').textContent = a.name; d.querySelector('.text-dim').textContent = `${fmtKB(a.size)} · ${a.serial || 0} updates · ${a.origin}${a.manifest?.source_code_url ? ' · ' + a.manifest.source_code_url : ''}`;
-  const wakeBtn = d.querySelector('[data-m=wake]'); const fullA = await XdcDB.app(a.id); const paintWake = () => { wakeBtn.textContent = `Jade answers messages sent to her here: ${fullA.jadeWake === false ? 'OFF' : 'ON'}`; }; paintWake();
+  const wakeBtn = d.querySelector('[data-m=wake]'); const fullA = await XdcDB.app(a.id); const paintWake = () => { wakeBtn.textContent = `Pandora answers messages sent to her here: ${fullA.jadeWake === false ? 'OFF' : 'ON'}`; }; paintWake();
   const bg = document.createElement('div'); bg.className = 'xdc-menu-bg'; bg.appendChild(d); document.body.appendChild(bg);
   let armed = '';
   bg.onclick = async e => {

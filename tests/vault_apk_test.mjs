@@ -32,7 +32,7 @@ await page.route('**/*', async route => {
   if (url === 'http://localhost:11434/api/tags') return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'qwen3:8b' }] }) });
   if (url === 'http://localhost:11434/api/chat') {
     const body = JSON.parse(req.postData());
-    if (/You keep Jade's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
+    if (/You keep Pandora's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
     const tools = body.tools.map(t => t.function.name);
     const tmsgs = body.messages.filter(m => m.role === 'tool'); const n = tmsgs.length;
     sentUser0 = (body.messages.find(m => m.role === 'user' && !m.content.startsWith('[Summary')) || {}).content || ''; sentUser0 = sentUser0.replace(/^\[\w{3} [^\]]+\] /, '');

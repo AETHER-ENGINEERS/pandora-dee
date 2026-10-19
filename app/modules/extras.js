@@ -132,25 +132,25 @@ var bgOn = false, bgText = '';
 function bgSync(text) {
   if (!nativeBG()) return;
   const want = S.bgMode === 'always' || (S.bgMode !== 'off' && running);
-  const t = text || (running ? 'Jade is working…' : `Standing by${Sched?.list?.filter?.(x => x.enabled !== false).length ? ` · ${Sched.list.filter(x => x.enabled !== false).length} schedules armed` : ''}`);
+  const t = text || (running ? 'Pandora is working…' : `Standing by${Sched?.list?.filter?.(x => x.enabled !== false).length ? ` · ${Sched.list.filter(x => x.enabled !== false).length} schedules armed` : ''}`);
   try {
     if (want && (!bgOn || t !== bgText)) { window.NetrunnerAndroid.keepAlive(true, t); bgOn = true; bgText = t; }
     else if (!want && bgOn) { window.NetrunnerAndroid.keepAlive(false, ''); bgOn = false; bgText = ''; }
   } catch (e) { console.warn('keepAlive failed', e); }
 }
-var BG_LABEL = { THINKING: 'Jade is thinking…', 'RUNNING TOOL': 'Jade is using a tool…', COMPACTING: 'Compacting the chat…' };
-function bgState(s) { if (running && BG_LABEL) bgSync(BG_LABEL[s] || (s && s !== 'IDLE' ? `Jade: ${String(s).toLowerCase()}` : 'Jade is working…')); }
+var BG_LABEL = { THINKING: 'Pandora is thinking…', 'RUNNING TOOL': 'Pandora is using a tool…', COMPACTING: 'Compacting the chat…' };
+function bgState(s) { if (running && BG_LABEL) bgSync(BG_LABEL[s] || (s && s !== 'IDLE' ? `Jade: ${String(s).toLowerCase()}` : 'Pandora is working…')); }
 function bgFinished() {
   bgSync();
   if (!document.hidden || !S.bgNotify || !cur) return;
   const last = [...cur.messages].reverse().find(m => m.role === 'assistant' && m.content?.trim());
   const body = last ? last.content.replace(/```[\s\S]*?```/g, '[code]').replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (m, a, b) => b || a).replace(/[*_#>`$]/g, '').replace(/\s+/g, ' ').trim().slice(0, 180) : 'Done.';
-  schedNotify(`Jade finished: ${cur.title || 'chat'}`.slice(0, 60), body);
+  schedNotify(`Pandora finished: ${cur.title || 'chat'}`.slice(0, 60), body);
 }
 function renderBgSettings() {
   $('#sBgMode').value = S.bgMode || 'agent'; $('#sBgNotify').checked = !!S.bgNotify;
   const native = nativeBG(); $('#bgNative').hidden = !native; $('#bgWeb').hidden = native;
-  if (native) { let opt = true; try { opt = window.NetrunnerAndroid.batteryOptimized(); } catch {} $('#bgBattery').innerHTML = opt ? '<span class="dot bad"></span>Battery saver may pause Jade in the background.' : '<span class="dot ok"></span>Unrestricted battery: Jade can keep working in the background.'; $('#btnBattery').hidden = !opt; }
+  if (native) { let opt = true; try { opt = window.NetrunnerAndroid.batteryOptimized(); } catch {} $('#bgBattery').innerHTML = opt ? '<span class="dot bad"></span>Battery saver may pause Pandora in the background.' : '<span class="dot ok"></span>Unrestricted battery: Pandora can keep working in the background.'; $('#btnBattery').hidden = !opt; }
 }
 $('#btnBattery').onclick = () => { try { window.NetrunnerAndroid.openBatterySettings(); } catch {} setTimeout(renderBgSettings, 4000); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#settings').hidden) renderBgSettings(); });

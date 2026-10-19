@@ -163,7 +163,7 @@ function dcInboxAdd({ from, chat, text, note, urgent }) {
   return line;
 }
 async function dcTellOwner(text, urgent) {
-  schedNotify(urgent ? '⚡ Jade (Discord)' : 'Jade (Discord)', text.slice(0, 200));
+  schedNotify(urgent ? '⚡ Jade (Discord)' : 'Pandora (Discord)', text.slice(0, 200));
   toast(esc(text.slice(0, 160)), urgent ? 'err' : 'ok');
   const owner = String(S.dcOwner || '').trim();
   if (owner && DC.connected && !(cur?.dc && !cur.dc.is_group && cur.dc.sender === owner)) {
@@ -323,7 +323,7 @@ async function discordTool(a) {
       return msgs.length ? msgs.map(m => `${new Date(m.at * 1000).toLocaleString()} ${m.mine ? 'you' : (m.author?.name || '?')} [${m.id}]${m.reply_to ? ' ↩' + m.reply_to : ''}: ${dcText(m)}${(m.attachments || []).map(x => ` [attachment ${x.index}: ${x.name}]`).join('')}${(m.reactions || []).length ? ' ' + m.reactions.map(r => `${r.emoji}×${r.count}`).join(' ') : ''}`).join('\n') : 'No messages.';
     }
     case 'profile': { const id = userId(); const u = dcJson(await dcCall('get_user', { user_id: id }), {}) || {}; DC.names[id] = u.global_name || u.username; return truncateHead(JSON.stringify({ id: u.id, username: u.username, global_name: u.global_name, bot: !!u.bot }, null, 1)); }
-    case 'guilds': { const l = dcJson(await dcCall('list_guilds'), []) || []; for (const g of l) DC.guilds[g.id] = { ...(DC.guilds[g.id] || {}), name: g.name }; return l.length ? l.map(g => `${g.name} (guild ${g.id})`).join('\n') : 'Jade is not in any server yet. Invite her with the link in Config → Discord.'; }
+    case 'guilds': { const l = dcJson(await dcCall('list_guilds'), []) || []; for (const g of l) DC.guilds[g.id] = { ...(DC.guilds[g.id] || {}), name: g.name }; return l.length ? l.map(g => `${g.name} (guild ${g.id})`).join('\n') : 'Pandora is not in any server yet. Invite her with the link in Config → Discord.'; }
     case 'channels': {
       const g = guildId(); const l = dcJson(await dcCall('list_channels', { guild_id: g }), []) || [];
       for (const c of l) DC.chans[c.id] = { guild_id: g, guild: DC.guilds[g]?.name || 'server', name: c.name, topic: c.topic || '', category: c.category || '', label: `#${c.name} · ${DC.guilds[g]?.name || 'server'}` };

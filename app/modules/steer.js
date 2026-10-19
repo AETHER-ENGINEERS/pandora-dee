@@ -119,7 +119,7 @@ The vault renders LaTeX with KaTeX.
 `,
   [`${SKILLS_DIR}/skill-creator/SKILL.md`]: `---
 name: skill-creator
-description: Create or improve one of Jade's skills. Use when the user asks for a new skill, workflow, routine or recipe that Jade should follow, or wants to change an existing skill.
+description: Create or improve one of Pandora's skills. Use when the user asks for a new skill, workflow, routine or recipe that Pandora should follow, or wants to change an existing skill.
 ---
 # Skill creator
 

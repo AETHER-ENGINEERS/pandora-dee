@@ -239,12 +239,12 @@ ok(/costs \$5 and \$10 today/.test(mt.txt), 'currency dollars are not math');
 await shot('15_math'); await overflow('math note');
 // ---- v3: SOUL / AGENTS / SYSTEM ----
 const sp = await page.evaluate(() => systemPrompt());
-ok(/neon edge of Night City/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
+ok(/small island town of cicadas/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
 ok(/Skills \(instruction packs/.test(sp) && /daily-review:/.test(sp) && /skill-creator:/.test(sp), 'skills listed in prompt');
 await page.evaluate(() => vfs.write('/Pandora/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
 const sp2 = await page.evaluate(() => systemPrompt());
 ok(sp2.startsWith('# SYSTEM\n\nYou are Bob') || sp2.startsWith('# SYSTEM\nYou are Bob') || /^# SYSTEM\s+You are Bob/.test(sp2), 'SYSTEM.md replaces intro: ' + JSON.stringify(sp2.slice(0, 40)));
-ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
+ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /small island town/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
 await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
 // ---- v3: skills ----
 const sk = await page.evaluate(async () => { const t = async (n, a) => { try { return await runTool(n, a, null); } catch (e) { return 'ERR ' + e.message; } };

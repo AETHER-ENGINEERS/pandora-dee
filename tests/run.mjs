@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const NM = (process.env.JV_NODE_MODULES || path.join(ROOT, 'node_modules')) + '/';
-const WEB = path.join(ROOT, 'dist', 'jade-vault.html');
+const WEB = path.join(ROOT, 'dist', 'pandora-dee.html');
 const APK = path.join(ROOT, 'android', 'proj', 'assets', 'index.html');
 const ALL = ['sq_glue_test', 'sq_bridge_test', 'sq_shim_test', 'vault_test', 'vault_apk_test', 'py_test', 'sqlite_test', 'mcp_test', 'hb_test', 'prov_test', 'ctx_test', 'memrag_test', 'api_test', 'api_java_test', 'flows_test', 'bridge_test', 'tpl_test', 'reply_test', 'tf_test', 'tf_gpu_test', 'traj_test', 'apps_test', 'jadelink_test', 'vector_test', 'aicord_test', 'discord_test', 'discord_archive_py'];
 const pick = process.argv.slice(2).map(a => a.replace(/\.(mjs|py)$/, ''));
@@ -19,8 +19,8 @@ const W = path.join(ROOT, 'tests', '.work');
 fs.rmSync(W, { recursive: true, force: true }); fs.mkdirSync(path.join(W, 'sq', 'build'), { recursive: true });
 fs.copyFileSync(path.join(ROOT, 'dist', 'tw.css'), path.join(W, 'tw.css'));
 for (const d of ['mpymock', 'xdcfix', 'hbfiles']) fs.symlinkSync(path.join(ROOT, 'tests', 'fixtures', d), path.join(W, d));
-fs.symlinkSync(path.join(ROOT, 'jade-vector'), path.join(W, 'jade-vector'));
-fs.symlinkSync(path.join(ROOT, 'jade-discord'), path.join(W, 'jade-discord'));
+fs.symlinkSync(path.join(ROOT, 'pandora-vector'), path.join(W, 'pandora-vector'));
+fs.symlinkSync(path.join(ROOT, 'pandora-discord'), path.join(W, 'pandora-discord'));
 fs.symlinkSync(path.join(ROOT, 'app', 'modules'), path.join(W, 'vault'));
 fs.copyFileSync(path.join(ROOT, 'app', 'vendor', 'sqlite3.min.wasm'), path.join(W, 'sq', 'build', 'sqlite3.min.wasm'));
 

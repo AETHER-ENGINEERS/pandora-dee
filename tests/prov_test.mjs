@@ -156,7 +156,7 @@ await page.evaluate(() => { if ($('#settings').hidden) $('#btnSettings').click()
 await page.tap('#btnExportAll'); await page.waitForTimeout(1200);
 const saved = await page.evaluate(() => window.__saved);
 const bk = JSON.parse(saved[2]);
-ok(/^jade-vault-backup-\d{4}-\d\d-\d\d\.json$/.test(saved[0]) && bk.kind === 'full' && bk.vault.files['/Welcome.md'] && bk.vault.files['/Jade/SOUL.md'] && bk.db.sessions?.length >= 2 && Array.isArray(bk.db.schedules ?? []), 'full export: files, chats, settings (' + Object.keys(bk.vault.files).length + ' files, ' + (bk.db.sessions || []).length + ' chats)');
+ok(/^pandora-dee-backup-\d{4}-\d\d-\d\d\.json$/.test(saved[0]) && bk.kind === 'full' && bk.vault.files['/Welcome.md'] && bk.vault.files['/Jade/SOUL.md'] && bk.db.sessions?.length >= 2 && Array.isArray(bk.db.schedules ?? []), 'full export: files, chats, settings (' + Object.keys(bk.vault.files).length + ' files, ' + (bk.db.sessions || []).length + ' chats)');
 ok(!('groqKey' in bk.settings) && !bk.includesKeys, 'keys left out unless asked');
 ok(/Full backup: \d+ files/.test(await page.textContent('#backupNote')), 'backup summary shown');
 await page.tap('#btnExportCfg'); await page.waitForTimeout(500);

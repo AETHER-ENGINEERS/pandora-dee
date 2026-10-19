@@ -1,5 +1,5 @@
 version: 2.10.0
-apkFileName: jadevault.apk
+apkFileName: pandoradee.apk
 isFrameworkApk: false
 usesFramework:
   ids:

@@ -17,10 +17,10 @@ const py = (args, env) => spawn('bash', ['-c', `${PYENV}exec python3 ${args}`], 
 const procs = [];
 const spawnPy = (args, env) => { const p = py(args, env); p.err = ''; p.stderr.on('data', d => p.err += d); procs.push(p); return p; };
 process.on('exit', () => { for (const p of procs) try { p.kill(); } catch {} });
-const vbridge = spawnPy(`jade-vector/jade_vector_bridge.py --agent "python3 ${cwd}/jade-vector/test/fake_vector_agent.py" --port ${VBP} --host 127.0.0.1`, { JADE_VECTOR_HOME: VHOME, FAKE_CONTROL_PORT: String(VCP) });
-const fake = spawnPy(`jade-discord/test/fake_discord.py --port ${FDP} --reject-content-once`, {});
+const vbridge = spawnPy(`pandora-vector/jade_vector_bridge.py --agent "python3 ${cwd}/pandora-vector/test/fake_vector_agent.py" --port ${VBP} --host 127.0.0.1`, { JADE_VECTOR_HOME: VHOME, FAKE_CONTROL_PORT: String(VCP) });
+const fake = spawnPy(`pandora-discord/test/fake_discord.py --port ${FDP} --reject-content-once`, {});
 await new Promise(r => setTimeout(r, 1200));
-const dbridge = spawnPy(`jade-discord/jade_discord_bridge.py --port ${DBP} --host 127.0.0.1 --bot-token-file ${cwd}/jdbot-dc.txt`, { JADE_DISCORD_HOME: DHOME, JADE_DISCORD_TEST_API: `http://127.0.0.1:${FDP}/api/v10` });
+const dbridge = spawnPy(`pandora-discord/jade_discord_bridge.py --port ${DBP} --host 127.0.0.1 --bot-token-file ${cwd}/jdbot-dc.txt`, { JADE_DISCORD_HOME: DHOME, JADE_DISCORD_TEST_API: `http://127.0.0.1:${FDP}/api/v10` });
 fs.writeFileSync(cwd + '/jdbot-dc.txt', 'FAKE.bot.token\n');
 await new Promise(r => setTimeout(r, 4500));
 const VTOKEN = fs.readFileSync(VHOME + '/token', 'utf8').trim(), DTOKEN = fs.readFileSync(DHOME + '/token', 'utf8').trim();

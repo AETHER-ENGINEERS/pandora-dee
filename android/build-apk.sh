@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build and sign the Android APK (no Android SDK needed: API stubs + dx + apktool).
-#   Release signing:  JADE_KEYSTORE=path.jks JADE_KEYSTORE_PASSWORD=... [JADE_KEY_ALIAS=netrunner] ./android/build-apk.sh
+#   Release signing:  PANDORA_KEYSTORE=path.jks PANDORA_KEYSTORE_PASSWORD=... [PANDORA_KEY_ALIAS=netrunner] ./android/build-apk.sh
+#   (the JADE_KEYSTORE* names from Jade Vault still work)
 #   Without those, a local debug key is made (that APK cannot update one signed with the release key).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -28,13 +29,14 @@ javac -nowarn --release 8 -cp build/stubs -d build/classes $(find src -name '*.j
 java -cp "$T/dx.jar" com.android.dx.command.Main --dex --min-sdk-version=24 --output=build/proj/classes.dex build/classes
 java -jar "$T/apktool.jar" b build/proj -o build/out/unsigned.apk >/dev/null
 
-if [ -n "${JADE_KEYSTORE:-}" ]; then
-  KS="$JADE_KEYSTORE"; PASS="${JADE_KEYSTORE_PASSWORD:?set JADE_KEYSTORE_PASSWORD}"; ALIAS="${JADE_KEY_ALIAS:-netrunner}"
+PANDORA_KEYSTORE="${PANDORA_KEYSTORE:-${JADE_KEYSTORE:-}}"; PANDORA_KEYSTORE_PASSWORD="${PANDORA_KEYSTORE_PASSWORD:-${JADE_KEYSTORE_PASSWORD:-}}"; PANDORA_KEY_ALIAS="${PANDORA_KEY_ALIAS:-${JADE_KEY_ALIAS:-}}"
+if [ -n "${PANDORA_KEYSTORE:-}" ]; then
+  KS="$PANDORA_KEYSTORE"; PASS="${PANDORA_KEYSTORE_PASSWORD:?set PANDORA_KEYSTORE_PASSWORD}"; ALIAS="${PANDORA_KEY_ALIAS:-netrunner}"
 else
   KS="$T/debug.jks"; PASS=android; ALIAS=debug
   [ -f "$KS" ] || keytool -genkeypair -keystore "$KS" -storepass "$PASS" -keypass "$PASS" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Jade Vault Debug" >/dev/null
-  echo "Signing with a DEBUG key (set JADE_KEYSTORE for a release build)."
+  echo "Signing with a DEBUG key (set PANDORA_KEYSTORE for a release build)."
 fi
 java -jar "$T/uber-apk-signer.jar" -a build/out/unsigned.apk --ks "$KS" --ksAlias "$ALIAS" --ksPass "$PASS" --ksKeyPass "$PASS" -o build/out/signed | grep -E "signature verified|SHA256:" || true
-mkdir -p "$ROOT/dist"; cp build/out/signed/*-aligned-signed.apk "$ROOT/dist/jade-vault-$VERSION.apk"
-echo "dist/jade-vault-$VERSION.apk"
+mkdir -p "$ROOT/dist"; cp build/out/signed/*-aligned-signed.apk "$ROOT/dist/pandora-dee-$VERSION.apk"
+echo "dist/pandora-dee-$VERSION.apk"

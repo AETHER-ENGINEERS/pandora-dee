@@ -8,7 +8,7 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 const log = [], fail = []; const ok = (c, m) => (c ? log : fail).push((c ? 'PASS ' : 'FAIL ') + m);
 const HOME = process.cwd() + '/jvhome-test'; fs.rmSync(HOME, { recursive: true, force: true });
 const BP = 8788, CP = 8798;
-const bridge = spawn('python3', ['jade-vector/jade_vector_bridge.py', '--agent', `python3 ${process.cwd()}/jade-vector/test/fake_vector_agent.py`, '--port', String(BP), '--host', '127.0.0.1'], { env: { ...process.env, JADE_VECTOR_HOME: HOME, FAKE_CONTROL_PORT: String(CP) }, stdio: ['ignore', 'ignore', 'pipe'] });
+const bridge = spawn('python3', ['pandora-vector/jade_vector_bridge.py', '--agent', `python3 ${process.cwd()}/pandora-vector/test/fake_vector_agent.py`, '--port', String(BP), '--host', '127.0.0.1'], { env: { ...process.env, JADE_VECTOR_HOME: HOME, FAKE_CONTROL_PORT: String(CP) }, stdio: ['ignore', 'ignore', 'pipe'] });
 let blog = ''; bridge.stderr.on('data', d => blog += d); process.on('exit', () => { try { bridge.kill(); } catch {} });
 await new Promise(r => setTimeout(r, 2500));
 const TOKEN = fs.readFileSync(HOME + '/token', 'utf8').trim();

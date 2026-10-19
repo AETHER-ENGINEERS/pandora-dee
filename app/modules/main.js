@@ -3751,7 +3751,7 @@ let lastBackupText = '';
 async function exportBackup(kind) {
   const withKeys = $('#sBackupKeys')?.checked; const data = await buildBackup(kind, withKeys);
   lastBackupText = JSON.stringify(data, null, 1);
-  const name = `jade-vault-${kind === 'full' ? 'backup' : 'config'}-${todayStr()}.json`;
+  const name = `pandora-dee-${kind === 'full' ? 'backup' : 'config'}-${todayStr()}.json`;
   $('#backupNote').textContent = `${kind === 'full' ? 'Full backup' : 'Config'}: ${Object.keys(data.vault.files).length} files${data.db ? `, ${(data.db.sessions || []).length} chats, ${(data.db.schedules || []).length} schedules` : ''} · ${fmtSize(lastBackupText.length)}${withKeys ? ' · includes API keys' : ''}`;
   $('#btnBackupCopy').hidden = false;
   await saveTextFile(name, lastBackupText);

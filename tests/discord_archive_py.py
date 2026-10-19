@@ -4,13 +4,13 @@
 Live messages (people, bots, replies, files), edits and deletions are kept; DMs are not unless asked; a backfill pulls
 channel and thread history (active and archived) and resumes; search digs in; the render makes linked markdown notes
 under the name the user chose. Run from tests/.work (node tests/run.mjs discord_archive_py) or any directory with
-jade-discord/ next to it. Needs discord.py.
+pandora-discord/ next to it. Needs discord.py.
 """
 import base64, json, os, pathlib, shutil, subprocess, sys, time, urllib.request
 
 CWD = pathlib.Path.cwd()
-ROOT = CWD if (CWD / 'jade-discord').exists() else pathlib.Path(__file__).resolve().parent.parent
-DC = ROOT / 'jade-discord'
+ROOT = CWD if (CWD / 'pandora-discord').exists() else pathlib.Path(__file__).resolve().parent.parent
+DC = ROOT / 'pandora-discord'
 HOME = CWD / 'jdhome-arc'
 ARC = HOME / 'archive'
 OUT = CWD / 'arc-render'

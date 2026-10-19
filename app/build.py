@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build Jade Vault: apply the Jade Vault layers (v2 … v16) to the pi-netrunner base page and
-write dist/jade-vault.html. Every edit is an exact-match replacement that must hit exactly once,
+write dist/pandora-dee.html. Every edit is an exact-match replacement that must hit exactly once,
 so a drifted base fails loudly instead of building something half-patched.
 
     python3 app/build.py            (run from anywhere; paths are relative to the repo)
@@ -26,9 +26,9 @@ def rep_between(start, end, new, keep_end=True):
 def rd(n): return open(os.path.join(D, 'modules', n)).read()
 
 # ---------- branding + storage ----------
-rep('<title>Pi Netrunner Mobile</title>', '<title>Jade Vault</title>')
-rep('data-text="NETRUNNER">NETRUNNER<', 'data-text="JADE VAULT">JADE VAULT<')
-rep('PI NETRUNNER MOBILE · JADE CAT EDITION', 'JADE VAULT · MARKDOWN KNOWLEDGE DECK')
+rep('<title>Pi Netrunner Mobile</title>', '<title>Pandora Dee</title>')
+rep('data-text="NETRUNNER">NETRUNNER<', 'data-text="PANDORA DEE">PANDORA DEE<')
+rep('PI NETRUNNER MOBILE · JADE CAT EDITION', 'PANDORA DEE · ATELIER OF THE ONEMOMENT FREE COMPANY')
 rep("localStorage.getItem('pinet:' + k)", "localStorage.getItem('jvault:' + k)")
 rep("localStorage.setItem('pinet:' + k,", "localStorage.setItem('jvault:' + k,")
 rep("indexedDB.open('pi-netrunner', 1)", "indexedDB.open('jade-vault', 1)")
@@ -1705,5 +1705,5 @@ rep("'secrets', 'vecToken', 'aicKey'];", "'secrets', 'vecToken', 'aicKey', 'dcTo
 rep("Object.assign(window, { tfjsSource,", "Object.assign(window, { DC, dcInviteUrl, dcConnect, dcStop, dcIncoming, dcPoll, dcCall, dcWake, dcScope, dcFilterTools, discordTool, dcInboxAdd, DC_INBOX, tfjsSource,")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
-open(os.path.join(DIST, 'jade-vault.html'), 'w').write(s)
+open(os.path.join(DIST, 'pandora-dee.html'), 'w').write(s)
 print('ok', len(src), '->', len(s))

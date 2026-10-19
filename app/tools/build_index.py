@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Make the Android app's page: dist/jade-vault.html with Tailwind compiled in and marked, DOMPurify and
+"""Make the Android app's page: dist/pandora-dee.html with Tailwind compiled in and marked, DOMPurify and
 KaTeX (with its fonts) inlined, so the phone needs no CDN for the basics. Writes android/proj/assets/index.html."""
 import re, sys, os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NM = os.environ.get('JV_NODE_MODULES', os.path.join(ROOT, 'node_modules')) + '/'
-s = open(os.path.join(ROOT, 'dist', 'jade-vault.html')).read()
+s = open(os.path.join(ROOT, 'dist', 'pandora-dee.html')).read()
 css = open(os.path.join(ROOT, 'dist', 'tw.css')).read()
 marked = open(NM + 'marked/lib/marked.umd.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
 purify = open(NM + 'dompurify/dist/purify.min.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')

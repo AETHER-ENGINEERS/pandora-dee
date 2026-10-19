@@ -53,7 +53,7 @@ const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png` });
 await page.goto('file://' + process.env.JV_APK);
 await page.waitForFunction(() => /BUSYBOX|JS APPLETS/.test(document.querySelector('#txtShell')?.textContent || ''), null, { timeout: 90000 });
 await page.waitForTimeout(1500);
-ok(await page.title() === 'Jade Vault', 'title');
+ok(await page.title() === 'Pandora Dee', 'title');
 ok(/second brain/.test(await page.textContent('#chat')), 'empty state hero');
 ok(/\d+ notes, \d+ links/.test(await page.textContent('#chat')), 'vault boot row');
 await shot('1_chat'); await overflow('chat');

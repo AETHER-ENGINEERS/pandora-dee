@@ -21,7 +21,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: pip install -r jade-discord/requirements.txt
+      - run: pip install -r pandora-discord/requirements.txt
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - name: Build web app
@@ -32,13 +32,13 @@ jobs:
         run: bash android/build-apk.sh
       - name: Bridge checks
         run: |
-          python3 -m py_compile jade-vector/*.py jade-vector/test/*.py jade-discord/*.py jade-discord/test/*.py
-          bash -n jade-vector/setup.sh
-          bash -n jade-discord/setup.sh
+          python3 -m py_compile pandora-vector/*.py pandora-vector/test/*.py pandora-discord/*.py pandora-discord/test/*.py
+          bash -n pandora-vector/setup.sh
+          bash -n pandora-discord/setup.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: jade-vault-build
+          name: pandora-dee-build
           path: |
             dist/
             tests/.work/**/*.png
@@ -53,7 +53,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
-          context: jade-vector
+          context: pandora-vector
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max

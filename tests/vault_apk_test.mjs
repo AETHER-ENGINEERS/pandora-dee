@@ -54,8 +54,8 @@ await page.goto('file://' + process.env.JV_APK);
 await page.waitForFunction(() => /BUSYBOX|JS APPLETS/.test(document.querySelector('#txtShell')?.textContent || ''), null, { timeout: 90000 });
 await page.waitForTimeout(1500);
 ok(await page.title() === 'Pandora Dee', 'title');
-ok(/second brain/.test(await page.textContent('#chat')), 'empty state hero');
-ok(/\d+ notes, \d+ links/.test(await page.textContent('#chat')), 'vault boot row');
+ok(/An Atelier that lives in this tab/.test(await page.textContent('#chat')), 'empty state hero');
+ok(/\d+ leaves, \d+ threads/.test(await page.textContent('#chat')), 'Atelier boot row');
 await shot('1_chat'); await overflow('chat');
 
 // Notes tab
@@ -63,7 +63,7 @@ await page.tap('.tab[data-tab="files"]'); await page.waitForTimeout(300);
 const treeTxt = await page.textContent('#tree');
 ok(/Welcome/.test(treeTxt) && /guides\//.test(treeTxt) && !/Welcome\.md/.test(treeTxt), 'tree shows notes by name');
 ok(await page.locator('#tree .lk-badge').count() > 3, 'link badges in tree');
-ok(/\d+ notes · \d+ links/.test(await page.textContent('#fsStats')), 'stats: ' + await page.textContent('#fsStats'));
+ok(/\d+ leaves · \d+ threads/.test(await page.textContent('#fsStats')), 'stats: ' + await page.textContent('#fsStats'));
 ok(await page.locator('#tagBar .tag-chip').count() >= 4, 'tag bar');
 await shot('2_notes'); await overflow('notes');
 await page.tap('#tree .tree-row[data-p="/guides"]'); await page.waitForTimeout(200);
@@ -101,7 +101,7 @@ ok(await page.textContent('#filePath') === 'Welcome', 'back twice → Welcome');
 // missing link creates note
 await page.locator('#notePrev .wiki-link.missing').first().tap(); await page.waitForTimeout(400);
 const created = await page.evaluate(() => editing);
-ok(created === '/wiki links.md' && await page.getAttribute('#noteBody', 'data-mode') === 'edit', 'missing link created ' + created);
+ok(created === '/threads.md' && await page.getAttribute('#noteBody', 'data-mode') === 'edit', 'missing link created ' + created);
 // type [[ autocomplete
 await page.locator('#fileEd').focus();
 await page.keyboard.type('See [[Mark');
@@ -111,7 +111,7 @@ await shot('7_suggest');
 await page.locator('#linkSuggest button', { hasText: 'Markdown Reference' }).tap(); await page.waitForTimeout(100);
 await page.keyboard.type(' for syntax.');
 await page.waitForTimeout(1000);
-const saved = await page.evaluate(() => vfs.read('/wiki links.md'));
+const saved = await page.evaluate(() => vfs.read('/threads.md'));
 ok(/See \[\[Markdown Reference\]\] for syntax\./.test(saved), 'autocomplete inserted + autosaved: ' + JSON.stringify(saved.slice(-60)));
 ok(/Linked from \[\[Welcome\]\]/.test(saved), 'new note links back');
 await page.tap('#modeSeg button[data-mode="split"]'); await page.waitForTimeout(400);
@@ -123,11 +123,11 @@ await page.tap('#modeSeg button[data-mode="edit"]');
 await page.evaluate(() => { const t = $('#fileEd'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); });
 await page.tap('#mdTools button[data-md="task"]'); await page.keyboard.type('buy chrome');
 await page.waitForTimeout(900);
-ok(/- \[ \] buy chrome/.test(await page.evaluate(() => vfs.read('/wiki links.md'))), 'task toolbar button');
+ok(/- \[ \] buy chrome/.test(await page.evaluate(() => vfs.read('/threads.md'))), 'task toolbar button');
 // Todo List checkbox toggling
 await page.evaluate(() => openFile('/Todo List.md', { mode: 'read' })); await page.waitForTimeout(300);
 await page.locator('#notePrev input[type=checkbox]').nth(1).click(); await page.waitForTimeout(300);
-ok(/- \[x\] Write a note/.test(await page.evaluate(() => vfs.read('/Todo List.md'))), 'checkbox toggles source');
+ok(/- \[x\] Write a leaf/.test(await page.evaluate(() => vfs.read('/Todo List.md'))), 'checkbox toggles source');
 await shot('9_todo');
 // graph
 await page.tap('#btnNoteGraph'); await page.waitForTimeout(1200);
@@ -200,7 +200,7 @@ const dup = await page.evaluate(async () => { const r = {}; const t = async (n, 
   r.nested = await t('write', { path: '/notes/Inbox.md', content: 'x' });
   r.under = await t('write', { path: 'Project_Neon', content: 'x' });
   r.fresh = await t('write', { path: 'New Idea', content: '# New Idea\n' });
-  r.edit = await t('edit', { path: 'todo list', oldText: 'Open the vault', newText: 'Open the vault!' });
+  r.edit = await t('edit', { path: 'todo list', oldText: 'Open the Atelier', newText: 'Open the Atelier!' });
   r.read = await t('read', { path: 'Markdown Reference' });
   r.files = vfs.isFile('/inbox') || vfs.isFile('/inbox.md') || vfs.isFile('/notes/Inbox.md') || vfs.isFile('/Project_Neon.md');
   r.newIdea = vfs.isFile('/New Idea.md'); r.inboxBody = vfs.read('/Inbox.md'); return r; });

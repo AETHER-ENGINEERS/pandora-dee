@@ -333,24 +333,24 @@ rep("""<div class="gem-theme-grid mt-2" id="jadeThemePicker" role="group" aria-l
 NOTES_MARKUP = r'''<!-- NOTES (vault) -->
     <section class="m-screen" data-panel="files" hidden>
       <div class="m-sub">
-        <div class="pane-h">Vault</div>
-        <button class="btn btn-ghost" id="btnToday" title="Today's daily note">Today</button>
+        <div class="pane-h">Atelier</div>
+        <button class="btn btn-ghost" id="btnToday" title="Today's chronicle">Today</button>
         <button class="btn btn-ghost" id="btnGraph" title="Graph view">Graph</button>
-        <button class="btn btn-solid cut cut-sm" id="btnNewFile" title="New note">+ Note</button>
+        <button class="btn btn-solid cut cut-sm" id="btnNewFile" title="New leaf">+ Leaf</button>
       </div>
       <div class="vault-search">
-        <label for="noteSearch" class="sr-only">Search notes</label>
-        <input id="noteSearch" type="text" class="field" placeholder="Search notes or #tag" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <label for="noteSearch" class="sr-only">Search leaves</label>
+        <input id="noteSearch" type="text" class="field" placeholder="Search leaves or #sigil" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
         <button class="icon-btn" id="btnSearchClear" aria-label="Clear search" hidden style="width:38px;height:38px"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="tag-bar" id="tagBar" hidden></div>
-      <div id="newEntry" class="px-3 py-2" hidden><input id="newEntryInput" class="field" placeholder="note name" autocapitalize="sentences" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
+      <div id="newEntry" class="px-3 py-2" hidden><input id="newEntryInput" class="field" placeholder="leaf name" autocapitalize="sentences" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>
       <div id="searchRes" class="flex-1 overflow-y-auto min-h-0" hidden></div>
       <div id="tree" class="flex-1 overflow-y-auto min-h-0 py-1" tabindex="-1"></div>
       <div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
         <div class="hud flex-1 min-w-0 truncate" id="fsStats">—</div>
-        <button class="btn btn-ghost" id="btnNewDir" title="New folder">+ Folder</button>
-        <label class="btn btn-ghost" title="Import markdown files" for="upload">Import</label>
+        <button class="btn btn-ghost" id="btnNewDir" title="New workshop">+ Workshop</button>
+        <label class="btn btn-ghost" title="Import markdown files as leaves" for="upload">Import</label>
         <input type="file" id="upload" multiple accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
       </div>
     </section>
@@ -359,26 +359,26 @@ NOTES_MARKUP = r'''<!-- NOTES (vault) -->
     <section class="m-screen" data-panel="file" hidden>
       <div class="m-sub">
         <button class="icon-btn" id="btnFileBack" aria-label="Back" style="width:38px;height:38px"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <div class="flex-1 min-w-0 leading-tight"><div class="disp text-yl font-bold text-[15px] truncate" id="filePath">No note open</div><div class="mono text-[10px] text-dim truncate" id="fileDir"></div></div>
+        <div class="flex-1 min-w-0 leading-tight"><div class="disp text-yl font-bold text-[15px] truncate" id="filePath">No leaf open</div><div class="mono text-[10px] text-dim truncate" id="fileDir"></div></div>
         <span class="save-state mono" id="saveState" aria-live="polite"></span>
         <div class="seg" id="modeSeg" role="group" aria-label="View mode">
           <button data-mode="edit" aria-pressed="false">Edit</button><button data-mode="split" aria-pressed="false">Split</button><button data-mode="read" aria-pressed="true">Read</button>
         </div>
       </div>
       <div class="note-body" id="noteBody" data-mode="read">
-        <label for="fileEd" class="sr-only">Note text</label>
-        <textarea id="fileEd" spellcheck="true" autocapitalize="sentences" class="mono leading-relaxed p-3 outline-none resize-none" placeholder="Start writing. Type [[ to link a note."></textarea>
+        <label for="fileEd" class="sr-only">Leaf text</label>
+        <textarea id="fileEd" spellcheck="true" autocapitalize="sentences" class="mono leading-relaxed p-3 outline-none resize-none" placeholder="Start writing. Type [[ to thread in a leaf."></textarea>
         <div id="notePrev" class="note-prev"></div>
       </div>
       <div class="link-suggest" id="linkSuggest" hidden></div>
       <div class="qk md-tools" id="mdTools" aria-label="Formatting">
-        <button data-md="link" aria-label="Insert link">[[ ]]</button><button data-md="h" aria-label="Heading">H</button><button data-md="b" aria-label="Bold"><b>B</b></button><button data-md="i" aria-label="Italic"><i>I</i></button>
-        <button data-md="task" aria-label="Task">☐</button><button data-md="ul" aria-label="Bullet list">•</button><button data-md="tag" aria-label="Tag">#</button><button data-md="quote" aria-label="Quote">❝</button>
+        <button data-md="link" aria-label="Insert thread">[[ ]]</button><button data-md="h" aria-label="Heading">H</button><button data-md="b" aria-label="Bold"><b>B</b></button><button data-md="i" aria-label="Italic"><i>I</i></button>
+        <button data-md="task" aria-label="Task">☐</button><button data-md="ul" aria-label="Bullet list">•</button><button data-md="tag" aria-label="Sigil">#</button><button data-md="quote" aria-label="Quote">❝</button>
         <button data-md="code" aria-label="Code">&lt;/&gt;</button><button data-md="s" aria-label="Strikethrough"><s>S</s></button><button data-md="date" aria-label="Insert today's date">date</button>
       </div>
       <div class="links-panel" id="linksPanel" hidden></div>
       <div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
-        <button class="btn btn-ghost" id="btnLinks" hidden>Links</button>
+        <button class="btn btn-ghost" id="btnLinks" hidden>Threads</button>
         <button class="btn btn-ghost" id="btnNoteGraph" title="Local graph">Graph</button>
         <span class="hud flex-1 min-w-0 truncate text-right" id="noteStats"></span>
         <button class="btn btn-ghost" id="btnFileCopy">Copy</button>
@@ -396,12 +396,12 @@ GRAPH_MARKUP = r'''<!-- GRAPH -->
         <button class="btn btn-ghost" id="btnGraphLocal" aria-pressed="false">Local</button>
         <button class="btn btn-ghost" id="btnGraphFit">Center</button>
       </div>
-      <canvas id="graphCv" class="flex-1 min-h-0 w-full" style="touch-action:none;display:block" aria-label="Graph of notes and links. Tap a node to open it."></canvas>
+      <canvas id="graphCv" class="flex-1 min-h-0 w-full" style="touch-action:none;display:block" aria-label="Graph of leaves and threads. Tap a node to open it."></canvas>
       <div class="hud px-3 py-2 border-t border-line">tap a node to open · drag to pan · pinch to zoom · <span class="text-rd">pink</span> = not written yet</div>
     </section>
   </main>'''
 rep_between('<!-- PREVIEW -->', '</main>', GRAPH_MARKUP, keep_end=False)
-rep('<path d="M3 6h7l2 2h9v11H3z"/></svg>Files</button>', '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Notes</button>')
+rep('<path d="M3 6h7l2 2h9v11H3z"/></svg>Files</button>', '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Leaves</button>')
 rep('<button data-c="ls -la">ls</button><button data-c="tree">tree</button><button data-c="help">help</button>',
     '<button data-c="ls -la">ls</button><button data-c="tree">tree</button><button data-c="tags">tags</button><button data-c="links">links</button><button data-c="help">help</button>')
 
@@ -603,18 +603,18 @@ rep("  for (const a of div.querySelectorAll('a')) { a.target = '_blank'; a.rel =
   }""")
 
 # ---------- empty state ----------
-rep('<div class="mono text-[11px] tracking-[.3em] text-rd">// JACK IN</div>', '<div class="mono text-[11px] tracking-[.3em] text-rd">// JACK INTO THE VAULT</div>')
-rep('text-wrap:balance">A coding agent that lives in this tab.</h1>', 'text-wrap:balance">A second brain that lives in this tab.</h1>')
+rep('<div class="mono text-[11px] tracking-[.3em] text-rd">// JACK IN</div>', '<div class="mono text-[11px] tracking-[.3em] text-rd">// STEP INTO THE ATELIER</div>')
+rep('text-wrap:balance">A coding agent that lives in this tab.</h1>', 'text-wrap:balance">An Atelier that lives in this tab.</h1>')
 rep('Your local Ollama model gets four core tools (read, write, edit, bash) plus tasks and web search. Files live in a virtual filesystem in your browser. Commands run in a BusyBox shell compiled to WebAssembly.',
-    'Markdown notes with [[wiki links]], backlinks, tags and a graph, stored on this device. Jade (your local Ollama model) searches, writes and links them with her tools, and still has the full BusyBox shell.')
+    'Markdown leaves with [[threads]], backlinks, sigils and a graph, stored on this device. Pandora (your local Ollama model) searches, writes and threads them together with her tools, and still has the full BusyBox shell.')
 rep("""      <div class="check-row"><span class="dot ${bb.module ? 'ok' : 'busy'} mt-1.5"></span>""",
-    """      <div class="check-row"><span class="dot ok mt-1.5"></span><div><b>Vault</b> — ${(() => { const i = vaultIndex(); let l = 0; for (const x of i.out.values()) l += x.size; return `${i.notes.length} notes, ${l} links`; })()} · <a href="#" class="text-cy underline" data-act="notes">open Notes</a></div></div>
+    """      <div class="check-row"><span class="dot ok mt-1.5"></span><div><b>Atelier</b> — ${(() => { const i = vaultIndex(); let l = 0; for (const x of i.out.values()) l += x.size; return `${i.notes.length} leaves, ${l} threads`; })()} · <a href="#" class="text-cy underline" data-act="notes">open Leaves</a></div></div>
       <div class="check-row"><span class="dot ${bb.module ? 'ok' : 'busy'} mt-1.5"></span>""")
 rep_between("        ${[['Neon snake',", "          .map(([t, p]) =>",
-    """        ${[['Sort my Inbox', 'Read Inbox.md and turn each item into its own short note with [[links]] back to the Inbox. Then tidy the Inbox.'],
-           ['Daily review', "Open today's daily note (create it if needed), list my open tasks from every note, and add a short plan for today."],
-           ['Map of content', 'Build a note called "Map of Content" that links every note in the vault, grouped by tag, and open it.'],
-           ['Research note', 'Search the web for spaced repetition techniques and write a note with sources, tagged #learning and linked from Project Neon.']]
+    """        ${[['Sort my Inbox', 'Read Inbox.md and turn each item into its own short leaf with [[threads]] back to the Inbox. Then tidy the Inbox.'],
+           ['Daily review', "Open today's chronicle (create it if needed), list my open tasks from every leaf, and add a short plan for today."],
+           ['Map of content', 'Build a leaf called "Map of Content" that threads every leaf in the Atelier together, grouped by sigil, and open it.'],
+           ['Research leaf', 'Search the web for spaced repetition techniques and write a leaf with sources, marked with the #learning sigil and threaded from Project Neon.']]
 """)
 rep("  if (a.dataset.act === 'retry') connect(); else openSettings();", "  e.preventDefault(); if (a.dataset.act === 'retry') connect(); else if (a.dataset.act === 'notes') setTab('files'); else openSettings();")
 

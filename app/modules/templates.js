@@ -222,7 +222,7 @@ for (const t of open) tR += "- [ ] " + t.text + " (" + t.path.split("/").pop().r
 ## Notes
 `;
 async function tplInsertFlow() {
-  if (!editing || !isNote(editing)) { toast('Open a note first', 'err'); return; }
+  if (!editing || !isNote(editing)) { toast('Open a leaf first', 'err'); return; }
   flushSave();
   const list = tplList(); const here = $('#fileEd').value; const hasTags = /<%[\s\S]*?%>/.test(here);
   const labels = [...list.map(p => p.slice(tplDir().length + 1).replace(/\.(md|markdown)$/i, '')), ...(hasTags ? ['⟳ Run the <% %> tags in this note'] : []), ...(list.length ? [] : [`＋ Create an example template in ${tplDir()}`])];

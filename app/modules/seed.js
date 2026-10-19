@@ -1,39 +1,39 @@
 const SEED = {
-  '/Welcome.md': `# Welcome to the Vault
+  '/Welcome.md': `# Welcome to the Atelier
 
-This is your second brain, jacked straight into the browser. Every note is a
-markdown file in a filesystem stored on this device. Jade can read, write,
-search and link them for you, and she still has the full BusyBox shell.
+This is a workshop we share, right here on this device. Every leaf is a
+markdown file kept in the Atelier. Pandora can read, write, search and thread
+them together for you, and she still has the full BusyBox shell.
 
 ## Start here
 - [[Markdown Reference]]: everything the editor renders
-- [[Linking Notes]]: how [[wiki links]] and backlinks work
-- [[Graph View]]: see your notes as a constellation
+- [[Linking Notes]]: how [[threads]] and backlinks work
+- [[Graph View]]: see your leaves as a constellation
 - [[Todo List]]: tap a checkbox in Read mode to tick it
-- [[Inbox]]: drop quick thoughts here, then ask Jade to file them
+- [[Inbox]]: drop quick thoughts here, then ask Pandora to file them
 
-## Ask Jade
-- "Read my Inbox and turn each idea into its own linked note"
-- "What links to [[Linking Notes]]?"
-- "Make a Map of Content that links every note by tag"
+## Ask Pandora
+- "Read my Inbox and turn each idea into its own threaded leaf"
+- "What threads lead to [[Linking Notes]]?"
+- "Make a Map of Content that threads every leaf together by sigil"
 
 #start
 `,
   '/Inbox.md': `# Inbox
 
-Quick capture. Ask Jade to sort these into notes.
+Quick capture. Ask Pandora to sort these into leaves.
 
-- Look into spaced repetition for the notes in #learning
-- Idea: a weekly review note every Sunday (try "schedule a weekly review every sunday at 6pm")
+- Look into spaced repetition for the leaves marked #learning
+- Idea: a weekly review leaf every Sunday (try "schedule a weekly review every sunday at 6pm")
 - [[Project Neon]] needs a plan
 `,
   '/Todo List.md': `# Todo List
 
-- [x] Open the vault
-- [ ] Write a note with a [[wiki link]] in it
-- [ ] Tap a missing (pink) link to create that note
+- [x] Open the Atelier
+- [ ] Write a leaf with a [[thread]] in it
+- [ ] Tap a missing (pink) thread to create that leaf
 - [ ] Open the [[Graph View]]
-- [ ] Ask Jade to summarise the vault
+- [ ] Ask Pandora to summarise the Atelier
 
 #tasks
 `,

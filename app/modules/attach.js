@@ -95,8 +95,8 @@ for (const el of [chatEl, $('.composer-wrap')]) {
 }
 chatEl.addEventListener('click', e => {
   const c = e.target.closest('.att-chip[data-att]'); if (!c) return; e.preventDefault();
-  const p = c.dataset.att; if (!vfs.isFile(p)) return toast('That file is no longer in the vault.', 'err');
-  if (isNote(p) || TEXT_EXT.test(p)) openFile(p, { mode: isNote(p) ? 'read' : undefined }); else toast(`Saved in the vault at ${esc(p)}`);
+  const p = c.dataset.att; if (!vfs.isFile(p)) return toast('That file is no longer in the Atelier.', 'err');
+  if (isNote(p) || TEXT_EXT.test(p)) openFile(p, { mode: isNote(p) ? 'read' : undefined }); else toast(`Saved in the Atelier at ${esc(p)}`);
 });
 // take the pending attachments for a message being sent
 function takeAttachments() { const a = ATT.pending.filter(x => !(x.kind === 'pdf' && !x.note && !x.pdfError && !x.noText)); const waiting = ATT.pending.length - a.length; ATT.pending = ATT.pending.filter(x => !a.includes(x)); renderAttachBar(); if (waiting) toast('A PDF is still being read; it will go with your next message.'); return a; }

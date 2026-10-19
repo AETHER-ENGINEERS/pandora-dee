@@ -51,7 +51,7 @@ Magick, as it turns out, is mostly weaving.
   - She archives server history into a searchable local database.
   - She bridges the gap so Discord users can meet her on Vector too.
 - **💬 Vector messenger:**
-  - Pandora Dee is a bot. You (her Partner) get the full Pandora Dee; admins get Vector powers; everyone else gets friendly chat and Mini Apps.
+  - Pandora Dee is a bot. You as her **Partner** get the full Pandora Dee experience; admins get Vector powers; everyone else gets friendly chat and Mini Apps.
   - She answers DMs and whitelisted channels by your trigger rules.
   - She reacts, replies, sends and receives files, and sees images.
   - She joins and leaves communities and plays Mini Apps.
@@ -218,7 +218,7 @@ That's it. She will join the server, start listening, and remember the people sh
 See [`pandora-vector/README.md`](pandora-vector/README.md): run `pandora-vector/setup.sh` on a Mac or Linux box
 (or `docker compose up` there), then fill in Config → Vector messenger in the app:
 - Bridge URL and token.
-- Your npub as her **Partner** -- the only one who can initiate system-level changes through Vector messages in your DMs or from your community chats
+- Your npub identifies you as her **Partner** and the only one who can initiate system-level changes through Vector messages in your DMs or from your community chats
 - Optionally an admin whitelist, a channel whitelist, who may DM her, trigger words, and how messages for you are delivered.
 
 ## 🚀 Releases

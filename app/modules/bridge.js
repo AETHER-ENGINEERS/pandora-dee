@@ -137,9 +137,9 @@ async function jadeBridge(op, a, ctx = {}) {
     case 'ask': return await askOnce(a.prompt, a);
     case 'agent': return await runAgentPrompt(a.message ?? a.prompt, a);
     case 'flow': {
-      if ((ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('flows call each other too deeply');
+      if ((ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('rituals call each other too deeply');
       const run = await flowRunByName(a.name, a.input, { via: ctx.via || 'script', depth: (ctx.depth || 0) + 1 });
-      if (run.status !== 'ok') throw new Error(`flow "${run.flow}" ${run.status}: ${run.error || ''}`);
+      if (run.status !== 'ok') throw new Error(`ritual "${run.flow}" ${run.status}: ${run.error || ''}`);
       return run.output;
     }
     case 'flows': return flowList().filter(f => !f._bad).map(f => ({ name: f.name, description: f.description || '', enabled: f.enabled !== false, trigger: flowTriggerText(f) }));

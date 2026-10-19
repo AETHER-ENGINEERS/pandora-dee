@@ -25,7 +25,7 @@ ok(r.out.trim() === '4', 'node: jade.ask with json:true returns parsed JSON');
 r = await sh(`node -e "const o = await jade.flow('Double', { x: 21 }); console.log(o.doubled, o.via)"`);
 ok(r.out.trim() === '42 script', 'node: jade.flow runs a flow and returns its output');
 r = await sh(`node -e "try { await jade.flow('Broken') } catch (e) { console.log('caught', e.message) }"`);
-ok(/^caught flow "Broken" error: .*broken on purpose/.test(r.out.trim()), 'node: a failing flow rejects with its error: ' + r.out.trim());
+ok(/^caught ritual "Broken" error: .*broken on purpose/.test(r.out.trim()), 'node: a failing flow rejects with its error: ' + r.out.trim());
 r = await sh(`node -e "const s = await jade.shell('echo hi && ls /does-not-exist'); console.log(s.code !== 0, s.stdout.trim())"`);
 ok(r.out.trim() === 'true hi', 'node: jade.shell runs a command line and returns code / stdout / stderr');
 r = await sh(`node -e "try { await jade.tool('no_such_tool') } catch (e) { console.log(e.message) }"`);

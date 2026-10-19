@@ -70,7 +70,7 @@ function schedKindSubmit(vals) {
   if (kind === 'prompt') { if (ed && schedIsJob(ed)) { delete ed.kind; delete ed.command; delete ed.flow; delete ed.input; } return false; }
   const o = { kind, command: $('#schedCmd').value.trim(), flow: $('#schedFlow').value, input: $('#schedInput').value.trim() || null };
   if (kind === 'shell' && !o.command) throw new Error('the command is empty');
-  if (kind === 'flow' && !flowFind(o.flow)) throw new Error('pick a flow');
+  if (kind === 'flow' && !flowFind(o.flow)) throw new Error('pick a ritual');
   if (o.input) { try { JSON.parse(o.input); } catch { throw new Error('the flow input must be JSON (or leave it empty)'); } }
   if (ed) {
     Object.assign(ed, specFields(cronMacro(vals.when)), { name: (vals.name || schedLabel(o)).trim().slice(0, 60), prompt: schedLabel(o), catchUp: vals.catchUp, enabled: true }, o);

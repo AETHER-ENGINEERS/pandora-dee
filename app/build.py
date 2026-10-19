@@ -1571,7 +1571,7 @@ rep("    applyBbEntries(r.entries);", "    applyBbEntries(r.entries, base);")
 rep("const DEFAULTS = { apiOn: false,", "const DEFAULTS = { tplOn: true, tplTools: false, tplDir: '/Templates', apiOn: false,")
 # bottom bar: a Flows tab between Schedule and Apps
 SCHED_TAB = '<button class="tab" role="tab" data-tab="sched" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Schedule<span class="badge" id="schedBadge" hidden>0</span></button>'
-rep(SCHED_TAB, SCHED_TAB + '\n    <button class="tab" role="tab" data-tab="flows" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="3.5" width="7" height="5.5" rx="1"/><rect x="14" y="15" width="7" height="5.5" rx="1"/><circle cx="17.5" cy="6.25" r="2.75"/><path d="M10 6.25h4.75M6.5 9v5.25a3 3 0 0 0 3 3H14"/></svg>Flows<span class="badge" id="flowBadge" hidden>0</span></button>')
+rep(SCHED_TAB, SCHED_TAB + '\n    <button class="tab" role="tab" data-tab="flows" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="3.5" width="7" height="5.5" rx="1"/><rect x="14" y="15" width="7" height="5.5" rx="1"/><circle cx="17.5" cy="6.25" r="2.75"/><path d="M10 6.25h4.75M6.5 9v5.25a3 3 0 0 0 3 3H14"/></svg>Rituals<span class="badge" id="flowBadge" hidden>0</span></button>')
 rep("repeat(6,1fr)", "repeat(7,1fr)")
 rep("font-size:9.5px;letter-spacing:.1em;position:relative}", "font-size:8.8px;letter-spacing:.04em;position:relative}")
 rep("    <!-- GRAPH -->", """    <!-- FLOWS -->
@@ -1618,12 +1618,12 @@ rep('[hidden]{display:none!important}', '[hidden]{display:none!important}\n' + "
 
 # the Schedule tab: run a prompt, a shell command or a flow
 rep('<div class="pane-h">Scheduled prompts</div>', '<div class="pane-h">Schedules</div>')
-rep("Runs a prompt on a schedule, in your local time.", "Runs a prompt, a shell command or a flow on a schedule, in your local time. From the shell: <span class=\"mono text-cy\">crontab -l</span>.")
+rep("Runs a prompt on a schedule, in your local time.", "Runs a prompt, a shell command or a ritual on a schedule, in your local time. From the shell: <span class=\"mono text-cy\">crontab -l</span>.")
 SNAME = '<div><label class="lbl" for="schedName">Name</label><input id="schedName" class="field mt-1" maxlength="60" placeholder="Morning standup"></div>'
 rep(SNAME, SNAME + """
-            <div class="sched-row"><div><label class="lbl" for="schedKind">Run</label><select id="schedKind" class="field mt-1"><option value="prompt">A prompt (Jade does it in a chat)</option><option value="shell">A shell command</option><option value="flow">A flow</option></select></div><div id="schedFlowWrap" hidden><label class="lbl" for="schedFlow">Flow</label><select id="schedFlow" class="field mt-1"></select></div></div>
+            <div class="sched-row"><div><label class="lbl" for="schedKind">Run</label><select id="schedKind" class="field mt-1"><option value="prompt">A prompt (Pandora does it in a chat)</option><option value="shell">A shell command</option><option value="flow">A ritual</option></select></div><div id="schedFlowWrap" hidden><label class="lbl" for="schedFlow">Ritual</label><select id="schedFlow" class="field mt-1"></select></div></div>
             <div id="schedCmdWrap" hidden><label class="lbl" for="schedCmd">Command</label><input id="schedCmd" class="field mt-1 mono" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="node /scripts/sync.js >> /Pandora/Logs/sync.log"><div class="hint mt-1">Runs in the shell on its own (no chat, no model). Output goes to /Pandora/Logs/cron.log; a failure notifies you.</div></div>
-            <div id="schedInputWrap" hidden><label class="lbl" for="schedInput">Flow input (JSON, optional)</label><input id="schedInput" class="field mt-1 mono" autocapitalize="off" spellcheck="false" placeholder='{"folder": "/projects"}'></div>""")
+            <div id="schedInputWrap" hidden><label class="lbl" for="schedInput">Ritual input (JSON, optional)</label><input id="schedInput" class="field mt-1 mono" autocapitalize="off" spellcheck="false" placeholder='{"folder": "/projects"}'></div>""")
 rep('<div><label class="lbl" for="schedPrompt">Prompt</label>', '<div id="schedPromptWrap"><label class="lbl" for="schedPrompt">Prompt</label>')
 rep("syncSchedForm(true); $('#schedName').focus();", "schedKindFill(s); syncSchedForm(true); $('#schedName').focus();")
 rep("  try {\n    if (Sched.editing) {\n      if (!vals.prompt.trim()) throw new Error('the prompt is empty');", "  try {\n    if (schedKindSubmit(vals)) { $('#schedForm').hidden = true; Sched.editing = null; return; }\n    if (Sched.editing) {\n      if (!vals.prompt.trim()) throw new Error('the prompt is empty');")
@@ -1634,7 +1634,7 @@ rep("async function runSchedule({ s, why }) {", "async function runSchedule({ s,
 rep("runningNow = s.lastStatus === 'running' && Sched.draining;", "runningNow = (s.lastStatus === 'running' && Sched.draining) || SchedBusy.has(s.id);")
 rep('<div class="sched-prompt">${esc(s.prompt)}</div>', '<div class="sched-prompt${schedIsJob(s) ? \' mono\' : \'\'}">${esc(s.prompt)}</div>')
 rep("    const s = addSchedule({ name: a.name, when, prompt: a.prompt || a.message || a.task || a.name, chat: a.chat });", "    const s = (a.command || a.flow) ? addScheduleKind({ name: a.name, when, kind: a.command ? 'shell' : 'flow', command: a.command, flow: a.flow, input: a.input ?? null }) : addSchedule({ name: a.name, when, prompt: a.prompt || a.message || a.task || a.name, chat: a.chat });")
-rep("Each run sends the prompt to you as a new message.", "Each run sends the prompt to you as a new message; or it runs a shell command (\"command\", no chat, output in /Pandora/Logs/cron.log) or one of your flows (\"flow\").")
+rep("Each run sends the prompt to you as a new message.", "Each run sends the prompt to you as a new message; or it runs a shell command (\"command\", no chat, output in /Pandora/Logs/cron.log) or one of your rituals (\"flow\": its name).")
 rep("prompt: { type: 'string', description: 'What to do or say each time, e.g. \"Remind the user to finish their projects\" (add)' },", "prompt: { type: 'string', description: 'What to do or say each time, e.g. \"Remind the user to finish their projects\" (add)' }, command: { type: 'string', description: 'add: run this shell command instead of a prompt, e.g. \"node /scripts/sync.js\"' }, flow: { type: 'string', description: 'add: run this flow (by name) instead of a prompt' }, input: { type: 'object', description: 'add with flow: the flow\\'s input' },")
 rep(r"- schedule: create/list/pause/delete scheduled prompts and reminders.", r"- schedule: create/list/pause/delete scheduled prompts and reminders, or scheduled shell commands (command) and flows (flow).")
 

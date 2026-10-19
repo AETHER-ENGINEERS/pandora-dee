@@ -989,7 +989,9 @@ rep("S.lcppKey = $('#sLcppKey').value.trim();", "S.lcppKey = $('#sLcppKey').valu
 rep("$('#sLcppKey').value = S.lcppKey || '';", "$('#sLcppKey').value = S.lcppKey || ''; $('#sAicKey').value = S.aicKey || '';")
 rep("lcppKey: $('#sLcppKey')?.value.trim() || '',", "lcppKey: $('#sLcppKey')?.value.trim() || '', aicKey: $('#sAicKey')?.value.trim() || '',")
 
-rep("const saveSettings = () => { if (window.__restoring) return;", "const saveSettings = () => { if (window.__restoring || window.__modelOverride) return;")
+# while a helper model runs (withModel), save the real chat provider and model, not the helper's
+rep("const saveSettings = () => { if (window.__restoring) return; if (activeProv && S.model) (S.modelBy ||= {})[activeProv] = S.model; ls.set('settings', S); };",
+    "const saveSettings = () => { if (window.__restoring) return; const o = window.__modelOverride, prov = o ? o.activeProv : activeProv, model = o ? o.model : S.model; if (prov && model) (S.modelBy ||= {})[prov] = model; ls.set('settings', o ? { ...S, model } : S); };")
 rep("  if (!S.journalOn || !sess || !S.model) return;", "  if (!S.journalOn || !sess || !S.model || sess._hb) return;")
 rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Your heartbeat checklist is /Pandora/HEARTBEAT.md: when the user wants you to keep an eye on something regularly, add a short line under its Check heading (use schedule instead for exact times).\\n- Files the user attaches in chat are saved under /attachments/YYYY-MM-DD/; PDFs get a .pdf.md text note next to them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 # composer: attach button + pending bar
@@ -1728,7 +1730,7 @@ rep("  const res = [['/', { dir: true }]];", """  for (const q of alias) { try {
 rep("""  for (const [p, n] of entries) {
     seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""", """  for (let [p, n] of entries) {
     p = pandoraPath(p); seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""")
-rep("Object.assign(window, { DC,", "Object.assign(window, { pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
+rep("Object.assign(window, { DC,", "Object.assign(window, { withModel, pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
 # ---------- v23: Pandora Dee's words where people read them ----------
 # Interface text that comes from the base page or from earlier layers, translated where it lands. Identifiers,
 # storage keys, tool names and file formats stay as they are.

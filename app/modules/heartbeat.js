@@ -48,12 +48,13 @@ function renderHbStatus() {
   const next = HB.last ? HB.last + hbEveryMs() : Date.now();
   el.textContent = !S.hbOn ? 'Off' : `${HB.last ? `Last ${clock(HB.last)}: ${HB.status || '—'}` : 'Not run yet'} · next ${inActiveHours(new Date(next)) ? clock(Math.max(next, Date.now())) : 'when active hours start'}${heartbeatBody() ? '' : ' · HEARTBEAT.md is empty, so it will skip'}`;
 }
-// run fn with another provider/model, restoring the chat model afterwards
+// run fn with another provider/model, restoring the chat model afterwards. While it runs, __modelOverride holds the
+// real chat provider and model, so a settings save in the meantime keeps them (and the person's other changes)
 async function withModel(prov, model, fn) {
   if (!prov || !model || providerMissing(prov)) return fn();
-  const saved = { client, activeProv, model: S.model, models };
-  try { if (prov !== activeProv) { client = makeClientFor(prov); activeProv = prov; } S.model = model; window.__modelOverride = true; return await fn(); }
-  finally { client = saved.client; activeProv = saved.activeProv; S.model = saved.model; models = saved.models; window.__modelOverride = false; fillModelSelects(); }
+  const saved = { client, activeProv, model: S.model, models }; const outer = window.__modelOverride;
+  try { if (prov !== activeProv) { client = makeClientFor(prov); activeProv = prov; } S.model = model; window.__modelOverride = outer || { activeProv: saved.activeProv, model: saved.model }; return await fn(); }
+  finally { client = saved.client; activeProv = saved.activeProv; S.model = saved.model; models = saved.models; window.__modelOverride = outer || false; fillModelSelects(); }
 }
 const hbIsAck = (text) => {
   const t = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();

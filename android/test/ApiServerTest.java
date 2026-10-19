@@ -63,8 +63,14 @@ public class ApiServerTest {
         calls.clear();
         r = get(base + "/v1/flow?name=Daily%20digest&input=%7B%22x%22%3A1%7D", "GET", "Bearer jv_test_token_123456");
         ok(r[0].equals("200") && calls.get(0).contains("'flow'") && calls.get(0).contains("'name':'Daily digest'") && calls.get(0).contains("'input':'\\u007b\\u0022x\\u0022\\u003a1\\u007d'"), "/v1/flow passes the name and the JSON input: " + (calls.isEmpty() ? "" : calls.get(0)));
+        calls.clear();
+        r = get(base + "/v1/rituals", "GET", "Bearer jv_test_token_123456");
+        ok(r[0].equals("200") && calls.size() == 1 && calls.get(0).contains("'rituals'"), "/v1/rituals reaches the page");
+        calls.clear();
+        r = get(base + "/v1/ritual?name=Daily%20digest", "GET", "Bearer jv_test_token_123456");
+        ok(r[0].equals("200") && calls.size() == 1 && calls.get(0).contains("'ritual'") && calls.get(0).contains("'name':'Daily digest'"), "/v1/ritual passes the name");
         r = get(base + "/v1/health", "GET", null);
-        ok(r[1].contains("/v1/flows") && r[1].contains("/v1/flow?name="), "health lists the flow endpoints");
+        ok(r[1].contains("/v1/rituals") && r[1].contains("/v1/ritual?name=") && r[1].contains("/v1/flows") && r[1].contains("/v1/flow?name="), "health lists the ritual endpoints and Jade Vault's flow ones");
         r = get(base + "/v1/flowz", "GET", "Bearer jv_test_token_123456");
         ok(r[0].equals("404"), "a near-miss path is still 404");
         r = get(base + "/v1/chat?message=x", "POST", "Bearer jv_test_token_123456");

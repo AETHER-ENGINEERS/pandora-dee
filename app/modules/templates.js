@@ -118,7 +118,7 @@ function __tplLib(T, $date) {
     user: {},
   };
   const __str = v => v == null ? '' : typeof v === 'object' ? (v instanceof Date ? $date('YYYY-MM-DD', v) : JSON.stringify(v)) : String(v);
-  async function __tplRun(text, depth) { const fn = new (Object.getPrototypeOf(async function () {}).constructor)('tp', 'dv', 'jade', 'fs', '__str', T.compiledOf(text)); return await fn(tp, dv, jade, fs, __str); }
+  async function __tplRun(text, depth) { const fn = new (Object.getPrototypeOf(async function () {}).constructor)('tp', 'dv', 'jade', 'pandora', 'fs', '__str', T.compiledOf(text)); return await fn(tp, dv, jade, jade, fs, __str); }
   return { dv, tp, ops, cell, __str, __tplRun };
 }
 // Templater text → JavaScript that builds tR

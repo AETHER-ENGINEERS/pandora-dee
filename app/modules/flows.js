@@ -75,7 +75,7 @@ function flowSave(f, oldPath) {
   flowsChanged(); return { ...clean, _path: p };
 }
 function flowDelete(f) { if (vfs.isFile(f._path)) vfs.rm(f._path); flowsChanged(); }
-function flowToolNames() { return [...new Set([...TOOL_DEFS.map(t => t.name), ...(typeof VEC_TOOL_DEFS !== 'undefined' ? VEC_TOOL_DEFS.map(t => t.name) : []), ...(typeof DC_TOOL_DEFS !== 'undefined' ? DC_TOOL_DEFS.map(t => t.name) : []), ...mcpToolDefs().map(t => t.function.name)])].filter(n => n !== 'flow').sort(); }
+function flowToolNames() { return [...new Set([...TOOL_DEFS.map(t => t.name), ...(typeof VEC_TOOL_DEFS !== 'undefined' ? VEC_TOOL_DEFS.map(t => t.name) : []), ...(typeof DC_TOOL_DEFS !== 'undefined' ? DC_TOOL_DEFS.map(t => t.name) : []), ...mcpToolDefs().map(t => t.function.name)])].filter(n => n !== 'ritual' && n !== 'flow').sort(); }
 
 /* ---------- validation ---------- */
 function flowValidate(f) {
@@ -106,7 +106,7 @@ function flowValidate(f) {
       if (kind === 'num' && v != null && v !== '' && !Number.isFinite(+v)) errs.push(`${where}: "${k}" must be a number`);
       if (kind.startsWith('sel:') && v != null && v !== '' && !kind.slice(4).split('|').includes(v)) errs.push(`${where}: "${k}" must be one of ${kind.slice(4).split('|').join(', ')}`);
     }
-    if (st.type === 'tool' && st.tool) { if (st.tool === 'flow') errs.push(`${where}: use a "flow" step to run another flow`); else if (!tools.includes(st.tool) && !/^mcp__/.test(st.tool)) errs.push(`${where}: no tool named "${st.tool}"`); }
+    if (st.type === 'tool' && st.tool) { if (st.tool === 'ritual' || st.tool === 'flow') errs.push(`${where}: use a "flow" step (Run ritual) to run another ritual`); else if (!tools.includes(st.tool) && !/^mcp__/.test(st.tool)) errs.push(`${where}: no tool named "${st.tool}"`); }
     if (st.type === 'tool' && st.args != null && (typeof st.args !== 'object' || Array.isArray(st.args))) errs.push(`${where}: "args" must be an object`);
     if (st.type === 'set' && st.fields != null && (typeof st.fields !== 'object' || Array.isArray(st.fields))) errs.push(`${where}: "fields" must be an object`);
     if (st.type === 'switch' && st.cases != null && (!Array.isArray(st.cases) || st.cases.some(c => !c || typeof c !== 'object'))) errs.push(`${where}: "cases" must be a list of {"match": value, "steps": [...]}`);
@@ -278,7 +278,7 @@ async function flowExec(step, ctx, st, rec) {
   switch (step.type) {
     case 'tool': {
       const name = String(p.tool || '');
-      if (name === 'flow') throw new Error('use a "flow" step to run another flow');
+      if (name === 'ritual' || name === 'flow') throw new Error('use a "flow" step (Run ritual) to run another ritual');
       if (!activeTools().some(t => t.function.name === name) && !/^mcp__/.test(name)) throw new Error(`the tool "${name}" is not available right now`);
       let r = await runTool(name, p.args && typeof p.args === 'object' ? p.args : {}, null);
       if (p.parse && typeof r === 'string') { try { r = JSON.parse(r); } catch { const m = /[\[{][\s\S]*[\]}]/.exec(r); if (!m) throw new Error('the result is not JSON'); r = JSON.parse(m[0]); } }
@@ -417,13 +417,13 @@ function flowsInit() {
   vfs.listeners.add(() => { clearTimeout(FlowTrig.nt); FlowTrig.nt = setTimeout(flowNoteCheck, 3000); });
 }
 
-/* ---------- Jade's tool ---------- */
-const FLOW_TOOL_DEFS = [{ name: 'flow', description: 'Automation flows (like n8n): a list of steps that run in order — Jade\'s tools, JavaScript, shell commands, Ollaya decisions, AI answers, a full Jade chat turn, notes, if / switch / for-each, wait, notify, other flows. A flow runs by hand, on a schedule, when a note changes, from the shell (flow run), from scripts (jade.flow) or over the API. Actions: help (the JSON format and every step type: read it before you create or change a flow), list, get, create, update, delete, run, runs, enable, disable.',
+/* ---------- her ritual tool (Jade Vault called it flow: calls to flow still work) ---------- */
+const FLOW_TOOL_DEFS = [{ name: 'ritual', description: 'Rituals: automations (like n8n flows), a list of steps that run in order — your tools, JavaScript, shell commands, Ollaya decisions, AI answers, a full chat turn of yours, leaves (notes), if / switch / for-each, wait, notify, other rituals. A ritual runs by hand, on a schedule, when a leaf changes, from the shell (ritual run), from scripts (pandora.ritual) or over the API. Actions: help (the JSON format and every step type: read it before you create or change a ritual), list, get, create, update, delete, run, runs, enable, disable.',
   parameters: { type: 'object', properties: {
     action: { type: 'string', enum: ['help', 'list', 'get', 'create', 'update', 'delete', 'run', 'runs', 'enable', 'disable'] },
-    name: { type: 'string', description: 'The flow\'s name (get, update, delete, run, runs, enable, disable)' },
-    flow: { type: 'object', description: 'create / update: the whole flow as JSON (see help). update replaces the flow; to rename, give the new name here and the old one in "name"' },
-    input: { type: 'object', description: 'run: input data for the flow (it is $input and the first $json)' },
+    name: { type: 'string', description: 'The ritual\'s name (get, update, delete, run, runs, enable, disable)' },
+    ritual: { type: 'object', description: 'create / update: the whole ritual as JSON (see help). update replaces the ritual; to rename, give the new name here and the old one in "name"' },
+    input: { type: 'object', description: 'run: input data for the ritual (it is $input and the first $json)' },
     limit: { type: 'number', description: 'runs: how many (default 10)' } }, required: ['action'] } }];
 function flowHelp() {
   const types = Object.entries(FLOW_TYPES).map(([k, T]) => `- ${k} (${T.label}): ${T.help}\n  fields: ${T.fields.map(([f, , kind, ph, req]) => `${f}${req ? '*' : ''}${kind.startsWith('sel:') ? ' = ' + kind.slice(4) : kind === 'bool' ? ' (true/false)' : kind === 'num' ? ' (number)' : kind === 'json' ? ' (JSON)' : kind === 'expr' ? ' (JavaScript expression)' : ''}`).join(', ')}${T.branches ? `; nested step lists: ${T.branches.map(b => b[0]).join(', ')}` : ''}${T.cases ? '; cases: [{"match": value or [values], "steps": [...]}], default: [steps]' : ''}`).join('\n');
@@ -456,6 +456,7 @@ function flowRunText(run) {
 }
 async function flowTool(a = {}) {
   const act = String(a.action || 'list');
+  if (a.ritual !== undefined && a.flow === undefined) a = { ...a, flow: a.ritual };   // the ritual tool's word for it
   const get = () => { const f = flowFind(a.name ?? a.flow?.name); if (!f) throw new Error(`no flow named "${a.name ?? ''}". Use action list.`); return f; };
   const parseFlow = () => { let f = a.flow; if (typeof f === 'string') { try { f = JSON.parse(f); } catch (e) { throw new Error('"flow" is not valid JSON: ' + e.message); } } if (!f || typeof f !== 'object') throw new Error('give the whole flow in "flow" (see action help)'); return f; };
   if (act === 'help') return flowHelp();

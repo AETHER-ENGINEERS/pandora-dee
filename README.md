@@ -171,7 +171,7 @@ Needs Node 20+, Python 3.9+, and for the APK a JDK 17+ (no Android SDK).
 npm install
 npx playwright install chromium     # for the tests
 npm run build                       # dist/pandora-dee.html, android/proj/assets/index.html
-npm test                            # 15 suites, ~8 minutes
+npm test # 27 suites, ~13 minutes
 bash android/build-apk.sh           # dist/pandora-dee-<version>.apk (debug key)
 ```
 
@@ -209,7 +209,7 @@ To set her up:
    - Add Reactions
    - Use Slash Commands (if you add commands later)
 6. Copy the generated URL, paste it in your browser, and invite her to your server.
-7. In the Pandora Dee app, go to **Config → Discord bridge** and paste your bot token. Set which servers, channels, and DMs she should listen to, and whether messages for you go to the inbox or reach you at once.
+7. In the **pandora-discord** bridge, run `./setup.sh --set-token YOUR_BOT_TOKEN` (or set the `PANDORA_DISCORD_TOKEN` environment variable). Then in the Pandora Dee app, go to **Config → Discord bridge** and paste only the bridge URL and bridge token — never the bot token. Set which servers, channels, and DMs she should listen to, and whether messages for you go to the inbox or reach you at once.
 
 That's it. She will join the server, start listening, and remember the people she meets.
 

@@ -1,6 +1,6 @@
 /* =====================================================================
    MCP — modelled on pi's built-in MCP (pi ≥ 0.99, "Codemode and MCP")
-   Config: /Jade/mcp.json  { "mcpServers": { "<name>": { url, headers, type, timeout, enabled,
+   Config: /Pandora/mcp.json  { "mcpServers": { "<name>": { url, headers, type, timeout, enabled,
            exposure, toolExposure, description } } }
    Tools are named mcp__<server>__<tool>. Per-server `exposure` (and per-tool `toolExposure`, keys are
    exact names or * patterns; exact names win):
@@ -12,7 +12,7 @@
    Transport: streamable HTTP only (a browser cannot spawn stdio servers; legacy SSE is rejected like pi).
    Servers connect in the background at startup and stay connected; edits to mcp.json apply live.
    ===================================================================== */
-const MCP_PATH = '/Jade/mcp.json';
+const MCP_PATH = '/Pandora/mcp.json';
 const MCP_PROTOCOL = '2025-06-18';
 const MCP_EXPOSURES = ['codemode', 'deferred', 'direct', 'hidden'];
 const MCP = { servers: new Map(), loadedKey: '', cfgText: '', reloadT: 0 };
@@ -33,7 +33,7 @@ function readMcpConfig() {
 }
 function writeMcpConfig(mutate) {
   let j = { mcpServers: {} };
-  if (vfs.isFile(MCP_PATH)) { try { j = JSON.parse(vfs.read(MCP_PATH).replace(/^\s*\/\/.*$/gm, '')); } catch { throw new Error('fix the JSON in /Jade/mcp.json first'); } }
+  if (vfs.isFile(MCP_PATH)) { try { j = JSON.parse(vfs.read(MCP_PATH).replace(/^\s*\/\/.*$/gm, '')); } catch { throw new Error('fix the JSON in /Pandora/mcp.json first'); } }
   j.mcpServers ||= {}; mutate(j.mcpServers, j);
   vfs.write(MCP_PATH, JSON.stringify(j, null, 2) + '\n', { mkdirs: true });
 }
@@ -378,7 +378,7 @@ function renderMcpPanel() {
       <div class="mcp-tools" hidden></div>
     </div>`;
   }).join('');
-  box.innerHTML = cfgErr + (rows || '<div class="hint">No MCP servers yet. Add one below or edit Jade/mcp.json.</div>');
+  box.innerHTML = cfgErr + (rows || '<div class="hint">No MCP servers yet. Add one below or edit Pandora/mcp.json.</div>');
   const n = mcpConnected().length; const chip = $('#mcpCount'); if (chip) chip.textContent = MCP.servers.size ? `${n}/${MCP.servers.size} connected` : '';
 }
 $('#mcpList').addEventListener('change', e => {

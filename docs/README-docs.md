@@ -2,6 +2,26 @@
 
 Jade Vault is a device-local Markdown vault with an AI assistant, browser-based scripting, automations, and an Android wrapper. These guides target **Jade Vault 2.9.0**; UI labels may vary slightly between releases. Config has Model, Memory, Tools, Connect, and App tabs, plus a search box.
 
+## Pandora Dee's words
+
+Pandora Dee is the Jade Vault edition these guides now describe, and its interface uses the Atelier's words. Many guides still use Jade Vault's terms; they mean the same things:
+
+| Jade Vault | In Pandora Dee's interface |
+| --- | --- |
+| vault | **Atelier** |
+| note / page | **leaf** / **leaves** (the Leaves tab) |
+| folder | **workshop** when you browse leaves; path fields and file pickers still say folder |
+| tag | **sigil** |
+| link | **thread** (backlinks keep their name) |
+| daily note | **chronicle** |
+| journal | **quest log** |
+| flow (Flows tab) | **ritual** (Rituals tab) |
+| owner | **Partner** |
+| `/Jade/…`, `/Jade/Flows/` | `/Pandora/…`, `/Pandora/Rituals/` |
+| `jade.*`, `jade` / `flow` commands, `/v1/flows` | `pandora.*`, `pandora` / `ritual` commands, `/v1/rituals` |
+
+Jade Vault's names keep working: `jade.*`, the `jade` and `flow` commands, `/v1/flows`, `.flow.json` files and paths under `/Jade` all still resolve. Her tool names (`notes_search`, `read`, `write` and the rest) are unchanged; only `flow` became `ritual`, and calls to `flow` still reach it. See [Backup and storage](backup-and-storage.md#migration-and-upgrades) for how an existing install moves in.
+
 ## Version and compatibility
 
 These guides cover **Jade Vault 2.9.0**. For platform requirements, network access, background operation, and backup coverage, see [Compatibility and limitations](compatibility-and-limitations.md).
@@ -24,7 +44,7 @@ These guides cover **Jade Vault 2.9.0**. For platform requirements, network acce
 | [Jade, memory, and skills](jade-and-memory.md) | Chat, tools, steering files, journal, skills, context management |
 | [Shell and scripting](scripting.md) | BusyBox, JavaScript bridge, MicroPython, SQLite, TensorFlow.js |
 | [Note scripts and templates](note-scripts-and-templates.md) | Dataview-style queries, inline expressions, Templater syntax |
-| [Flows and scheduling](automation.md) | Flow JSON reference, expressions, schedules, crontab, heartbeat |
+| [Rituals and scheduling](automation.md) | Ritual JSON reference, expressions, schedules, crontab, heartbeat |
 | [MCP and HTTP integrations](integrations.md) | MCP configuration, tool exposure, resources, HTTP requests |
 | [Apps and Jade Link](apps.md) | Sandboxed webxdc apps, update protocol, packaging |
 | [Discord](discord.md) | Bot creation, bridge setup, permissions, shared queue, diagnostics |
@@ -51,4 +71,4 @@ These guides cover **Jade Vault 2.9.0**. For platform requirements, network acce
 - [Jade Link protocol](../apps/jade-link/README.md).
 - [SQLite WebAssembly build reference](../sqlite-wasm/README.md).
 
-> Paths such as `/Jade/SOUL.md` are files **inside the app's virtual vault**, rather than paths in your computer's regular filesystem. Commands in build/development guides run on your computer; commands in scripting guides run inside Jade Vault unless explicitly stated otherwise.
+> Paths such as `/Pandora/SOUL.md` are files **inside the app's virtual vault**, rather than paths in your computer's regular filesystem. Commands in build/development guides run on your computer; commands in scripting guides run inside Jade Vault unless explicitly stated otherwise.

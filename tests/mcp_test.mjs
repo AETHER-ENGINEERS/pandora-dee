@@ -72,10 +72,10 @@ await page.route('**/*', async route => {
 await page.goto(URL_);
 await page.waitForFunction(() => /BUSYBOX|JS APPLETS/.test(document.querySelector('#txtShell')?.textContent || '') && typeof mcpReload === 'function', null, { timeout: 90000 });
 await page.waitForTimeout(800);
-ok(await page.evaluate(() => vfs.isFile('/Jade/mcp.json') && JSON.parse(vfs.read('/Jade/mcp.json')).mcpServers && MCP.servers.size === 0), 'mcp.json seeded empty');
+ok(await page.evaluate(() => vfs.isFile('/Pandora/mcp.json') && JSON.parse(vfs.read('/Pandora/mcp.json')).mcpServers && MCP.servers.size === 0), 'mcp.json seeded empty');
 ok(await page.evaluate(() => !activeTools().some(t => ['codemode', 'tool_search'].includes(t.function.name))), 'no MCP tools without servers');
 // write config (live reload, like editing the note)
-await page.evaluate(() => vfs.write('/Jade/mcp.json', JSON.stringify({ mcpServers: {
+await page.evaluate(() => vfs.write('/Pandora/mcp.json', JSON.stringify({ mcpServers: {
   notes: { url: 'https://notes.example.com/mcp', description: 'Weather and maths helpers' },
   docs: { url: 'https://docs.example.com/mcp', exposure: 'deferred' },
   calc: { url: 'https://calc.example.com/mcp', exposure: 'direct', headers: { Authorization: 'Bearer ${CALC_TOKEN}' } },
@@ -158,18 +158,18 @@ ok(await page.locator('.mcp-row[data-srv="notes"] .mcp-tool').count() === 3, 'in
 await page.locator('.mcp-row[data-srv="notes"]').scrollIntoViewIfNeeded(); await page.screenshot({ path: OUT + '/3_panel.png' });
 const initsBefore = mcpLog.filter(x => x.name === 'notes' && x.method === 'initialize').length;
 await page.selectOption('.mcp-row[data-srv="notes"] .mcp-ex', 'direct'); await page.waitForTimeout(900);
-const after = await page.evaluate(() => ({ ex: JSON.parse(vfs.read('/Jade/mcp.json')).mcpServers.notes.exposure, names: activeTools().map(t => t.function.name) }));
+const after = await page.evaluate(() => ({ ex: JSON.parse(vfs.read('/Pandora/mcp.json')).mcpServers.notes.exposure, names: activeTools().map(t => t.function.name) }));
 ok(after.ex === 'direct' && after.names.includes('mcp__notes__get_weather'), 'exposure change written to mcp.json and applied');
 ok(mcpLog.filter(x => x.name === 'notes' && x.method === 'initialize').length === initsBefore, 'exposure change did not reconnect');
 await page.locator('.mcp-row[data-srv="docs"] [data-mcp="toggle"]').tap(); await page.waitForTimeout(800);
-ok(await page.evaluate(() => MCP.servers.get('docs').state === 'disabled' && JSON.parse(vfs.read('/Jade/mcp.json')).mcpServers.docs.enabled === false && !activeTools().some(t => t.function.name === 'tool_search')), 'disable server');
+ok(await page.evaluate(() => MCP.servers.get('docs').state === 'disabled' && JSON.parse(vfs.read('/Pandora/mcp.json')).mcpServers.docs.enabled === false && !activeTools().some(t => t.function.name === 'tool_search')), 'disable server');
 // add via form
 await page.fill('#mcpName', 'calc2'); await page.fill('#mcpUrl', 'https://calc.example.com/mcp'); await page.fill('#mcpHeader', 'Authorization: Bearer ${CALC_TOKEN}');
 await page.tap('#btnMcpAdd'); await page.waitForTimeout(1500);
 ok(await page.evaluate(() => MCP.servers.get('calc2')?.state === 'connected'), 'add server from the panel');
 // secrets are not in mcp.json and stay out of backups unless keys are included
-ok(await page.evaluate(() => !vfs.read('/Jade/mcp.json').includes('secret123')), 'secret stays out of the vault');
-const bk = await page.evaluate(async () => { const a = await buildBackup('config', false); const b = await buildBackup('config', true); return [!!a.settings.mcpSecrets, !!b.settings.mcpSecrets, !!a.vault.files['/Jade/mcp.json']]; });
+ok(await page.evaluate(() => !vfs.read('/Pandora/mcp.json').includes('secret123')), 'secret stays out of the vault');
+const bk = await page.evaluate(async () => { const a = await buildBackup('config', false); const b = await buildBackup('config', true); return [!!a.settings.mcpSecrets, !!b.settings.mcpSecrets, !!a.vault.files['/Pandora/mcp.json']]; });
 ok(JSON.stringify(bk) === '[false,true,true]', 'backup: mcp.json included, secrets only with keys');
 await page.screenshot({ path: OUT + '/4_panel2.png' });
 console.log(log.join('\n')); console.log('\n' + (fail.length ? fail.join('\n') : 'ALL PASS'));

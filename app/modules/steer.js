@@ -1,14 +1,14 @@
 /* =====================================================================
    STEERING + SKILLS
-   /Jade/SOUL.md     who Jade is: persona, voice, values (added to every prompt)
-   /AGENTS.md        the user's standing instructions (also /Jade/AGENTS.md)
-   /Jade/SYSTEM.md   optional: replaces Jade's base intro + guidelines
-   /Jade/skills/<name>/SKILL.md   pi-style skills: frontmatter name + description,
+   /Pandora/SOUL.md     who Jade is: persona, voice, values (added to every prompt)
+   /AGENTS.md        the user's standing instructions (also /Pandora/AGENTS.md)
+   /Pandora/SYSTEM.md   optional: replaces Jade's base intro + guidelines
+   /Pandora/skills/<name>/SKILL.md   pi-style skills: frontmatter name + description,
                      listed in the prompt; loaded on demand with the skill tool
                      or by the user with /skill:name
    HTML comments (<!-- -->) in these files are notes for you and never reach the model.
    ===================================================================== */
-const SOUL_PATH = '/Jade/SOUL.md', AGENTS_PATH = '/AGENTS.md', SYSTEM_PATH = '/Jade/SYSTEM.md', SKILLS_DIR = '/Jade/skills';
+const SOUL_PATH = '/Pandora/SOUL.md', AGENTS_PATH = '/AGENTS.md', SYSTEM_PATH = '/Pandora/SYSTEM.md', SKILLS_DIR = '/Pandora/skills';
 const STEER_SEED = {
   [SOUL_PATH]: `---
 name: Jade
@@ -36,8 +36,8 @@ the places that ought to be connected.
 
 <!-- Standing instructions Jade follows in every chat (like AGENTS.md in pi).
      Edit, add or delete lines. Comments like this one are not sent to her.
-     Advanced: create /Jade/SYSTEM.md to replace her whole base prompt.
-     Her personality lives in /Jade/SOUL.md, her memory in /Jade/Memory.md. -->
+     Advanced: create /Pandora/SYSTEM.md to replace her whole base prompt.
+     Her personality lives in /Pandora/SOUL.md, her memory in /Pandora/Memory.md. -->
 
 - Name new notes in Title Case. Put them in the vault root unless a folder clearly fits
   (projects/, guides/, daily/).
@@ -119,16 +119,16 @@ The vault renders LaTeX with KaTeX.
 `,
   [`${SKILLS_DIR}/skill-creator/SKILL.md`]: `---
 name: skill-creator
-description: Create or improve one of Jade's skills. Use when the user asks for a new skill, workflow, routine or recipe that Jade should follow, or wants to change an existing skill.
+description: Create or improve one of Pandora's skills. Use when the user asks for a new skill, workflow, routine or recipe that Pandora should follow, or wants to change an existing skill.
 ---
 # Skill creator
 
-A skill is a folder /Jade/skills/<kebab-case-name>/ containing SKILL.md, plus optional extra files
+A skill is a folder /Pandora/skills/<kebab-case-name>/ containing SKILL.md, plus optional extra files
 (templates, examples) that SKILL.md refers to by relative path.
 
 1. Ask what the skill should do and when it should trigger, unless the user already said.
-2. notes_search or ls /Jade/skills so you do not duplicate an existing skill; edit it instead if it is close.
-3. Write /Jade/skills/<name>/SKILL.md:
+2. notes_search or ls /Pandora/skills so you do not duplicate an existing skill; edit it instead if it is close.
+3. Write /Pandora/skills/<name>/SKILL.md:
    ---
    name: <name>
    description: <what it does>. Use when <the situations or phrases that should trigger it>.
@@ -152,11 +152,11 @@ function ensureSteering() {
   ls.set('steerSeeded', 1);
 }
 const readCap = (p, cap = 8000) => { if (!vfs.isFile(p)) return ''; let t = stripComments(vfs.read(p)); if (t.length > cap) t = t.slice(0, cap) + '\n…(truncated)'; return t; };
-function agentsFiles() { const out = []; for (const k of vfs.nodes.keys()) if (/^\/(jade\/)?agents\.md$/i.test(k) && vfs.isFile(k)) out.push(k); return out.sort((a, b) => a.length - b.length); }
+function agentsFiles() { const out = []; for (const k of vfs.nodes.keys()) if (/^\/((pandora|jade)\/)?agents\.md$/i.test(k) && vfs.isFile(k)) out.push(k); return out.sort((a, b) => a.length - b.length); }
 function listSkills() {
   const off = new Set(ls.get('skillsOff', [])); const out = [];
   for (const k of vfs.nodes.keys()) {
-    const m = /^\/jade\/skills\/([^/]+)\/skill\.md$/i.exec(k); if (!m || !vfs.isFile(k)) continue;
+    const m = /^\/(?:pandora|jade)\/skills\/([^/]+)\/skill\.md$/i.exec(k); if (!m || !vfs.isFile(k)) continue;
     const { meta, body } = parseFront(vfs.read(k)); const name = (meta.name || m[1]).trim();
     out.push({ name, description: meta.description || (body.split('\n').find(l => l.trim() && !l.startsWith('#')) || '').trim().slice(0, 200), path: k, dir: vfs.parent(k), off: off.has(name) });
   }
@@ -176,7 +176,7 @@ function steering() {
 }
 function steeringContext(st) {
   let out = '';
-  if (st.soul) out += `\n\nYour persona (from /Jade/SOUL.md; this is who you are, keep this voice in chat):\n${st.soul}`;
+  if (st.soul) out += `\n\nYour persona (from /Pandora/SOUL.md; this is who you are, keep this voice in chat):\n${st.soul}`;
   for (const a of st.agents) out += `\n\nStanding instructions from the user (${a.p}; always follow them):\n${a.t}`;
   if (st.skills.length) out += `\n\nSkills (instruction packs in ${SKILLS_DIR}). When a request matches a skill's description, FIRST call the skill tool with its name, then follow the instructions it returns step by step:\n${st.skills.map(s => `- ${s.name}: ${s.description}`).join('\n')}\nTo create a skill, write ${SKILLS_DIR}/<kebab-name>/SKILL.md beginning with frontmatter ("---", "name: …", "description: … Use when …", "---") followed by numbered steps.`;
   return out;
@@ -243,7 +243,7 @@ chatEl.addEventListener('click', e => {
 });
 
 /* ---------- "/" suggestions above the composer ---------- */
-const SLASH_CMDS = [['/new', 'new chat'], ['/compact', 'summarise old turns'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'journal this chat'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
+const SLASH_CMDS = [['/new', 'new chat'], ['/compact', 'summarise old turns'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'write this chat into the quest log'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
 function updateSlashSuggest() {
   const box = $('#slashSuggest'); const v = input.value;
   if (!/^\/\S*$/.test(v)) { box.hidden = true; return; }

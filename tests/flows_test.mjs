@@ -137,23 +137,29 @@ ok(/"trigger"/.test(t) && /- decide \(Decide\)/.test(t) && /\$node/.test(t) && /
 t = await tool({ action: 'create', flow: { name: 'Bad', steps: [{ type: 'tool' }] } });
 ok(/^ERR not saved/.test(t) && /"tool" is required/.test(t), 'create refuses an invalid flow and says why');
 t = await tool({ action: 'create', flow: JSON.stringify({ name: 'Made by Jade', description: 'test', steps: [{ type: 'set', fields: { hello: '{{ $input.who }}' } }] }) });
-ok(/Created flow "Made by Jade"/.test(t) && await E(() => vfs.isFile('/Jade/Flows/Made by Jade.flow.json')), 'create saves /Jade/Flows/<name>.flow.json (flow given as an object or JSON text)');
+ok(/Created ritual "Made by Jade"/.test(t) && await E(() => vfs.isFile('/Pandora/Rituals/Made by Jade.ritual.json')), 'create saves /Pandora/Rituals/<name>.ritual.json (flow given as an object or JSON text)');
 t = await tool({ action: 'create', flow: { name: 'made by jade', steps: [] } });
 ok(/already exists/.test(t), 'names are unique (case-insensitive)');
 t = await tool({ action: 'run', name: 'Made by Jade', input: { who: 'Sam' } });
-ok(/Flow "Made by Jade" ok/.test(t) && /"hello": "Sam"/.test(t) && /✓/.test(t), 'run returns the status, each step and the output: ' + t.slice(0, 120));
+ok(/Ritual "Made by Jade" ok/.test(t) && /"hello": "Sam"/.test(t) && /✓/.test(t), 'run returns the status, each step and the output: ' + t.slice(0, 120));
 t = await tool({ action: 'get', name: 'Made by Jade' });
 ok(JSON.parse(t).steps[0].id === 's1', 'get returns the JSON (steps get ids)');
 t = await tool({ action: 'update', name: 'Made by Jade', flow: { name: 'Renamed', steps: [{ type: 'set', fields: { v: 2 } }] } });
-ok(/Updated flow "Renamed"/.test(t) && await E(() => !vfs.isFile('/Jade/Flows/Made by Jade.flow.json') && vfs.isFile('/Jade/Flows/Renamed.flow.json')), 'update can rename (the old file goes)');
+ok(/Updated ritual "Renamed"/.test(t) && await E(() => !vfs.isFile('/Pandora/Rituals/Made by Jade.ritual.json') && vfs.isFile('/Pandora/Rituals/Renamed.ritual.json')), 'update can rename (the old file goes)');
 t = await tool({ action: 'disable', name: 'Renamed' }); ok(/disabled/.test(t) && await E(() => flowFind('Renamed').enabled === false), 'disable / enable');
 t = await tool({ action: 'list' }); ok(/Renamed \(off\)/.test(t) && /Ticker/.test(t) && /⏰/.test(t), 'list shows triggers and on/off');
-t = await tool({ action: 'runs', name: 'Made by Jade' }); ok(/^ERR no flow/.test(t), 'runs of a renamed flow: unknown name is an error');
+t = await tool({ action: 'runs', name: 'Made by Jade' }); ok(/^ERR no ritual/.test(t), 'runs of a renamed ritual: unknown name is an error');
 t = await tool({ action: 'runs' }); ok(/via jade/.test(t), 'runs lists recent runs');
 await E(() => flowSave({ name: 'Has agent', steps: [{ type: 'agent', prompt: 'x' }] }));
-t = await tool({ action: 'run', name: 'Has agent' }); ok(/^ERR this flow has a Jade agent step/.test(t), 'the tool will not run agent flows inside a chat turn');
+t = await tool({ action: 'run', name: 'Has agent' }); ok(/^ERR this ritual has a Pandora agent step/.test(t), 'the tool will not run rituals with an agent step inside a chat turn');
 t = await tool({ action: 'delete', name: 'Renamed' }); ok(/Deleted/.test(t) && await E(() => !flowFind('Renamed')), 'delete');
-ok(await E(() => activeTools().some(t => t.function.name === 'flow') && /- flow: build, change and run/.test(systemPrompt())), 'the flow tool is offered to Jade and described in her instructions');
+ok(await E(() => activeTools().some(t => t.function.name === 'ritual') && !activeTools().some(t => t.function.name === 'flow') && /- ritual: build, change and run rituals/.test(systemPrompt())), 'her ritual tool is offered and described in her instructions (no separate flow tool)');
+t = await E(async () => { const one = await runTool('ritual', { action: 'list' }, null); const two = await runTool('flow', { action: 'list' }, null); return [one, two]; });
+ok(/Ticker/.test(t[0]) && t[0] === t[1], 'a call to flow (Jade Vault\'s name) still reaches the ritual tool');
+t = await E(async () => { try { return await runTool('ritual', { action: 'create', ritual: { name: 'Via ritual', steps: [{ type: 'set', fields: { a: 1 } }] } }, null); } catch (e) { return 'ERR ' + e.message; } });
+ok(/Via ritual/.test(t) && await E(() => vfs.isFile('/Pandora/Rituals/Via ritual.ritual.json')), 'the ritual tool takes the ritual JSON in "ritual" (and still in "flow"): ' + t.slice(0, 120));
+v = await E(() => flowValidate({ name: 'x', steps: [{ type: 'tool', tool: 'ritual' }] }));
+ok(v.some(e => /use a "flow" step \(Run ritual\)/.test(e)), 'a tool step cannot call the ritual tool either: ' + v.join(' | '));
 
 // ---------- API ----------
 let a = await api('flows');
@@ -165,6 +171,12 @@ ok(a.status === 200 && a.body.run.output.doubled === 2, 'the input can come insi
 a = await api('flow', { name: 'Nope' }); ok(a.status === 404 && a.body.error.code === 'unknown_flow', 'unknown flow → 404');
 a = await api('flow', { name: 'Child', input: '{bad' }); ok(a.status === 400 && a.body.error.code === 'bad_input', 'bad input JSON → 400');
 a = await api('flow', { name: 'Loop A' }); ok(a.status === 502 && a.body.ok === false && /too deeply/.test(a.body.run.error), 'a failing flow → 502 with the error');
+a = await api('rituals');
+ok(a.status === 200 && a.body.rituals.some(f => f.name === 'Ticker' && f.last_run?.status === 'ok') && !a.body.flows, 'GET /v1/rituals lists rituals (GET /v1/flows still does too)');
+a = await api('ritual', { name: 'Child', input: '{"x": 6}' });
+ok(a.status === 200 && a.body.run.ritual === 'Child' && a.body.run.flow === 'Child' && a.body.run.output.doubled === 12, 'GET /v1/ritual?name=…&input={json} runs one: ' + JSON.stringify(a.body.run).slice(0, 120));
+a = await api('ritual', { name: 'Nope' }); ok(a.status === 404 && a.body.error.code === 'unknown_ritual' && /\/v1\/rituals/.test(a.body.error.message), 'unknown ritual → 404 that points at /v1/rituals');
+a = await api('ritual', {}); ok(a.status === 400 && /say which ritual/.test(a.body.error.message), 'no name → 400');
 
 // ---------- Flows tab ----------
 const tabs = await E(() => [...document.querySelectorAll('.m-nav .tab')].map(t => t.dataset.tab).join());
@@ -224,10 +236,10 @@ ok(/- \[ \] server on fire asap/.test(await read('/Urgent.md') || '') && !/buy m
 await page.screenshot({ path: 'flows_run.png' });
 await page.click('#flowsPanel [data-fa="back"]'); await page.waitForTimeout(150);
 // toggle and delete from the list
-await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] .sched-switch'); await page.waitForTimeout(150);
+await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] .sched-switch'); await page.waitForTimeout(150);
 ok(await E(() => flowFind('UI flow').enabled === false), 'the switch on a card turns a scheduled flow off');
-await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] [data-fa="del"]'); await page.click('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"] [data-fa="del"]'); await page.waitForTimeout(150);
-ok(await E(() => !flowFind('UI flow') && !document.querySelector('.fl-card[data-path="/Jade/Flows/UI flow.flow.json"]')), 'delete asks for a second tap, then removes the flow');
+await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] [data-fa="del"]'); await page.click('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"] [data-fa="del"]'); await page.waitForTimeout(150);
+ok(await E(() => !flowFind('UI flow') && !document.querySelector('.fl-card[data-path="/Pandora/Rituals/UI flow.ritual.json"]')), 'delete asks for a second tap, then removes the flow');
 // unsaved changes guard
 await page.click('.fl-card [data-fa="edit"]'); await page.waitForTimeout(100);
 await page.fill('#flDesc', 'changed'); await page.click('#flBack');

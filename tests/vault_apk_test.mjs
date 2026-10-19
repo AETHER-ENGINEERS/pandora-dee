@@ -32,7 +32,7 @@ await page.route('**/*', async route => {
   if (url === 'http://localhost:11434/api/tags') return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'qwen3:8b' }] }) });
   if (url === 'http://localhost:11434/api/chat') {
     const body = JSON.parse(req.postData());
-    if (/You keep Jade's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
+    if (/You keep Pandora's diary/.test(body.messages[0].content)) { log.push('[journal call] ' + body.messages[1].content.slice(0, 60).replace(/\n/g, ' ')); return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ message: { role: 'assistant', content: 'SUMMARY:\n- The user asked for a map of content; Jade built [[Map of Content]].\n\nREMEMBER:\n- The user organises notes by tag\n- none' }, done: true }) }); }
     const tools = body.tools.map(t => t.function.name);
     const tmsgs = body.messages.filter(m => m.role === 'tool'); const n = tmsgs.length;
     sentUser0 = (body.messages.find(m => m.role === 'user' && !m.content.startsWith('[Summary')) || {}).content || ''; sentUser0 = sentUser0.replace(/^\[\w{3} [^\]]+\] /, '');
@@ -54,8 +54,8 @@ await page.goto('file://' + process.env.JV_APK);
 await page.waitForFunction(() => /BUSYBOX|JS APPLETS/.test(document.querySelector('#txtShell')?.textContent || ''), null, { timeout: 90000 });
 await page.waitForTimeout(1500);
 ok(await page.title() === 'Pandora Dee', 'title');
-ok(/second brain/.test(await page.textContent('#chat')), 'empty state hero');
-ok(/\d+ notes, \d+ links/.test(await page.textContent('#chat')), 'vault boot row');
+ok(/An Atelier that lives in this tab/.test(await page.textContent('#chat')), 'empty state hero');
+ok(/\d+ leaves, \d+ threads/.test(await page.textContent('#chat')), 'Atelier boot row');
 await shot('1_chat'); await overflow('chat');
 
 // Notes tab
@@ -63,7 +63,7 @@ await page.tap('.tab[data-tab="files"]'); await page.waitForTimeout(300);
 const treeTxt = await page.textContent('#tree');
 ok(/Welcome/.test(treeTxt) && /guides\//.test(treeTxt) && !/Welcome\.md/.test(treeTxt), 'tree shows notes by name');
 ok(await page.locator('#tree .lk-badge').count() > 3, 'link badges in tree');
-ok(/\d+ notes · \d+ links/.test(await page.textContent('#fsStats')), 'stats: ' + await page.textContent('#fsStats'));
+ok(/\d+ leaves · \d+ threads/.test(await page.textContent('#fsStats')), 'stats: ' + await page.textContent('#fsStats'));
 ok(await page.locator('#tagBar .tag-chip').count() >= 4, 'tag bar');
 await shot('2_notes'); await overflow('notes');
 await page.tap('#tree .tree-row[data-p="/guides"]'); await page.waitForTimeout(200);
@@ -101,7 +101,7 @@ ok(await page.textContent('#filePath') === 'Welcome', 'back twice → Welcome');
 // missing link creates note
 await page.locator('#notePrev .wiki-link.missing').first().tap(); await page.waitForTimeout(400);
 const created = await page.evaluate(() => editing);
-ok(created === '/wiki links.md' && await page.getAttribute('#noteBody', 'data-mode') === 'edit', 'missing link created ' + created);
+ok(created === '/threads.md' && await page.getAttribute('#noteBody', 'data-mode') === 'edit', 'missing link created ' + created);
 // type [[ autocomplete
 await page.locator('#fileEd').focus();
 await page.keyboard.type('See [[Mark');
@@ -111,7 +111,7 @@ await shot('7_suggest');
 await page.locator('#linkSuggest button', { hasText: 'Markdown Reference' }).tap(); await page.waitForTimeout(100);
 await page.keyboard.type(' for syntax.');
 await page.waitForTimeout(1000);
-const saved = await page.evaluate(() => vfs.read('/wiki links.md'));
+const saved = await page.evaluate(() => vfs.read('/threads.md'));
 ok(/See \[\[Markdown Reference\]\] for syntax\./.test(saved), 'autocomplete inserted + autosaved: ' + JSON.stringify(saved.slice(-60)));
 ok(/Linked from \[\[Welcome\]\]/.test(saved), 'new note links back');
 await page.tap('#modeSeg button[data-mode="split"]'); await page.waitForTimeout(400);
@@ -123,11 +123,11 @@ await page.tap('#modeSeg button[data-mode="edit"]');
 await page.evaluate(() => { const t = $('#fileEd'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); });
 await page.tap('#mdTools button[data-md="task"]'); await page.keyboard.type('buy chrome');
 await page.waitForTimeout(900);
-ok(/- \[ \] buy chrome/.test(await page.evaluate(() => vfs.read('/wiki links.md'))), 'task toolbar button');
+ok(/- \[ \] buy chrome/.test(await page.evaluate(() => vfs.read('/threads.md'))), 'task toolbar button');
 // Todo List checkbox toggling
 await page.evaluate(() => openFile('/Todo List.md', { mode: 'read' })); await page.waitForTimeout(300);
 await page.locator('#notePrev input[type=checkbox]').nth(1).click(); await page.waitForTimeout(300);
-ok(/- \[x\] Write a note/.test(await page.evaluate(() => vfs.read('/Todo List.md'))), 'checkbox toggles source');
+ok(/- \[x\] Write a leaf/.test(await page.evaluate(() => vfs.read('/Todo List.md'))), 'checkbox toggles source');
 await shot('9_todo');
 // graph
 await page.tap('#btnNoteGraph'); await page.waitForTimeout(1200);
@@ -200,7 +200,7 @@ const dup = await page.evaluate(async () => { const r = {}; const t = async (n, 
   r.nested = await t('write', { path: '/notes/Inbox.md', content: 'x' });
   r.under = await t('write', { path: 'Project_Neon', content: 'x' });
   r.fresh = await t('write', { path: 'New Idea', content: '# New Idea\n' });
-  r.edit = await t('edit', { path: 'todo list', oldText: 'Open the vault', newText: 'Open the vault!' });
+  r.edit = await t('edit', { path: 'todo list', oldText: 'Open the Atelier', newText: 'Open the Atelier!' });
   r.read = await t('read', { path: 'Markdown Reference' });
   r.files = vfs.isFile('/inbox') || vfs.isFile('/inbox.md') || vfs.isFile('/notes/Inbox.md') || vfs.isFile('/Project_Neon.md');
   r.newIdea = vfs.isFile('/New Idea.md'); r.inboxBody = vfs.read('/Inbox.md'); return r; });
@@ -217,7 +217,7 @@ const mem = await page.evaluate(async () => { const t = async (a) => { try { ret
   r.s2 = await t({ action: 'save', text: 'the user loves synthwave and dark themes.' });
   r.s3 = await t({ action: 'save', text: 'Their cat is called Byte', section: 'about' });
   r.search = await t({ action: 'search', text: 'cat' });
-  r.prompt = systemPrompt(); r.f = await t({ action: 'forget', text: 'cat is called' }); r.after = vfs.read('/Jade/Memory.md'); return r; });
+  r.prompt = systemPrompt(); r.f = await t({ action: 'forget', text: 'cat is called' }); r.after = vfs.read('/Pandora/Memory.md'); return r; });
 ok(/Saved to memory under "Preferences"/.test(mem.s1) && /Already remembered/.test(mem.s2), 'memory save + dedupe');
 ok(/Byte/.test(mem.search), 'memory search');
 ok(/Long-term memory/.test(mem.prompt) && /synthwave/.test(mem.prompt) && /Byte/.test(mem.prompt), 'memory in system prompt');
@@ -226,7 +226,7 @@ ok(/Forgot 1/.test(mem.f) && !/Byte/.test(mem.after) && /synthwave/.test(mem.aft
 await page.evaluate(() => journalSession(window.__cur || null));
 await page.evaluate(async () => { const s = await (async () => { for (const k of Object.keys(window)) {} })(); });
 await page.tap('.tab[data-tab="chat"]'); await page.fill('#input', '/new'); await page.tap('#btnSend'); await page.waitForTimeout(1500);
-const jr = await page.evaluate(() => { const p = [...vfs.nodes.keys()].find(k => k.startsWith('/Jade/Journal/')); return { p, body: p ? vfs.read(p) : '', mem: vfs.read('/Jade/Memory.md') }; });
+const jr = await page.evaluate(() => { const p = [...vfs.nodes.keys()].find(k => k.startsWith('/Pandora/Journal/')); return { p, body: p ? vfs.read(p) : '', mem: vfs.read('/Pandora/Memory.md') }; });
 ok(jr.p && /Map of Content/.test(jr.body) && /organises notes by tag/.test(jr.mem), 'journal entry + learned fact: ' + jr.p);
 ok(!/- none/.test(jr.mem), 'journal "none" not saved');
 await shot('14_memory');
@@ -241,11 +241,11 @@ await shot('15_math'); await overflow('math note');
 const sp = await page.evaluate(() => systemPrompt());
 ok(/neon edge of Night City/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
 ok(/Skills \(instruction packs/.test(sp) && /daily-review:/.test(sp) && /skill-creator:/.test(sp), 'skills listed in prompt');
-await page.evaluate(() => vfs.write('/Jade/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
+await page.evaluate(() => vfs.write('/Pandora/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
 const sp2 = await page.evaluate(() => systemPrompt());
 ok(sp2.startsWith('# SYSTEM\n\nYou are Bob') || sp2.startsWith('# SYSTEM\nYou are Bob') || /^# SYSTEM\s+You are Bob/.test(sp2), 'SYSTEM.md replaces intro: ' + JSON.stringify(sp2.slice(0, 40)));
 ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
-await page.evaluate(() => vfs.rm('/Jade/SYSTEM.md'));
+await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
 // ---- v3: skills ----
 const sk = await page.evaluate(async () => { const t = async (n, a) => { try { return await runTool(n, a, null); } catch (e) { return 'ERR ' + e.message; } };
   return { n: listSkills().length, tool: await t('skill', { name: 'Daily Review' }), bad: await t('skill', { name: 'nope' }),

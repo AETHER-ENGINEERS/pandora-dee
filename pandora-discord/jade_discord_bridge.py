@@ -109,11 +109,26 @@ def msg_record(m):
     return rec
 
 
+def is_public(ch):
+    """Can everyone in the server see this channel? Private threads, and channels hidden from @everyone, are not public."""
+    g = getattr(ch, 'guild', None)
+    kind = getattr(getattr(ch, 'type', None), 'name', '')
+    if not g or kind == 'private_thread':
+        return False
+    try:
+        role = g.default_role
+        target = getattr(ch, 'parent', None) if kind.endswith('thread') else ch
+        return bool(role and target and target.permissions_for(role).view_channel)
+    except Exception:
+        return False
+
+
 def channel_meta(ch):
     parent = getattr(ch, 'parent', None)
     return {'id': str(ch.id), 'name': getattr(ch, 'name', '') or '', 'type': getattr(getattr(ch, 'type', None), 'name', ''),
             'topic': getattr(ch, 'topic', None) or '', 'parent_id': str(getattr(ch, 'parent_id', '') or ''),
-            'parent_name': getattr(parent, 'name', '') or '', 'thread': getattr(getattr(ch, 'type', None), 'name', '').endswith('thread')}
+            'parent_name': getattr(parent, 'name', '') or '', 'thread': getattr(getattr(ch, 'type', None), 'name', '').endswith('thread'),
+            'public': is_public(ch)}
 
 
 class Archive:
@@ -130,6 +145,28 @@ class Archive:
             os.chmod(self.root, 0o700)
         except OSError:
             pass
+        self._db = None
+
+    @property
+    def db(self):
+        """The archive database: the archive indexed for search (archive_db.py next to this file)."""
+        if self._db is None:
+            from archive_db import ArchiveDB
+            self._db = ArchiveDB(self.root)
+        return self._db
+
+    def index_forever(self, every=60):
+        """Keep the database caught up with the archive, in the background."""
+        def run():
+            while True:
+                try:
+                    n = self.db.sync()
+                    if n:
+                        log(f'archive: indexed {n} new message(s)')
+                except Exception as e:
+                    log(f'archive: indexing failed: {type(e).__name__}: {e}')
+                time.sleep(every)
+        threading.Thread(target=run, daemon=True).start()
 
     def scope(self, guild_id):
         return str(guild_id) if guild_id else 'dm'
@@ -461,6 +498,13 @@ class Bridge:
                 bridge.error = ''
                 bridge.ready.set()
                 log(f'online as {self.user} ({self.user.id}) in {len(self.guilds)} server(s)')
+                if bridge.archive:
+                    for g in self.guilds:
+                        for ch in list(g.channels) + list(getattr(g, 'threads', [])):
+                            try:
+                                bridge.archive.note_channel(ch)
+                            except Exception:
+                                pass
 
             async def on_disconnect(self):
                 log('disconnected from the Gateway (discord.py reconnects)')
@@ -760,6 +804,31 @@ class Bridge:
         lim = max(1, min(int(a.get('limit') or 20), 200))
         return await asyncio.get_running_loop().run_in_executor(None, lambda: arc.search(a.get('query'), lim, a.get('chat_id')))
 
+    async def t_archive_query(self, a):
+        """Search the archive's database: search / context / timeline / channels / status. scope 'public' (default) sees only
+        channels everyone in the server can see; 'all' sees everything archived."""
+        db = self._archive().db
+        act = str(a.get('action') or 'search').lower()
+        scope = 'all' if a.get('scope') == 'all' else 'public'
+        noise = str(a.get('include_noise', '')).lower() in ('1', 'true', 'yes')
+
+        def run():
+            db.sync(wait=10)  # catch up on what just arrived (a long first indexing run does not hold the search up)
+            if act == 'search':
+                r = db.search(a.get('query'), scope, a.get('channel'), a.get('author'), a.get('since'), a.get('until'), a.get('limit') or 15, noise)
+            elif act == 'context':
+                r = db.context(a.get('message_id'), scope, a.get('before', 6), a.get('after', 6))
+            elif act == 'timeline':
+                r = db.timeline(a.get('channel'), scope, a.get('since'), a.get('until'), a.get('author'), a.get('limit') or 30, noise)
+            elif act == 'channels':
+                r = db.channels(scope)
+            elif act == 'status':
+                return db.status()
+            else:
+                raise ValueError('action is one of search, context, timeline, channels, status')
+            return '\n'.join(r) if r else 'Nothing found.'
+        return await asyncio.get_running_loop().run_in_executor(None, run)
+
 
 TOOLS = {
     'status': 'Is the bot online? Returns the bot user, warnings and server count.',
@@ -784,6 +853,10 @@ TOOLS = {
     'archive_status': 'The archive (--archive): where it is, its size, and how a running backfill is doing.',
     'archive_backfill': 'Archive the whole history of every channel and thread the bot can read (or only guild_id), in the background. Resumes where it stopped.',
     'archive_search': 'Search the archive for query (text or author name); optional chat_id, limit (20). Oldest first. Deleted messages are left out.',
+    'archive_query': ('The archive as a searchable database (no model cost). action: search (query in FTS5 syntax: words, "a phrase", OR, NOT, prefix*; '
+                'optional channel, author, since, until as YYYY-MM-DD, limit, include_noise), context (message_id, before, after), '
+                'timeline (channel, since, until, author, limit), channels, status. scope: public (default, channels everyone can see) or all. '
+                'One line per message: [id] date #channel author: text.'),
 }
 TOOL_DEFS = [{'name': n, 'description': d, 'inputSchema': {'type': 'object', 'properties': {}, 'additionalProperties': True}} for n, d in TOOLS.items()]
 
@@ -987,6 +1060,11 @@ def main():
         return
     if archive:
         log(f'archive: keeping every message in {arc_dir}{" (DMs too)" if args.archive_dms else ""}')
+        try:
+            archive.db  # noqa: B018 (opens the database)
+            archive.index_forever()
+        except Exception as e:
+            log(f'archive: the search database is off ({type(e).__name__}: {e})')
     srv = Server((args.host, args.port), make_handler(bridge, token, args.allow_origin))
     scheme = 'http'
     if args.tls_cert:

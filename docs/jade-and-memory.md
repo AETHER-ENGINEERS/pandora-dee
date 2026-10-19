@@ -16,9 +16,9 @@ Replies have Copy, thumbs-up/down, and Retry controls. Ratings work even with tr
 
 | Vault path | Role |
 | --- | --- |
-| `/Jade/Memory.md` | Durable facts/preferences included in context |
-| `/Jade/Journal.md` | Entry point for the journal |
-| `/Jade/Journal/` | Daily notes summarizing earlier chats |
+| `/Pandora/Memory.md` | Durable facts/preferences included in context |
+| `/Pandora/Journal.md` | Entry point for the journal |
+| `/Pandora/Journal/` | Daily notes summarizing earlier chats |
 
 Ask `Remember that I prefer short weekly reviews` or use the memory tool's save, list, search, and forget actions. Memory is editable Markdown: review it for stale, incorrect, or sensitive facts. Journal generation is model-assisted and can use the configured provider; it is not a perfect transcript or guaranteed factual record.
 
@@ -38,10 +38,10 @@ Save the setting, then ask about a topic represented in your memory bullets. For
 
 | Path | Effect |
 | --- | --- |
-| `/Jade/SOUL.md` | Persona, tone, values |
-| `/AGENTS.md` and `/Jade/AGENTS.md` | Standing user instructions |
-| `/Jade/SYSTEM.md` | Optional replacement for the base introduction/guidelines |
-| `/Jade/skills/<name>/SKILL.md` | On-demand instruction pack |
+| `/Pandora/SOUL.md` | Persona, tone, values |
+| `/AGENTS.md` and `/Pandora/AGENTS.md` | Standing user instructions |
+| `/Pandora/SYSTEM.md` | Optional replacement for the base introduction/guidelines |
+| `/Pandora/skills/<name>/SKILL.md` | On-demand instruction pack |
 
 HTML comments in steering/skill content are removed before prompting. SYSTEM is a powerful override: prefer a small AGENTS addition for routine preferences rather than replacing the baseline instructions.
 
@@ -60,7 +60,7 @@ These are model instructions, not a permission enforcement layer. Do not rely on
 
 ## Create a skill
 
-Create `/Jade/skills/weekly-review/SKILL.md`:
+Create `/Pandora/skills/weekly-review/SKILL.md`:
 
 ```markdown
 ---

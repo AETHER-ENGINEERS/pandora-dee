@@ -8,7 +8,7 @@
      Insert one with the {} button in the editor's toolbar, or run the tags already in a note.
    The code runs in the node sandbox with no network and no file writes. It can read the vault.
    Calling Jade's tools (jade.tool, jade.decide, jade.ask, jade.flow …) needs Config → Tools →
-   "Let note scripts call Jade's tools", because a note written from web content could otherwise run them.
+   "Let leaf scripts and templates call Pandora's tools", because a leaf written from web content could otherwise run them.
    ===================================================================== */
 const TPL_LANGS = ['dataviewjs', 'jade-js', 'jadejs'];
 const TplState = { stamp: 0, cache: new Map(), pages: null, pagesStamp: -1, queue: Promise.resolve() };
@@ -118,7 +118,7 @@ function __tplLib(T, $date) {
     user: {},
   };
   const __str = v => v == null ? '' : typeof v === 'object' ? (v instanceof Date ? $date('YYYY-MM-DD', v) : JSON.stringify(v)) : String(v);
-  async function __tplRun(text, depth) { const fn = new (Object.getPrototypeOf(async function () {}).constructor)('tp', 'dv', 'jade', 'fs', '__str', T.compiledOf(text)); return await fn(tp, dv, jade, fs, __str); }
+  async function __tplRun(text, depth) { const fn = new (Object.getPrototypeOf(async function () {}).constructor)('tp', 'dv', 'jade', 'pandora', 'fs', '__str', T.compiledOf(text)); return await fn(tp, dv, jade, jade, fs, __str); }
   return { dv, tp, ops, cell, __str, __tplRun };
 }
 // Templater text → JavaScript that builds tR
@@ -222,7 +222,7 @@ for (const t of open) tR += "- [ ] " + t.text + " (" + t.path.split("/").pop().r
 ## Notes
 `;
 async function tplInsertFlow() {
-  if (!editing || !isNote(editing)) { toast('Open a note first', 'err'); return; }
+  if (!editing || !isNote(editing)) { toast('Open a leaf first', 'err'); return; }
   flushSave();
   const list = tplList(); const here = $('#fileEd').value; const hasTags = /<%[\s\S]*?%>/.test(here);
   const labels = [...list.map(p => p.slice(tplDir().length + 1).replace(/\.(md|markdown)$/i, '')), ...(hasTags ? ['⟳ Run the <% %> tags in this note'] : []), ...(list.length ? [] : [`＋ Create an example template in ${tplDir()}`])];

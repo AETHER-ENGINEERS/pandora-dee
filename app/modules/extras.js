@@ -55,7 +55,7 @@ async function dbRestore(obj, wipe) {
   return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); const st = t.objectStore('kv'); if (wipe) st.clear(); for (const [k, v] of Object.entries(obj)) st.put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); });
 }
 const isText = u8 => { if (u8.length > 4e6) return false; try { new TextDecoder('utf-8', { fatal: true }).decode(u8); return !/[\x00-\x08\x0e-\x1f]/.test(dec.decode(u8.subarray(0, 4000))); } catch { return false; } };
-const isConfigPath = p => /^\/jade\/(soul|system|agents|memory|heartbeat)\.md$/i.test(p) || /^\/jade\/mcp\.json$/i.test(p) || /^\/jade\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
+const isConfigPath = p => /^\/(pandora|jade)\/(soul|system|agents|memory|heartbeat)\.md$/i.test(p) || /^\/(pandora|jade)\/mcp\.json$/i.test(p) || /^\/(pandora|jade)\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
 async function buildBackup(kind, withKeys) {
   const settings = JSON.parse(JSON.stringify(S)); if (!withKeys) for (const k of SECRET_KEYS) delete settings[k];
   const storage = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith('jvault:') && k !== 'jvault:settings') { try { storage[k.slice(7)] = JSON.parse(localStorage.getItem(k)); } catch {} } }
@@ -96,10 +96,11 @@ async function exportBackup(kind) {
 }
 async function importBackup(file) {
   let data; try { data = JSON.parse(await file.text()); } catch { toast('That file is not valid JSON.', 'err'); return; }
-  if (data?.app !== 'jade-vault' || !data.vault) { toast('That is not a Jade Vault backup.', 'err'); return; }
+  if (data?.app !== 'jade-vault' || !data.vault) { toast('That is not a Pandora Dee or Jade Vault backup.', 'err'); return; }
   const full = data.kind === 'full';
   const msg = full ? `Replace EVERYTHING here (notes, chats, schedules, settings) with the backup from ${String(data.exportedAt || '').slice(0, 10)}?` : `Merge config from ${String(data.exportedAt || '').slice(0, 10)} (settings, SOUL/AGENTS/SYSTEM, memory, skills)? Your other notes and chats stay.`;
   if (!confirm(msg)) return;
+  const moved = migrateBackup(data);   // a Jade Vault backup's /Jade files land in /Pandora
   const keep = pick(S, SECRET_KEYS);
   const next = { ...DEFAULTS, ...(full ? {} : S), ...data.settings }; for (const k of SECRET_KEYS) if (!data.settings?.[k]) next[k] = keep[k];
   window.__restoring = true;   // stop pending autosaves from overwriting the restore
@@ -109,11 +110,13 @@ async function importBackup(file) {
   if (full) {
     const entries = [['/', { dir: true, mtime: Date.now() }]];
     for (const d of data.vault.dirs || []) entries.push([d, { dir: true, mtime: Date.now() }]);
+    if (moved.length) { const at = new Date().toISOString().slice(0, 19).replace('T', ' '); const prev = data.vault.files[MIGRATION_LOG]; data.vault.files[MIGRATION_LOG] = (typeof prev === 'string' ? prev : '') + moved.map(l => `${at} ${l}\n`).join(''); }
     for (const [p, v] of Object.entries(data.vault.files)) { let q = vfs.parent(p); while (q !== '/' && !entries.some(e => e[0] === q)) { entries.push([q, { dir: true, mtime: Date.now() }]); q = vfs.parent(q); } entries.push([p, { data: toBytes(v), mtime: Date.now() }]); }
     await dbRestore({ ...(data.db || {}), vfs: entries, pendingSettings: next }, true);   // settings ride along in IndexedDB (durable before reload)
     ls.set('lastSession', null);
   } else {
     for (const [p, v] of Object.entries(data.vault.files)) vfs.write(p, toBytes(v), { mkdirs: true });
+    migrationLog(moved);
     await new Promise(r => setTimeout(r, 300)); await dbRestore({ vfs: [...vfs.nodes.entries()], pendingSettings: next }, false);
   }
   toast('Backup restored. Reloading…', 'ok'); setTimeout(() => location.reload(), 400);
@@ -129,25 +132,25 @@ var bgOn = false, bgText = '';
 function bgSync(text) {
   if (!nativeBG()) return;
   const want = S.bgMode === 'always' || (S.bgMode !== 'off' && running);
-  const t = text || (running ? 'Jade is working…' : `Standing by${Sched?.list?.filter?.(x => x.enabled !== false).length ? ` · ${Sched.list.filter(x => x.enabled !== false).length} schedules armed` : ''}`);
+  const t = text || (running ? 'Pandora is working…' : `Standing by${Sched?.list?.filter?.(x => x.enabled !== false).length ? ` · ${Sched.list.filter(x => x.enabled !== false).length} schedules armed` : ''}`);
   try {
     if (want && (!bgOn || t !== bgText)) { window.NetrunnerAndroid.keepAlive(true, t); bgOn = true; bgText = t; }
     else if (!want && bgOn) { window.NetrunnerAndroid.keepAlive(false, ''); bgOn = false; bgText = ''; }
   } catch (e) { console.warn('keepAlive failed', e); }
 }
-var BG_LABEL = { THINKING: 'Jade is thinking…', 'RUNNING TOOL': 'Jade is using a tool…', COMPACTING: 'Compacting the chat…' };
-function bgState(s) { if (running && BG_LABEL) bgSync(BG_LABEL[s] || (s && s !== 'IDLE' ? `Jade: ${String(s).toLowerCase()}` : 'Jade is working…')); }
+var BG_LABEL = { THINKING: 'Pandora is thinking…', 'RUNNING TOOL': 'Pandora is using a tool…', COMPACTING: 'Compacting the chat…' };
+function bgState(s) { if (running && BG_LABEL) bgSync(BG_LABEL[s] || (s && s !== 'IDLE' ? `Jade: ${String(s).toLowerCase()}` : 'Pandora is working…')); }
 function bgFinished() {
   bgSync();
   if (!document.hidden || !S.bgNotify || !cur) return;
   const last = [...cur.messages].reverse().find(m => m.role === 'assistant' && m.content?.trim());
   const body = last ? last.content.replace(/```[\s\S]*?```/g, '[code]').replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (m, a, b) => b || a).replace(/[*_#>`$]/g, '').replace(/\s+/g, ' ').trim().slice(0, 180) : 'Done.';
-  schedNotify(`Jade finished: ${cur.title || 'chat'}`.slice(0, 60), body);
+  schedNotify(`Pandora finished: ${cur.title || 'chat'}`.slice(0, 60), body);
 }
 function renderBgSettings() {
   $('#sBgMode').value = S.bgMode || 'agent'; $('#sBgNotify').checked = !!S.bgNotify;
   const native = nativeBG(); $('#bgNative').hidden = !native; $('#bgWeb').hidden = native;
-  if (native) { let opt = true; try { opt = window.NetrunnerAndroid.batteryOptimized(); } catch {} $('#bgBattery').innerHTML = opt ? '<span class="dot bad"></span>Battery saver may pause Jade in the background.' : '<span class="dot ok"></span>Unrestricted battery: Jade can keep working in the background.'; $('#btnBattery').hidden = !opt; }
+  if (native) { let opt = true; try { opt = window.NetrunnerAndroid.batteryOptimized(); } catch {} $('#bgBattery').innerHTML = opt ? '<span class="dot bad"></span>Battery saver may pause Pandora in the background.' : '<span class="dot ok"></span>Unrestricted battery: Pandora can keep working in the background.'; $('#btnBattery').hidden = !opt; }
 }
 $('#btnBattery').onclick = () => { try { window.NetrunnerAndroid.openBatterySettings(); } catch {} setTimeout(renderBgSettings, 4000); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#settings').hidden) renderBgSettings(); });

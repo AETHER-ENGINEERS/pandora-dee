@@ -37,7 +37,7 @@ say "Installing discord.py into $HOME_DIR/venv …"
 python3 -m venv "$HOME_DIR/venv" || die "python3 -m venv failed (on Debian/Ubuntu: sudo apt install python3-venv)."
 "$HOME_DIR/venv/bin/pip" install --quiet --upgrade pip
 "$HOME_DIR/venv/bin/pip" install --quiet --upgrade -r "$HERE/requirements.txt"
-cp "$HERE/jade_discord_bridge.py" "$HOME_DIR/jade_discord_bridge.py"
+cp "$HERE/jade_discord_bridge.py" "$HERE/archive_db.py" "$HOME_DIR/"
 cat > "$HOME_DIR/run.sh" <<RUN
 #!/usr/bin/env bash
 exec "$HOME_DIR/venv/bin/python" "$HOME_DIR/jade_discord_bridge.py" --port "$PORT" --host "$HOST" $ARCHIVE "\$@"

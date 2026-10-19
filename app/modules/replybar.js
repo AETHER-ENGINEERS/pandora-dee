@@ -20,7 +20,7 @@ function replyText(m) {
 }
 function replyBar(m) {
   const d = document.createElement('div'); d.className = 'rate-bar reply-bar';
-  d.innerHTML = `<button type="button" data-ract="copy" title="Copy what Jade said (Markdown)">Copy</button><button type="button" data-rate="1" title="Good reply">👍</button><button type="button" data-rate="-1" title="Bad reply">👎</button><button type="button" data-ract="retry" title="Run your last message again">Retry</button>`;
+  d.innerHTML = `<button type="button" data-ract="copy" title="Copy what Pandora said (Markdown)">Copy</button><button type="button" data-rate="1" title="Good reply">👍</button><button type="button" data-rate="-1" title="Bad reply">👎</button><button type="button" data-ract="retry" title="Run your last message again">Retry</button>`;
   d._msg = m;
   const paint = () => d.querySelectorAll('[data-rate]').forEach(b => b.classList.toggle('on', +b.dataset.rate === m?.rating));
   if (!m) d.querySelectorAll('[data-rate],[data-ract="copy"]').forEach(b => { b.hidden = true; });
@@ -36,7 +36,7 @@ function replyBar(m) {
 // only the newest reply in the chat offers Retry
 function replyRetrySync() { const all = [...chatEl.querySelectorAll('.reply-bar [data-ract="retry"]')]; all.forEach((b, i) => { b.hidden = i !== all.length - 1; }); }
 async function replyRetry(m) {
-  if (running) return toast('Jade is still working. Abort her first.', 'err');
+  if (running) return toast('Pandora is still working. Abort her first.', 'err');
   const msgs = cur?.messages || [];
   let u = m ? replyTurn(m)?.user ?? -1 : -1;
   if (u < 0) for (let j = msgs.length - 1; j >= 0; j--) if (msgs[j].role === 'user') { u = j; break; }

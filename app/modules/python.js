@@ -133,9 +133,9 @@ async function runPython(c) {
   });
   URL.revokeObjectURL(wurl);
   for (const [k, v] of r.out || []) k === 'o' ? c.o(v) : c.e(v);
-  for (const p of r.deletes || []) if (vfs.isFile(p)) vfs.rm(p);
-  for (const p of r.mkdirs || []) { try { vfs.mkdirp(p); } catch {} }
-  for (const [p, d] of Object.entries(r.writes || {})) { try { vfs.write(p, d, { mkdirs: true }); } catch (e) { c.e(`python: could not save ${p}: ${e.message}\n`); } }
+  for (const q of r.deletes || []) { const p = pandoraPath(q); if (vfs.isFile(p)) vfs.rm(p); }
+  for (const p of r.mkdirs || []) { try { vfs.mkdirp(pandoraPath(p)); } catch {} }
+  for (const [p, d] of Object.entries(r.writes || {})) { try { vfs.write(pandoraPath(p), d, { mkdirs: true }); } catch (e) { c.e(`python: could not save ${p}: ${e.message}\n`); } }
   return r.code ?? 1;
 }
 // fetch the runtime in the background once, so Python also works offline later (phone app)

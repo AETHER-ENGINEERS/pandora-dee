@@ -76,7 +76,7 @@ function renderSecrets() {
   add.onclick = () => {
     const k = $('#sSecretName').value.trim().replace(/[^A-Za-z0-9_]/g, '_').replace(/^(\d)/, '_$1'), v = $('#sSecretValue').value;
     if (!k || !v) return toast('Give the secret a name and a value.', 'err');
-    S.secrets = { ...secretsMap(), [k]: v }; saveSettings(); $('#sSecretName').value = ''; $('#sSecretValue').value = ''; renderSecrets(); toast(`Saved. Jade can use it as {{${esc(k)}}}`, 'ok');
+    S.secrets = { ...secretsMap(), [k]: v }; saveSettings(); $('#sSecretName').value = ''; $('#sSecretValue').value = ''; renderSecrets(); toast(`Saved. Pandora can use it as {{${esc(k)}}}`, 'ok');
   };
   $('#secretList').onclick = e => { const b = e.target.closest('[data-del-secret]'); if (!b) return; const s = { ...secretsMap() }; delete s[b.dataset.delSecret]; S.secrets = s; saveSettings(); renderSecrets(); };
   renderSecrets();

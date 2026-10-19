@@ -2,7 +2,7 @@
 
 **Jade Vault 2.9.0** · [Documentation index](README-docs.md)
 
-Connect Jade to Discord to answer DMs and channel messages, react, share files, and take messages for you. Discord support requires Jade Vault **2.8.0 or later** and a bridge running on a separate computer.
+Connect Pandora to Discord to answer DMs and channel messages, react, share files, and take messages for you. Discord support requires Jade Vault **2.8.0 or later** and a bridge running on a separate computer.
 
 ## Architecture and credentials
 
@@ -16,7 +16,7 @@ Jade Discord bridge on an always-on computer
 Discord
 ```
 
-The bridge maintains the bot connection; Jade's reasoning still runs in the app. Keep both running for replies. discord.py handles Gateway reconnect/resume and Discord rate limits. The app polls the bridge (default interval three seconds).
+The bridge maintains the bot connection; Pandora's reasoning still runs in the app. Keep both running for replies. discord.py handles Gateway reconnect/resume and Discord rate limits. The app polls the bridge (default interval three seconds).
 
 Two different secrets are involved:
 
@@ -25,7 +25,7 @@ Two different secrets are involved:
 | Discord bot token | Bridge host; `~/.jade-discord/bot_token` by default | Logs the bot into Discord |
 | Bridge bearer token | Bridge state plus Jade Vault Config | Authorizes access to the bridge's HTTP/MCP service |
 
-Never paste the Discord bot token into Jade's chat or the app's Bridge token field. Keep bot/bridge tokens separate from model keys, Vector bridge tokens, and Android API tokens.
+Never paste the Discord bot token into Pandora's chat or the app's Bridge token field. Keep bot/bridge tokens separate from model keys, Vector bridge tokens, and Android API tokens.
 
 ## 1. Create the Discord bot
 
@@ -33,11 +33,11 @@ Never paste the Discord bot token into Jade's chat or the app's Bridge token fie
 2. Generate/reset the bot token. Supply it to the bridge only, using the interactive setup below.
 3. Enable **Message Content Intent** for ordinary channel-text handling.
 4. After connecting the app, use **Copy invite link** in its Discord settings to invite the bot to your server. Give only the Discord permissions you need.
-5. Enable Discord Developer Mode to copy your own numeric **User ID**. Owner/admin settings use IDs, not display names or usernames.
+5. Enable Discord Developer Mode to copy your own numeric **User ID**. Partner/admin settings use IDs, not display names or usernames.
 
 Message Content Intent is optional in the implementation: if not authorized, the bridge reconnects without it and reports a warning. DMs and messages that @mention the bot can still work, but a plain-text trigger word in an otherwise unreadable channel message is not a substitute for the missing intent.
 
-Discord's server/channel permission system is additional to Jade's app-level roles. Being a Jade admin does not grant the bot permissions Discord has denied.
+Discord's server/channel permission system is additional to Pandora's app-level roles. Being a Pandora admin does not grant the bot permissions Discord has denied.
 
 ## 2. Install the bridge
 
@@ -87,15 +87,15 @@ The source provides a local Dockerfile/Compose image named `jade-discord:latest`
 
 ## 3. Connect the app
 
-In the **2.9.0 app**, open Config → Connect → **Discord (Jade as a bot)**, or type `/discord` in the app chat.
+In the **2.9.0 app**, open Config → Connect → **Discord (Pandora as a bot)**, or type `/discord` in the app chat.
 
 1. Set Bridge URL, for example `http://192.168.1.20:8788/mcp`.
 2. Set the **bridge bearer token** printed by the bridge.
-3. Set your Discord numeric user ID as **Owner**; review this carefully because it grants full Jade permissions.
+3. Set your Discord numeric user ID as **Partner**; review this carefully because it grants full Pandora permissions.
 4. Add optional admin IDs.
-5. Choose the DM policy, channel whitelist, triggers/words, and owner-notification policy.
-6. Enable **Run Jade on Discord** and save/apply settings.
-7. Check status and any Message Content Intent warning, then invite the bot and test an owner DM.
+5. Choose the DM policy, channel whitelist, triggers/words, and Partner-notification policy.
+6. Enable **Run Pandora on Discord** and save/apply settings.
+7. Check status and any Message Content Intent warning, then invite the bot and test a Partner DM.
 
 Use the bridge computer's LAN/private-VPN address from a phone, not `localhost`. Browser CORS, TLS, and mixed-content constraints still apply. See [provider/network configuration](configuration.md) for the same general browser limitations.
 
@@ -104,23 +104,24 @@ Use the bridge computer's LAN/private-VPN address from a phone, not `localhost`.
 - An empty channel whitelist does not enable ordinary public channel participation.
 - Whitelist entries can identify channel IDs, server IDs, `#channel` names, or server names. Prefer numeric IDs when names are ambiguous; whitespace-delimited parsing can make multiword names unsuitable.
 - Channel replies require a trigger: all messages if configured, otherwise a mention, reply to the bot, or a configured word.
-- The owner can bypass the channel whitelist, but still needs the trigger rule in a group channel.
-- DM policies distinguish anyone, known users (owner/admin), and owner-only behavior. Owner DMs remain eligible; optionally unanswered DMs are filed in the inbox.
+- The Partner can bypass the channel whitelist, but still needs the trigger rule in a group channel.
+- DM policies distinguish anyone, known users (Partner/admin), and Partner-only behavior. Partner DMs remain eligible; optionally unanswered DMs are filed in the inbox.
 
-## 4. Roles, tools, and owner notifications
+## 4. Roles, tools, and Partner notifications
 
 | Role | Implementation behavior |
 | --- | --- |
-| Owner | Full Jade tool access, including vault and scripts |
-| Admin whitelist | Discord messaging/moderation actions, `notify_owner`, and `web_search`; no vault, memory, shell, HTTP, MCP, or file tools |
-| Public | Current-chat actions such as replies, reactions, reading, editing/deleting through supported actions; `notify_owner` and `web_search`; no general vault/tool access or cross-chat sends |
+| Partner | Full Pandora tool access, including vault and scripts |
+| Admin whitelist | Discord messaging/moderation actions, `discord_history` (public channels), `notify_owner`, and `web_search`; no vault, memory, shell, HTTP, MCP, or file tools |
+| Public | Current-chat actions such as replies, reactions, reading, editing/deleting through supported actions; `discord_history` (public channels), `notify_owner` and `web_search`; no general vault/tool access or cross-chat sends |
 
-Tool lists are filtered and execution guards run again. Discord actions also have an action allowlist and public target restrictions; Discord itself enforces message ownership and server permissions. Non-owner prompts omit ordinary private vault/memory context but include Jade's SOUL persona, so do not place private facts in persona text expecting it to be owner-only.
+Tool lists are filtered and execution guards run again. Discord actions also have an action allowlist and public target restrictions; Discord itself enforces message ownership and server permissions. Non-Partner prompts omit ordinary private vault/memory context but include Pandora's SOUL persona, so do not place private facts in persona text expecting it to be Partner-only.
 
-The `discord` tool provides send/reply, typing, reaction, edit/delete, read/profile, server/channel lists, moderation, and owner file-transfer capabilities. Use real IDs obtained from the service, not invented examples. Numeric user targets can be expressed as `user:<id>` to disambiguate from channels. Ordinary assistant replies in a Discord session are sent back automatically; avoid sending a duplicate explicit tool reply.
+The `discord` tool provides send/reply, typing, reaction, edit/delete, read/profile, server/channel lists, moderation, and Partner file-transfer capabilities. Use real IDs obtained from the service, not invented examples. Numeric user targets can be expressed as `user:<id>` to disambiguate from channels. Ordinary assistant replies in a Discord session are sent back automatically; avoid sending a duplicate explicit tool reply.
 
-- `notify_owner` in a Discord chat uses `/Jade/Discord Inbox.md`, not Vector's inbox.
-- Notification settings control inbox-only versus immediate owner notification/DM behavior; urgent requests are handled according to that policy.
+- `discord_history` searches the bridge's archive database (bridge started with `--archive`): one call returns a few compact lines, so recalling the server's past costs no context or rate limit. The Partner searches every archived channel; everyone else only channels the whole server can see. Config → Discord → *What you call the archive* gives it your own name in the character's instructions. See the bridge README for the query syntax.
+- `notify_owner` in a Discord chat uses `/Pandora/Discord Inbox.md`, not Vector's inbox.
+- Notification settings control inbox-only versus immediate Partner notification/DM behavior; urgent requests are handled according to that policy.
 - Attachments saved to the vault use `/attachments/discord/<date>/...` by default. Image interpretation depends on a vision-capable model and image settings.
 - Jade Vault 2.9.0 limits outgoing vault file sends to **8 MiB**.
 

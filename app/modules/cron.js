@@ -2,9 +2,9 @@
    SCHEDULES THAT RUN SHELL COMMANDS OR FLOWS (+ crontab)
    A schedule runs one of: a prompt (Jade does it in a chat, as before), a shell command, or a flow.
    Command and flow schedules run on their own, without the model and without waiting for the chat.
-   Their output goes to /Jade/Logs/cron.log; a failure sends a notification.
+   Their output goes to /Pandora/Logs/cron.log; a failure sends a notification.
    ===================================================================== */
-const CRON_LOG = '/Jade/Logs/cron.log';
+const CRON_LOG = '/Pandora/Logs/cron.log';
 const SchedBusy = new Set();
 const schedIsJob = s => s && (s.kind === 'shell' || s.kind === 'flow');
 const CRON_MACROS = { '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *', '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *', '@hourly': '0 * * * *' };
@@ -15,7 +15,7 @@ function schedLabel(o) { return o.kind === 'shell' ? `$ ${o.command}` : `flow ${
 function addScheduleKind({ name, when, kind, command, flow, input = null, catchUp = false, enabled = true, src = '' }) {
   kind = kind || (command ? 'shell' : 'flow');
   if (kind === 'shell' && !String(command || '').trim()) throw new Error('the command is empty');
-  if (kind === 'flow') { const f = flowFind(flow); if (!f) throw new Error(`no flow named "${flow}". flow list shows them`); flow = f.name; }
+  if (kind === 'flow') { const f = flowFind(flow); if (!f) throw new Error(`no ritual named "${flow}". ritual list shows them`); flow = f.name; }
   const o = { kind, command: kind === 'shell' ? String(command).trim() : undefined, flow: kind === 'flow' ? flow : undefined, input };
   const s = addSchedule({ name: String(name || '').trim() || schedLabel(o).slice(0, 60), when: cronMacro(when), prompt: schedLabel(o), chat: 'new', catchUp, enabled });
   Object.assign(s, o, { src }); if (kind !== 'shell') delete s.command; if (kind !== 'flow') { delete s.flow; delete s.input; }
@@ -70,7 +70,7 @@ function schedKindSubmit(vals) {
   if (kind === 'prompt') { if (ed && schedIsJob(ed)) { delete ed.kind; delete ed.command; delete ed.flow; delete ed.input; } return false; }
   const o = { kind, command: $('#schedCmd').value.trim(), flow: $('#schedFlow').value, input: $('#schedInput').value.trim() || null };
   if (kind === 'shell' && !o.command) throw new Error('the command is empty');
-  if (kind === 'flow' && !flowFind(o.flow)) throw new Error('pick a flow');
+  if (kind === 'flow' && !flowFind(o.flow)) throw new Error('pick a ritual');
   if (o.input) { try { JSON.parse(o.input); } catch { throw new Error('the flow input must be JSON (or leave it empty)'); } }
   if (ed) {
     Object.assign(ed, specFields(cronMacro(vals.when)), { name: (vals.name || schedLabel(o)).trim().slice(0, 60), prompt: schedLabel(o), catchUp: vals.catchUp, enabled: true }, o);
@@ -82,10 +82,10 @@ function schedKindSubmit(vals) {
 $('#schedKind').onchange = schedKindSync;
 
 /* ---------- crontab ---------- */
-const CRONTAB_HELP = `crontab — run shell commands (or flows) on a schedule, while the app is open
+const CRONTAB_HELP = `crontab — run shell commands (or rituals) on a schedule, while the app is open
   crontab -l                           list schedules (id, when, what)
   crontab add '<when>' '<command>'     e.g. crontab add '*/15 * * * *' 'node /scripts/sync.js'
-                                       or   crontab add 'every weekday at 9am' 'flow run Digest'
+                                       or   crontab add 'every weekday at 9am' 'ritual run Digest'
   crontab -r <id> | -r all             remove one, or every command schedule made by crontab
   crontab <file>                       install a crontab file (replaces the ones it installed before)
   crontab -e                           how to edit the file
@@ -94,7 +94,7 @@ File lines: "m h dom mon dow command", "@daily command" (@hourly @weekly @monthl
 Output: ${CRON_LOG}. A failing command sends a notification. Times are local (${typeof TZ !== 'undefined' ? TZ : 'local time'}).
 `;
 const shq = a => /^[\w@%+=:,./-]+$/.test(a) ? a : !a.includes("'") ? `'${a}'` : `"${a.replace(/(["\\$`])/g, '\\$1')}"`;
-function crontabLine(s) { const when = s.once ? 'once ' + clock(s.runAt) : s.cron; const what = s.kind === 'shell' ? s.command : s.kind === 'flow' ? `flow run ${shq(s.flow)}${s.input ? ' ' + shq(typeof s.input === 'string' ? s.input : JSON.stringify(s.input)) : ''}` : `[prompt] ${s.prompt.replace(/\s+/g, ' ').slice(0, 80)}`; return `${s.id}  ${when.padEnd(16)} ${what}${s.enabled ? '' : '   # paused'}`; }
+function crontabLine(s) { const when = s.once ? 'once ' + clock(s.runAt) : s.cron; const what = s.kind === 'shell' ? s.command : s.kind === 'flow' ? `ritual run ${shq(s.flow)}${s.input ? ' ' + shq(typeof s.input === 'string' ? s.input : JSON.stringify(s.input)) : ''}` : `[prompt] ${s.prompt.replace(/\s+/g, ' ').slice(0, 80)}`; return `${s.id}  ${when.padEnd(16)} ${what}${s.enabled ? '' : '   # paused'}`; }
 function parseCrontab(text) {
   const out = [], bad = [];
   String(text).split(/\r?\n/).forEach((line, i) => {
@@ -108,7 +108,7 @@ function parseCrontab(text) {
   return { out, bad };
 }
 function crontabAdd(when, command, src = 'crontab') {
-  const fm = /^flow\s+run\s+(?:'([^']+)'|"([^"]+)"|(\S+))(?:\s+([\s\S]+))?$/.exec(command.trim());
+  const fm = /^(?:ritual|flow)\s+run\s+(?:'([^']+)'|"([^"]+)"|(\S+))(?:\s+([\s\S]+))?$/.exec(command.trim());
   if (fm && flowFind(fm[1] || fm[2] || fm[3])) { let input = fm[4] ? fm[4].trim().replace(/^'([\s\S]*)'$/, '$1') : null; return addScheduleKind({ kind: 'flow', flow: fm[1] || fm[2] || fm[3], input, when, src }); }
   return addScheduleKind({ kind: 'shell', command, when, src });
 }
@@ -117,7 +117,7 @@ async function crontabShell(c) {
   try {
     if (!a.length || a[0] === '-h' || a[0] === '--help' || a[0] === 'help') { c.o(CRONTAB_HELP); return 0; }
     if (a[0] === '-l' || a[0] === 'list') { if (!Sched.list.length) { c.o('no schedules\n'); return 0; } for (const s of Sched.list) c.o(crontabLine(s) + '\n'); return 0; }
-    if (a[0] === '-e') { c.o(`Edit a file (for example /Jade/crontab) with lines like\n  */15 * * * * node /scripts/sync.js >> /Jade/Logs/sync.log\n  @daily flow run Digest\nthen install it: crontab /Jade/crontab\n`); return 0; }
+    if (a[0] === '-e') { c.o(`Edit a file (for example /Pandora/crontab) with lines like\n  */15 * * * * node /scripts/sync.js >> /Pandora/Logs/sync.log\n  @daily ritual run Digest\nthen install it: crontab /Pandora/crontab\n`); return 0; }
     if (a[0] === '-r' || a[0] === 'rm' || a[0] === 'remove') {
       const id = String(a[1] || '').replace(/^#/, ''); if (!id) throw new Error('usage: crontab -r <id> | -r all');
       const gone = id === 'all' ? Sched.list.filter(s => s.src === 'crontab') : Sched.list.filter(s => s.id === id);

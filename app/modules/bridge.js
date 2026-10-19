@@ -122,14 +122,14 @@ async function runNode(c) {
 function jadeToolList() { return activeTools().map(t => ({ name: t.function.name, description: String(t.function.description || '').slice(0, 240) })); }
 async function jadeBridge(op, a, ctx = {}) {
   if (ctx.off) throw new Error(`jade.${op} is not available here (${ctx.off})`);
-  if (ctx.allow && !ctx.allow.has(op)) throw new Error(ctx.allowWhy || `jade.${op} is off for note scripts. Turn on "Let note scripts call Jade's tools" in Config → Tools → Note scripts & templates`);
+  if (ctx.allow && !ctx.allow.has(op)) throw new Error(ctx.allowWhy || `pandora.${op} is off for leaf scripts. Turn on "Let leaf scripts and templates call Pandora's tools" in Config → Tools → Leaf scripts & templates`);
   switch (op) {
     case 'tool': {
       const name = String(a.name || '');
       if (!name) throw new Error('jade.tool needs a tool name');
-      if (name === 'flow' && (ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('flows call each other too deeply');
+      if ((name === 'ritual' || name === 'flow') && (ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('rituals call each other too deeply');
       vecGuard(name); if (typeof dcGuard === 'function') dcGuard(name);
-      if (!activeTools().some(t => t.function.name === name) && !/^mcp__/.test(name)) throw new Error(`no tool named ${name}. jade.list() shows them`);
+      if (!activeTools().some(t => t.function.name === name) && !(name === 'flow' && activeTools().some(t => t.function.name === 'ritual')) && !/^mcp__/.test(name)) throw new Error(`no tool named ${name}. pandora.list() shows them`);
       return await runTool(name, a.args && typeof a.args === 'object' ? a.args : {}, null);
     }
     case 'list': return jadeToolList();
@@ -137,14 +137,14 @@ async function jadeBridge(op, a, ctx = {}) {
     case 'ask': return await askOnce(a.prompt, a);
     case 'agent': return await runAgentPrompt(a.message ?? a.prompt, a);
     case 'flow': {
-      if ((ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('flows call each other too deeply');
+      if ((ctx.depth || 0) >= FLOW_MAX_DEPTH) throw new Error('rituals call each other too deeply');
       const run = await flowRunByName(a.name, a.input, { via: ctx.via || 'script', depth: (ctx.depth || 0) + 1 });
-      if (run.status !== 'ok') throw new Error(`flow "${run.flow}" ${run.status}: ${run.error || ''}`);
+      if (run.status !== 'ok') throw new Error(`ritual "${run.flow}" ${run.status}: ${run.error || ''}`);
       return run.output;
     }
     case 'flows': return flowList().filter(f => !f._bad).map(f => ({ name: f.name, description: f.description || '', enabled: f.enabled !== false, trigger: flowTriggerText(f) }));
     case 'shell': { const r = await runShellLine(a.command, { timeoutMs: 120000, echo: 'script' }); return { code: r.code, stdout: r.out, stderr: r.err }; }
-    case 'notify': { const t = String(a.title || 'Jade'), b = String(a.body || ''); schedNotify(t, b); toast(esc(t) + (b ? ': ' + esc(b.slice(0, 140)) : ''), 'ok'); return true; }
+    case 'notify': { const t = String(a.title || 'Pandora'), b = String(a.body || ''); schedNotify(t, b); toast(esc(t) + (b ? ': ' + esc(b.slice(0, 140)) : ''), 'ok'); return true; }
     case 'kv': return await kvOp(a);
     case 'ui.prompt': if (!ctx.ui) throw new Error('jade.prompt / tp.system.prompt only work in a template you insert (nobody is there to answer here)'); return await jvDialog({ title: 'Template', message: a.message, def: a.def });
     case 'ui.suggest': {
@@ -237,7 +237,7 @@ function jvDialog({ title, message = '', def = '', items = null, placeholder = '
   return new Promise(resolve => {
     const bg = document.createElement('div'); bg.className = 'modal-bg jv-dlg';
     bg.innerHTML = `<div class="frame cut w-full" style="max-width:460px;height:auto"><div class="inner p-4 flex flex-col gap-3">
-      <div class="pane-h">${esc(title || 'Jade')}</div>${message ? `<div class="text-sm leading-relaxed">${esc(message)}</div>` : ''}
+      <div class="pane-h">${esc(title || 'Pandora')}</div>${message ? `<div class="text-sm leading-relaxed">${esc(message)}</div>` : ''}
       ${items ? `<div class="flex flex-col gap-1" style="max-height:55vh;overflow:auto">${items.map((t, i) => `<button type="button" class="btn jv-dlg-item" data-i="${i}">${esc(t)}</button>`).join('') || '<div class="hint">Nothing to choose from.</div>'}</div>` : `<input class="field" autocomplete="off" value="${esc(def)}" placeholder="${esc(placeholder)}">`}
       <div class="flex justify-end gap-2"><button type="button" class="btn" data-x="cancel">Cancel</button>${items ? '' : '<button type="button" class="btn btn-solid cut cut-sm" data-x="ok">OK</button>'}</div></div></div>`;
     const done = v => { bg.remove(); resolve(v); };
@@ -277,24 +277,25 @@ function shArgs(list, stdin) {
   return o;
 }
 const shShow = v => typeof v === 'string' ? (v.endsWith('\n') ? v : v + '\n') : JSON.stringify(v, null, 2) + '\n';
-const JADE_SHELL_HELP = `jade — call Jade from the shell (and from node scripts as jade.*)
-  jade tools                          list her tools
-  jade tool <name> [json | k=v …]     call a tool, e.g. jade tool notes_search query=inbox
-  jade decide '<json>'                Ollaya: {"state":"…","question":"…","type":"choice","options":["a","b"]}
-  jade ask "<prompt>" [--json] [-s "<system prompt>"]   one answer from the model, no tools
-  jade agent "<message>"              a full chat turn (shows up in the chat)
-  jade notify "<title>" ["<body>"]    phone notification
-  jade kv get <key> | set <key> <json> | list
-Arguments can also come as JSON on stdin: echo '{"query":"x"}' | jade tool notes_search
-In node: await jade.tool('notes_search', {query:'x'}), jade.tools.read({path:'/Inbox.md'}), jade.decide({...}),
-  jade.ask('…'), jade.agent('…'), jade.flow('Name', input), jade.shell('ls'), jade.notify('t','b'), jade.kv.get/set.
+const JADE_SHELL_HELP = `pandora — call Pandora from the shell (and from node scripts as pandora.*)
+  pandora tools                          list her tools
+  pandora tool <name> [json | k=v …]     call a tool, e.g. pandora tool notes_search query=inbox
+  pandora decide '<json>'                Ollaya: {"state":"…","question":"…","type":"choice","options":["a","b"]}
+  pandora ask "<prompt>" [--json] [-s "<system prompt>"]   one answer from the model, no tools
+  pandora agent "<message>"              a full chat turn (shows up in the chat)
+  pandora notify "<title>" ["<body>"]    phone notification
+  pandora kv get <key> | set <key> <json> | list
+Arguments can also come as JSON on stdin: echo '{"query":"x"}' | pandora tool notes_search
+In node: await pandora.tool('notes_search', {query:'x'}), pandora.tools.read({path:'/Inbox.md'}), pandora.decide({...}),
+  pandora.ask('…'), pandora.agent('…'), pandora.ritual('Name', input), pandora.shell('ls'), pandora.notify('t','b'), pandora.kv.get/set.
+Jade Vault's names work too: the jade command, jade.* in node, and jade.flow() for pandora.ritual().
 `;
 async function jadeShell(c) {
-  const [sub, ...rest] = c.argv;
+  const [sub, ...rest] = c.argv; const cmd = c.name === 'jade' ? 'jade' : 'pandora';
   try {
     if (!sub || sub === 'help' || sub === '-h' || sub === '--help') { c.o(JADE_SHELL_HELP); return 0; }
     if (sub === 'tools') { for (const t of jadeToolList()) c.o(`${t.name.padEnd(18)} ${t.description.split(/(?<=\.)\s/)[0].slice(0, 100)}\n`); return 0; }
-    if (sub === 'tool') { const [name, ...a] = rest; if (!name) throw new Error('usage: jade tool <name> [json | key=value …]'); const args = shArgs(a, c.stdin); c.o(shShow(await jadeBridge('tool', { name, args: typeof args === 'object' ? args : {} }, { via: 'shell' }))); return 0; }
+    if (sub === 'tool') { const [name, ...a] = rest; if (!name) throw new Error(`usage: ${cmd} tool <name> [json | key=value …]`); const args = shArgs(a, c.stdin); c.o(shShow(await jadeBridge('tool', { name, args: typeof args === 'object' ? args : {} }, { via: 'shell' }))); return 0; }
     if (sub === 'decide') {
       let a = shArgs(rest.length === 1 || !rest.length ? rest : [], c.stdin);
       if (rest.length > 1) { const [state, question, ...options] = rest; a = { state, question, type: options.length ? 'choice' : 'yesno', options }; }
@@ -302,47 +303,48 @@ async function jadeShell(c) {
     }
     if (sub === 'ask') { const { f, rest: r } = opts(rest, 's:'); const prompt = r.join(' ') || c.stdin; c.o(shShow(await askOnce(prompt, { json: !!f.json, system: typeof f.system === 'string' ? f.system : f.s }))); return 0; }
     if (sub === 'agent') { const r = await runAgentPrompt(rest.join(' ') || c.stdin, {}); c.o(shShow(r.reply)); return 0; }
-    if (sub === 'notify') { await jadeBridge('notify', { title: rest[0] || 'Jade', body: rest.slice(1).join(' ') }, {}); return 0; }
+    if (sub === 'notify') { await jadeBridge('notify', { title: rest[0] || 'Pandora', body: rest.slice(1).join(' ') }, {}); return 0; }
     if (sub === 'kv') {
       const [op, k, ...v] = rest;
       if (op === 'list' || op === 'all') { c.o(shShow(await kvOp({ op: 'all' }))); return 0; }
       if (op === 'get') { c.o(shShow(await kvOp({ op: 'get', k }))); return 0; }
       if (op === 'set') { let val = v.join(' '); try { val = JSON.parse(val); } catch {} await kvOp({ op: 'set', k, v: val }); return 0; }
       if (op === 'rm' || op === 'del') { await kvOp({ op: 'set', k, v: null }); return 0; }
-      throw new Error('usage: jade kv get <key> | set <key> <json> | rm <key> | list');
+      throw new Error(`usage: ${cmd} kv get <key> | set <key> <json> | rm <key> | list`);
     }
-    throw new Error(`unknown subcommand "${sub}". Try: jade help`);
-  } catch (e) { c.e(`jade: ${e.message}\n`); return 1; }
+    throw new Error(`unknown subcommand "${sub}". Try: ${cmd} help`);
+  } catch (e) { c.e(`${cmd}: ${e.message}\n`); return 1; }
 }
 
-const FLOW_SHELL_HELP = `flow — run and manage flows (the Flows tab)
-  flow list                           all flows, their triggers and last runs
-  flow run <name> [json | k=v …]      run one; the input is $input. Also: echo '{"a":1}' | flow run Name
-       -q                             print only the output
-  flow show <name>                    the flow as JSON
-  flow runs [name]                    recent runs
-  flow enable|disable <name>
-  flow import <file.json>             add or replace a flow from a JSON file
-  flow export <name> [file.json]      write it to a file (default: print)
-Schedule one: crontab add "every day at 9am" flow run Name   (or give the flow a schedule trigger)
+const FLOW_SHELL_HELP = `ritual — run and manage rituals (the Rituals tab)
+  ritual list                           all rituals, their triggers and last runs
+  ritual run <name> [json | k=v …]      run one; the input is $input. Also: echo '{"a":1}' | ritual run Name
+         -q                             print only the output
+  ritual show <name>                    the ritual as JSON
+  ritual runs [name]                    recent runs
+  ritual enable|disable <name>
+  ritual import <file.json>             add or replace a ritual from a JSON file
+  ritual export <name> [file.json]      write it to a file (default: print)
+Schedule one: crontab add "every day at 9am" ritual run Name   (or give the ritual a schedule trigger)
+Jade Vault's flow command works too (flow run Name …).
 `;
 async function flowShell(c) {
-  const [sub, ...rest0] = c.argv; const quiet = rest0.includes('-q'); const rest = rest0.filter(x => x !== '-q');
+  const [sub, ...rest0] = c.argv; const cmd = c.name === 'flow' ? 'flow' : 'ritual'; const quiet = rest0.includes('-q'); const rest = rest0.filter(x => x !== '-q');
   try {
     if (!sub || sub === 'help' || sub === '-h' || sub === '--help') { c.o(FLOW_SHELL_HELP); return 0; }
     if (sub === 'list' || sub === 'ls') {
       await flowRecordsLoad(); const all = flowList();
-      if (!all.length) { c.o('no flows yet (Flows tab, or ask Jade to build one)\n'); return 0; }
+      if (!all.length) { c.o('no rituals yet (Rituals tab, or ask Pandora to build one)\n'); return 0; }
       for (const f of all) { const last = FlowRuns.recent.find(r => r.path === f._path); c.o(`${(f.enabled === false ? '○ ' : '● ') + f.name.padEnd(24)} ${(f._bad ? 'INVALID JSON: ' + f._bad : flowTriggerText(f)).padEnd(34)} ${last ? `${last.status} ${relTime(last.started)}` : 'never run'}\n`); }
       return 0;
     }
-    const name = rest[0]; const need = () => { const f = flowFind(name); if (!f) throw new Error(name ? `no flow named "${name}". flow list shows them` : 'say which flow'); if (f._bad) throw new Error(`${f._path} is not valid JSON: ${f._bad}`); return f; };
+    const name = rest[0]; const need = () => { const f = flowFind(name); if (!f) throw new Error(name ? `no ritual named "${name}". ${cmd} list shows them` : 'say which ritual'); if (f._bad) throw new Error(`${f._path} is not valid JSON: ${f._bad}`); return f; };
     if (sub === 'run') {
       const f = need(); let input = null; const a = rest.slice(1);
       if (a.length || String(c.stdin || '').trim()) { try { input = shArgs(a, c.stdin); } catch (e) { throw new Error('input: ' + e.message); } }
       const run = await flowRun(f, input, { via: 'shell' });
       if (!quiet) for (const s of run.steps) c.o(`${s.status === 'ok' ? '✓' : s.status === 'skipped' ? '–' : s.status === 'error' ? '✗' : '…'} ${s.name} (${s.type}${s.ms ? ', ' + s.ms + ' ms' : ''}${s.note ? ', ' + s.note : ''})${s.error ? ': ' + s.error : ''}\n`);
-      if (run.status !== 'ok') { c.e(`flow: ${run.flow} ${run.status}: ${run.error}\n`); return 1; }
+      if (run.status !== 'ok') { c.e(`${cmd}: ${run.flow} ${run.status}: ${run.error}\n`); return 1; }
       c.o(shShow(run.output ?? null)); return 0;
     }
     if (sub === 'show' || sub === 'get') { const f = need(); c.o(JSON.stringify(flowClean(f), null, 2) + '\n'); return 0; }
@@ -355,11 +357,11 @@ async function flowShell(c) {
     }
     if (sub === 'enable' || sub === 'disable') { const f = need(); f.enabled = sub === 'enable'; flowSave(f, f._path); c.o(`${f.name}: ${sub}d\n`); return 0; }
     if (sub === 'import') {
-      if (!name) throw new Error('usage: flow import <file.json>');
-      const f = JSON.parse(vfs.read(c.P(name))); const errs = flowValidate(f); if (errs.length) throw new Error('not a valid flow:\n  ' + errs.join('\n  '));
+      if (!name) throw new Error(`usage: ${cmd} import <file.json>`);
+      const f = JSON.parse(vfs.read(c.P(name))); const errs = flowValidate(f); if (errs.length) throw new Error('not a valid ritual:\n  ' + errs.join('\n  '));
       const old = flowFind(f.name); const saved = flowSave(f, old?._path); c.o(`${old ? 'replaced' : 'added'} ${saved.name} (${saved._path})\n`); return 0;
     }
     if (sub === 'export') { const f = need(); const text = JSON.stringify(flowClean(f), null, 2) + '\n'; if (rest[1]) { vfs.write(c.P(rest[1]), text, { mkdirs: true }); c.o(`wrote ${c.P(rest[1])}\n`); } else c.o(text); return 0; }
-    throw new Error(`unknown subcommand "${sub}". Try: flow help`);
-  } catch (e) { c.e(`flow: ${e.message}\n`); return 1; }
+    throw new Error(`unknown subcommand "${sub}". Try: ${cmd} help`);
+  } catch (e) { c.e(`${cmd}: ${e.message}\n`); return 1; }
 }

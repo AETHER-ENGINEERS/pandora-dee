@@ -2,7 +2,7 @@
    CHAT ATTACHMENTS
    Files you attach are saved into the vault under /attachments/YYYY-MM-DD/. Text files are also
    inlined into your message (trimmed), images go to vision models (downscaled), and PDFs get their
-   text extracted to a sidecar note (<file>.pdf.md) that Jade can read and link.
+   text extracted to a sidecar note (<file>.pdf.md) that Pandora can read and thread to other leaves.
    ===================================================================== */
 const ATT = { pending: [] };   // {name, type, size, path, kind, text?, image?, note?}
 const TEXT_EXT = /\.(md|markdown|txt|text|csv|tsv|json|jsonl|ya?ml|toml|ini|xml|html?|css|js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|c|h|cpp|hpp|cs|sh|bash|zsh|sql|log|srt|vtt|tex|bib|org|rst|env|conf|cfg|svg)$/i;
@@ -95,8 +95,8 @@ for (const el of [chatEl, $('.composer-wrap')]) {
 }
 chatEl.addEventListener('click', e => {
   const c = e.target.closest('.att-chip[data-att]'); if (!c) return; e.preventDefault();
-  const p = c.dataset.att; if (!vfs.isFile(p)) return toast('That file is no longer in the vault.', 'err');
-  if (isNote(p) || TEXT_EXT.test(p)) openFile(p, { mode: isNote(p) ? 'read' : undefined }); else toast(`Saved in the vault at ${esc(p)}`);
+  const p = c.dataset.att; if (!vfs.isFile(p)) return toast('That file is no longer in the Atelier.', 'err');
+  if (isNote(p) || TEXT_EXT.test(p)) openFile(p, { mode: isNote(p) ? 'read' : undefined }); else toast(`Saved in the Atelier at ${esc(p)}`);
 });
 // take the pending attachments for a message being sent
 function takeAttachments() { const a = ATT.pending.filter(x => !(x.kind === 'pdf' && !x.note && !x.pdfError && !x.noText)); const waiting = ATT.pending.length - a.length; ATT.pending = ATT.pending.filter(x => !a.includes(x)); renderAttachBar(); if (waiting) toast('A PDF is still being read; it will go with your next message.'); return a; }

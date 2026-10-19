@@ -1,12 +1,12 @@
 /* =====================================================================
    HEARTBEAT (Moltbot-style)
-   Every N minutes inside active hours, Jade wakes up, reads /Jade/HEARTBEAT.md and acts on it.
+   Every N minutes inside active hours, Jade wakes up, reads /Pandora/HEARTBEAT.md and acts on it.
    If nothing needs attention she answers HEARTBEAT_OK: that run is silent and pruned from the chat.
    Anything else is an alert: kept in the Heartbeat chat and sent as a notification.
    An effectively empty HEARTBEAT.md (only comments, headings, blank lines or empty checkboxes)
    skips the run without calling the model. It can use its own provider/model.
    ===================================================================== */
-const HB_PATH = '/Jade/HEARTBEAT.md';
+const HB_PATH = '/Pandora/HEARTBEAT.md';
 const HB_DEFAULT_PROMPT = 'Read HEARTBEAT.md (below). Follow it strictly. Do not infer or repeat old tasks from prior chats. Use your tools to check what it asks. If nothing needs attention, reply HEARTBEAT_OK.';
 const HB_SEED = `# HEARTBEAT
 
@@ -96,8 +96,8 @@ async function runHeartbeat({ manual = false } = {}) {
     } else {
       const clean = reply.replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (m, a, b) => b || a).replace(/[`*#_>$]/g, '').replace(/\s+/g, ' ').trim();
       hbSetStatus('alert: ' + clean.slice(0, 80));
-      schedNotify('♥ Jade', clean.slice(0, 200)); toast('♥ Heartbeat: ' + esc(clean.slice(0, 140)), 'ok');
-      if (Jade.ready) jadeBubble(clean.slice(0, 160), 'Jade', 8000);
+      schedNotify('♥ Pandora', clean.slice(0, 200)); toast('♥ Heartbeat: ' + esc(clean.slice(0, 140)), 'ok');
+      if (Jade.ready) jadeBubble(clean.slice(0, 160), 'Pandora', 8000);
     }
   } catch (e) { hbSetStatus('error: ' + (e.message || e)); }
   finally { HB.running = false; renderSessions(); renderHbStatus(); }

@@ -1,6 +1,8 @@
 
 const __out = []; let __files = {}; let __dirs = new Set(['/']); const __writes = {}; const __mk = new Set(); const __rmd = new Set(); let __cwd = '/';
-const __norm = (p) => { p = String(p); if (p.startsWith('file://')) p = p.slice(7); const parts = (p.startsWith('/') ? p : __cwd + '/' + p).split('/'); const o = []; for (const s of parts) { if (!s || s === '.') continue; if (s === '..') o.pop(); else o.push(s); } return '/' + o.join('/'); };
+// /Jade/... (Jade Vault's home) reads as /Pandora/..., and /Jade/Flows/<name>.flow.json as /Pandora/Rituals/<name>.ritual.json
+const __pd = (p) => { if (p !== '/Jade' && !p.startsWith('/Jade/')) return p; let r = p.slice(5); if (r === '/Flows' || r.startsWith('/Flows/')) { r = '/Rituals' + r.slice(6); if (r.endsWith('.flow.json')) r = r.slice(0, -10) + '.ritual.json'; } return '/Pandora' + r; };
+const __norm = (p) => { p = String(p); if (p.startsWith('file://')) p = p.slice(7); const parts = (p.startsWith('/') ? p : __cwd + '/' + p).split('/'); const o = []; for (const s of parts) { if (!s || s === '.') continue; if (s === '..') o.pop(); else o.push(s); } return __pd('/' + o.join('/')); };
 const __fmt = (a) => a.map(x => typeof x === 'string' ? x : (() => { try { return x instanceof Error ? (x.stack || String(x)) : x === undefined ? 'undefined' : typeof x === 'function' ? '[Function]' : JSON.stringify(x, (k, v) => v instanceof Set ? [...v] : v instanceof Map ? Object.fromEntries(v) : typeof v === 'bigint' ? String(v) : v, 2) ?? String(x); } catch { return String(x); } })()).join(' ');
 const __log = (k) => (...a) => { __out.push([k, __fmt(a) + '\n']); };
 const console = { log: __log('o'), info: __log('o'), debug: __log('o'), dir: __log('o'), table: __log('o'), warn: __log('e'), error: __log('e'), time() {}, timeEnd() {}, group() {}, groupEnd() {} };
@@ -160,7 +162,7 @@ const __mkRequire = (dir) => (m) => {
   new Function('module', 'exports', 'require', '__filename', '__dirname', 'console', 'process', src)(mod, mod.exports, __mkRequire(__parent(cand)), cand, __parent(cand), console, process);
   return mod.exports;
 };
-// ---- jade: call Jade's tools, decisions, model, shell and flows from a script ----
+// ---- pandora (also jade): call Pandora's tools, decisions, model, shell and rituals from a script ----
 // Each call goes to the app over postMessage. Files the script wrote are handed over first, and files the
 // call changed come back, so fs and Jade's tools see the same vault.
 let __globals = {}; let __jseq = 0; const __jpend = new Map(); let __jbridge = true; let __jwhy = '';
@@ -194,6 +196,8 @@ const jade = Object.freeze({
   decide: (o) => __jcall('decide', o || {}),
   ask: (prompt, o) => __jcall('ask', { ...(o || {}), prompt: String(prompt ?? '') }),
   agent: (message, o) => __jcall('agent', { ...(o || {}), message: String(message ?? '') }),
+  ritual: (name, input) => __jcall('flow', { name: String(name), input: input === undefined ? null : input }),
+  rituals: () => __jcall('flows', {}),
   flow: (name, input) => __jcall('flow', { name: String(name), input: input === undefined ? null : input }),
   flows: () => __jcall('flows', {}),
   shell: (command) => __jcall('shell', { command: String(command ?? '') }),
@@ -204,6 +208,7 @@ const jade = Object.freeze({
   suggest: (items, values, placeholder) => __jcall('ui.suggest', { items, values, placeholder }),
   sleep: (ms) => new Promise(r => setTimeout(r, Math.max(0, +ms || 0))),
 });
+const pandora = jade;   // Pandora Dee's name for it; jade.* (Jade Vault's) keeps working
 let require = __mkRequire('/');
 const module = { exports: {} }; const exports = module.exports; let __filename = '/[eval]', __dirname = '/';
 let __pending = 0; const __st = self.setTimeout.bind(self), __ct = self.clearTimeout.bind(self); const __live = new Set();

@@ -58,7 +58,7 @@ ok(errs.some(e => /nope is not defined/.test(e)), 'a script error is shown in pl
 ok(await E(() => /⚠/.test(document.querySelector('#notePrev .jv-js-inline.err')?.textContent || '')), 'an inline error is shown in place');
 ok(errs.some(e => /fetch is not a function|fetch is not defined/.test(e)), 'note scripts have no network');
 ok(/wrote\? true/.test(tx) && !(await read('/hacked.md')), 'note scripts cannot change the vault (writes stay in the sandbox)');
-ok(errs.some(e => /off for note scripts/.test(e)) && !(await read('/pwned.md')), 'note scripts cannot call Jade\'s tools unless allowed');
+ok(errs.some(e => /off for leaf scripts. Turn on "Let leaf scripts and templates call Pandora's tools"/.test(e)) && !(await read('/pwned.md')), 'leaf scripts cannot call Pandora\'s tools unless allowed');
 await E(() => { S.tplTools = true; TplState.cache.clear(); });
 await open('/Bad.md'); await settle();
 ok(await read('/pwned.md') === 'pwned\n', 'with "Let note scripts call Jade\'s tools" on, they can');

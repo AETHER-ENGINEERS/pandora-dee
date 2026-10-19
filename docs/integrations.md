@@ -8,7 +8,7 @@ External integrations can transmit notes, prompts, and credentials to another se
 
 Jade uses **streamable HTTP** MCP. A browser cannot spawn a local stdio process, and legacy SSE transport is not supported. Run a suitable HTTP server/bridge separately when necessary.
 
-Configuration lives at `/Jade/mcp.json` in the virtual vault:
+Configuration lives at `/Pandora/mcp.json` in the virtual vault:
 
 ```json
 {

@@ -33,7 +33,7 @@ async function xdcWakeJade(appId, batch) {
   const app = await XdcDB.app(appId); if (!app) return;
   const min = Math.min(...batch.map(b => b.serial));
   const ups = (await XdcDB.updates(appId, min - 1)).filter(u => batch.some(b => b.serial === u.serial)); if (!ups.length) return;
-  if (!S.model) { xdcRealtime(appId, { jade: 'error', text: 'no model picked in Jade Vault' }); toast(`${esc(app.name)} wants Jade, but no model is picked (Config).`, 'err'); return; }
+  if (!S.model) { xdcRealtime(appId, { jade: 'error', text: 'no model picked in Jade Vault' }); toast(`${esc(app.name)} wants Pandora, but no model is picked (Config).`, 'err'); return; }
   xdcRealtime(appId, { jade: 'thinking' });
   const prevCur = cur, prevId = cur?.id; const screen = document.body.dataset.screen || 'chat';
   if (app.jadeSession && sessions.some(x => x.id === app.jadeSession)) { if (cur?.id !== app.jadeSession) await openSession(app.jadeSession); }
@@ -57,7 +57,7 @@ async function xdcWakeJade(appId, batch) {
   xdcRealtime(appId, err ? { jade: 'error', text: String(err._error).slice(0, 80) } : { jade: 'idle' });
   await restoreChat(prevCur);
   if (document.body.dataset.screen !== screen) setTab(screen);   // opening a chat jumps to Chat: put the user back where they were
-  if (XDC.session?.app.id !== appId && !err) toast(`Jade answered in ${esc(app.name)}`, 'ok');
+  if (XDC.session?.app.id !== appId && !err) toast(`Pandora answered in ${esc(app.name)}`, 'ok');
 }
 // built-in app: Jade Link (messenger + shared board), installed on first run and kept up to date
 const JADELINK_VER = 1;

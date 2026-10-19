@@ -16,16 +16,16 @@ function renderTree() {
     for (const n of [...dirs, ...files]) {
       const q = vfs.norm(n, p); const dir = vfs.isDir(q); const open = openDirs.has(q); const note = !dir && isNote(q);
       let right = '';
-      if (note) { const b = idx.back.get(q)?.size || 0, o = idx.out.get(q)?.size || 0; right = `<span class="ml-auto flex gap-1 flex-none">${b ? `<span class="lk-badge" title="${b} backlinks">↙${b}</span>` : ''}${o ? `<span class="lk-badge out" title="${o} outgoing links">↗${o}</span>` : ''}</span>`; }
+      if (note) { const b = idx.back.get(q)?.size || 0, o = idx.out.get(q)?.size || 0; right = `<span class="ml-auto flex gap-1 flex-none">${b ? `<span class="lk-badge" title="${b} backlinks">↙${b}</span>` : ''}${o ? `<span class="lk-badge out" title="${o} outgoing threads">↗${o}</span>` : ''}</span>`; }
       else if (!dir) right = `<span class="ml-auto text-[10px] text-dim">${fmtSize(vfs.stat(q).size)}</span>`;
       rows.push(`<div class="tree-row ${selPath === q ? 'sel' : ''}" tabindex="0" role="button" data-p="${esc(q)}" style="padding-left:${10 + depth * 14}px"><span class="ic">${dir ? (open ? '▾' : '▸') : note ? '◆' : '·'}</span><span class="${dir ? 'text-yl' : note ? '' : 'text-dim'} truncate">${esc(note ? noteName(q) : n)}${dir ? '/' : ''}</span>${right}</div>`);
       if (dir && open) rec(q, depth + 1);
     }
   };
   rec('/', 0);
-  $('#tree').innerHTML = rows.join('') || '<div class="px-3 text-xs text-dim">Empty vault. Tap + Note.</div>';
+  $('#tree').innerHTML = rows.join('') || '<div class="px-3 text-xs text-dim">Empty Atelier. Tap + Leaf.</div>';
   let links = 0, miss = 0; for (const s of idx.out.values()) links += s.size; for (const s of idx.missing.values()) miss += s.size;
-  $('#fsStats').innerHTML = `<b>${idx.notes.length}</b> notes · <b>${links}</b> links${miss ? ` · <span class="text-rd">${miss} unresolved</span>` : ''} · <b>${idx.words.toLocaleString()}</b> words`;
+  $('#fsStats').innerHTML = `<b>${idx.notes.length}</b> leaves · <b>${links}</b> threads${miss ? ` · <span class="text-rd">${miss} unresolved</span>` : ''} · <b>${idx.words.toLocaleString()}</b> words`;
   renderTagBar();
 }
 let treeT; const renderTreeSoon = () => { clearTimeout(treeT); treeT = setTimeout(() => { renderTree(); if ($('#noteSearch').value.trim()) runVaultSearch(); }, 120); };
@@ -110,7 +110,7 @@ function renderNotePreview() {
   const tags = noteTags(editing);
   const pv = $('#notePrev'); const st = pv.scrollTop; pv.replaceChildren(el); pv.scrollTop = st;
   const words = (body.match(/\S+/g) || []).length;
-  $('#noteStats').textContent = `${words} words · ${Math.max(1, Math.round(words / 220))} min${tags.length ? ' · ' + tags.length + ' tags' : ''}`;
+  $('#noteStats').textContent = `${words} words · ${Math.max(1, Math.round(words / 220))} min${tags.length ? ' · ' + tags.length + ' sigils' : ''}`;
 }
 function scrollToHeading(h) {
   const t = $('#notePrev').querySelector('#h-' + CSS.escape(slug(h)));
@@ -186,13 +186,13 @@ function linkContext(src, target) {
 function renderNoteLinks() {
   if (!editing || !isNote(editing)) { $('#btnLinks').hidden = true; return; }
   const idx = vaultIndex(); const back = [...(idx.back.get(editing) || [])].sort(), out = [...(idx.out.get(editing) || [])].sort(), miss = [...(idx.missing.get(editing) || [])].sort();
-  $('#btnLinks').hidden = false; $('#btnLinks').innerHTML = `Links <span class="lk-badge">↙${back.length}</span> <span class="lk-badge out">↗${out.length}</span>`;
+  $('#btnLinks').hidden = false; $('#btnLinks').innerHTML = `Threads <span class="lk-badge">↙${back.length}</span> <span class="lk-badge out">↗${out.length}</span>`;
   const item = (p, ctx) => `<button class="link-item" data-p="${esc(p)}"><span class="text-yl">${esc(noteName(p))}</span>${ctx ? `<span class="text-[12px] text-dim leading-snug" style="display:block;margin-top:2px">${esc(ctx.slice(0, 160))}</span>` : ''}</button>`;
   $('#linksPanel').innerHTML =
-    `<div class="lbl">Backlinks · ${back.length}</div>${back.map(p => item(p, linkContext(p, editing))).join('') || '<div class="text-xs text-dim py-1">No notes link here yet.</div>'}` +
-    `<div class="lbl mt-3">Outgoing · ${out.length}</div>${out.map(p => item(p)).join('') || '<div class="text-xs text-dim py-1">No links. Type [[ in the editor to add one.</div>'}` +
+    `<div class="lbl">Backlinks · ${back.length}</div>${back.map(p => item(p, linkContext(p, editing))).join('') || '<div class="text-xs text-dim py-1">No threads lead here yet.</div>'}` +
+    `<div class="lbl mt-3">Outgoing · ${out.length}</div>${out.map(p => item(p)).join('') || '<div class="text-xs text-dim py-1">No threads. Type [[ in the editor to add one.</div>'}` +
     (miss.length ? `<div class="lbl mt-3" style="color:var(--rd)">Unresolved · ${miss.length}</div>${miss.map(m => `<button class="link-item" data-create="${esc(m)}"><span style="color:var(--rd)">${esc(m)}</span> <span class="text-[11px] text-dim">tap to create</span></button>`).join('')}` : '') +
-    (noteTags(editing).length ? `<div class="lbl mt-3">Tags</div><div class="flex flex-wrap gap-1 py-1">${noteTags(editing).map(t => `<a href="#" class="tag-chip" data-tag="${esc(t)}">#${esc(t)}</a>`).join('')}</div>` : '');
+    (noteTags(editing).length ? `<div class="lbl mt-3">Sigils</div><div class="flex flex-wrap gap-1 py-1">${noteTags(editing).map(t => `<a href="#" class="tag-chip" data-tag="${esc(t)}">#${esc(t)}</a>`).join('')}</div>` : '');
 }
 $('#btnLinks').onclick = () => { const p = $('#linksPanel'); p.hidden = !p.hidden; if (!p.hidden) renderNoteLinks(); };
 $('#linksPanel').addEventListener('click', e => {
@@ -214,7 +214,7 @@ function updateLinkSuggest() {
   const scored = notes.map(p => { const n = noteName(p).toLowerCase(); return [p, !q ? 1 : n.startsWith(q) ? 3 : n.includes(q) ? 2 : p.toLowerCase().includes(q) ? 1 : 0]; }).filter(x => x[1]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8);
   const exact = notes.some(p => noteName(p).toLowerCase() === q);
   box.innerHTML = scored.map(([p]) => `<button data-link="${esc(linkName(p))}"><span>${esc(noteName(p))}</span><small>${esc(vfs.parent(p))}</small></button>`).join('') +
-    (q && !exact ? `<button data-link="${esc(lq.q.trim())}" class="new"><span>+ ${esc(lq.q.trim())}</span><small>new note</small></button>` : '');
+    (q && !exact ? `<button data-link="${esc(lq.q.trim())}" class="new"><span>+ ${esc(lq.q.trim())}</span><small>new leaf</small></button>` : '');
   box.hidden = !box.innerHTML;
 }
 $('#linkSuggest').addEventListener('mousedown', e => e.preventDefault());
@@ -266,7 +266,7 @@ function openToday() {
   openFile(p, { mode: 'edit' });
 }
 let newKind = null;
-const startNew = k => { newKind = k; $('#newEntry').hidden = false; const i = $('#newEntryInput'); i.value = ''; i.placeholder = k === 'dir' ? 'folder name, e.g. projects' : 'note name, e.g. projects/Big Idea'; i.focus(); };
+const startNew = k => { newKind = k; $('#newEntry').hidden = false; const i = $('#newEntryInput'); i.value = ''; i.placeholder = k === 'dir' ? 'workshop name, e.g. projects' : 'leaf name, e.g. projects/Big Idea'; i.focus(); };
 $('#btnNewFile').onclick = () => startNew('file'); $('#btnNewDir').onclick = () => startNew('dir');
 $('#btnToday').onclick = openToday;
 $('#newEntryInput').addEventListener('keydown', e => {
@@ -311,7 +311,7 @@ function buildGraph() {
   }
   for (const [a, b] of Graph.edges) { a.deg++; b.deg++; }
   Graph.focus = focus; Graph.alpha = 1;
-  $('#graphTitle').textContent = focus ? `Local graph · ${noteName(focus)}` : `Vault graph · ${notes.length} notes`;
+  $('#graphTitle').textContent = focus ? `Local graph · ${noteName(focus)}` : `Atelier graph · ${notes.length} leaves`;
   $('#btnGraphLocal').hidden = !(editing && isNote(editing)); $('#btnGraphLocal').setAttribute('aria-pressed', String(!!focus));
 }
 function graphStep() {

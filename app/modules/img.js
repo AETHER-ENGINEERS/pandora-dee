@@ -121,7 +121,7 @@ function insertAtCursor(text) {
   ta.setRangeText(pre + text + '\n', s, e, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true }));
 }
 async function addImagesToNote(files) {
-  if (!editing || !isNote(editing)) return toast('Open a note first.', 'err');
+  if (!editing || !isNote(editing)) return toast('Open a leaf first.', 'err');
   const imgs = [...files].filter(f => /^image\//.test(f.type)); if (!imgs.length) return;
   if ($('#noteBody').dataset.mode === 'read') setNoteMode('split');
   for (const f of imgs) { const p = await saveImageFile(f); insertAtCursor(`![[${embedRef(p)}]]`); }

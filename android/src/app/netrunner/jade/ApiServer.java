@@ -26,7 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Jade's HTTP API: a tiny GET-only server, JSON in (query string) and JSON out.
  *
  *   GET /v1/health                       public: {"ok":true,"app":"jade-vault","api":1}
- *   GET /v1/status | /v1/chat | /v1/history | /v1/chats | /v1/flows | /v1/flow      need the token
+ *   GET /v1/status | /v1/chat | /v1/history | /v1/chats | /v1/rituals | /v1/ritual   need the token
+ *       (/v1/flows and /v1/flow, Jade Vault's names for the last two, still work)
  *
  * Java only parses the request line, headers and query string. The work happens in the page's JavaScript
  * (window.__jadeApi) so a message sent here goes through the same send() as one typed in the app and shows
@@ -252,8 +253,8 @@ public class ApiServer {
         String p = r.path.length() > 1 && r.path.endsWith("/") ? r.path.substring(0, r.path.length() - 1) : r.path;
         if (p.equals("/v1/health") || p.equals("/") || p.equals("/v1"))
             return new Res(200, "{\"ok\":true,\"app\":\"jade-vault\",\"api\":" + API + ",\"auth\":\"Authorization: Bearer <token> or ?token=<token>\","
-                    + "\"endpoints\":[\"/v1/health\",\"/v1/status\",\"/v1/chat?message=...\",\"/v1/history\",\"/v1/chats\",\"/v1/flows\",\"/v1/flow?name=...\"]}");
-        if (!(p.equals("/v1/status") || p.equals("/v1/chat") || p.equals("/v1/history") || p.equals("/v1/chats") || p.equals("/v1/flows") || p.equals("/v1/flow")))
+                    + "\"endpoints\":[\"/v1/health\",\"/v1/status\",\"/v1/chat?message=...\",\"/v1/history\",\"/v1/chats\",\"/v1/rituals\",\"/v1/ritual?name=...\",\"/v1/flows\",\"/v1/flow?name=...\"]}");
+        if (!(p.equals("/v1/status") || p.equals("/v1/chat") || p.equals("/v1/history") || p.equals("/v1/chats") || p.equals("/v1/rituals") || p.equals("/v1/ritual") || p.equals("/v1/flows") || p.equals("/v1/flow")))
             return Res.err(404, "not_found", "unknown endpoint " + p + ". Try /v1/health");
         if (!authorized(r)) return Res.err(401, "unauthorized", "missing or wrong token. Send Authorization: Bearer <token> or ?token=<token>");
         int wait = DEFAULT_WAIT_S;

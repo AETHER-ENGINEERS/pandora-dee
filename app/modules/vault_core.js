@@ -9,7 +9,7 @@ const noteName = (p) => vfs.base(p).replace(/\.(md|markdown)$/i, '');
 const Vault = { index: null, dirty: true, renderFrom: null };
 function allNotes() {
   const out = [];
-  for (const [p, n] of vfs.nodes) if (!n.dir && isNote(p) && !/\/(node_modules|\.git|\.trash)\//.test(p) && !/^\/jade\/skills\//i.test(p)) out.push(p);
+  for (const [p, n] of vfs.nodes) if (!n.dir && isNote(p) && !/\/(node_modules|\.git|\.trash)\//.test(p) && !/^\/(?:pandora|jade)\/skills\//i.test(p)) out.push(p);
   return out.sort((a, b) => a.localeCompare(b));
 }
 const WIKI_RE = /\[\[([^\[\]\n|#]+)(#[^\[\]\n|]*)?(?:\|([^\[\]\n]+))?\]\]/g;

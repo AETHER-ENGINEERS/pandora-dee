@@ -2,7 +2,7 @@
 
 **Jade Vault 2.9.0** · [Documentation index](README-docs.md)
 
-Jade's model and permissions remain in the app. A separate always-on computer runs a Python HTTP bridge and Vector's patched `vector-agent`, which maintains the messenger identity and receives events. The bridge does not independently run Jade's brain.
+Pandora's model and permissions remain in the app. A separate always-on computer runs a Python HTTP bridge and Vector's patched `vector-agent`, which maintains the messenger identity and receives events. The bridge does not independently run Pandora's brain.
 
 ```text
 Jade Vault app → HTTP(S) + bearer token → Jade Vector bridge
@@ -34,9 +34,9 @@ Read the printed Bridge URL/token privately. Docker uses the `jade-vector-data` 
 
 1. Open **Config → Connect → Vector messenger**.
 2. Enter the bridge URL reachable from this device and its bearer token.
-3. Set your own Vector **npub** as owner. This determines who has full agent permissions.
+3. Set your own Vector **npub** as Partner. This determines who has full agent permissions.
 4. Optionally configure admin and channel whitelists, DM policy, trigger rules/words, polling, and secretary notifications.
-5. Enable the integration; copy Jade's npub and send a test DM from your owner account.
+5. Enable the integration; copy Pandora's npub and send a test DM from your Partner account.
 6. Keep Jade Vault running. On Android, use Config's Background mode as appropriate.
 
 On a phone, the bridge URL is the computer's LAN/VPN address, not `localhost`. For browser clients, consider CORS and HTTPS mixed content.
@@ -47,17 +47,17 @@ The bridge creates a bot key at `~/.jade-vector/nsec` (Docker: `/data/nsec`, mod
 
 | Caller | Permissions |
 | --- | --- |
-| Owner | Full Jade tool access |
+| Partner | Full Pandora tool access |
 | Whitelisted admin | Vector administrative/messaging powers and web search, no vault tools |
-| Public user | Conversation-scoped chat/reactions/Mini Apps, owner notification, web search; no notes, memory, files, shell, HTTP, or MCP |
+| Public user | Conversation-scoped chat/reactions/Mini Apps, Partner notification, web search; no notes, memory, files, shell, HTTP, or MCP |
 
-Tools are filtered before prompting and checked again at execution. Non-owner prompts exclude ordinary private vault/memory context, but include SOUL persona text. Keep private facts out of persona text. Still review outgoing behavior: role enforcement cannot guarantee sensible model-generated speech.
+Tools are filtered before prompting and checked again at execution. Non-Partner prompts exclude ordinary private vault/memory context, but include SOUL persona text. Keep private facts out of persona text. Still review outgoing behavior: role enforcement cannot guarantee sensible model-generated speech.
 
 ## Run alongside Discord
 
-In 2.9.0, [Discord](discord.md) and Vector can both be enabled. Each has its own bridge URL/token, messenger sessions, and incoming queue. Their queues coordinate busy checks and wake one another so Jade handles **one agent conversation at a time**, not parallel model turns. Connected bridges also participate in Android background-mode decisions.
+In 2.9.0, [Discord](discord.md) and Vector can both be enabled. Each has its own bridge URL/token, messenger sessions, and incoming queue. Their queues coordinate busy checks and wake one another so Pandora handles **one agent conversation at a time**, not parallel model turns. Connected bridges also participate in Android background-mode decisions.
 
-The `notify_owner` tool routes messages from Discord chats to `/Jade/Discord Inbox.md`; Vector chats use `/Jade/Vector Inbox.md`. Configure the notification policy separately for each connector. Discord defaults to port 8788; Vector defaults to 8787.
+The `notify_owner` tool routes messages from Discord chats to `/Pandora/Discord Inbox.md`; Vector chats use `/Pandora/Vector Inbox.md`. Configure the notification policy separately for each connector. Discord defaults to port 8788; Vector defaults to 8787.
 
 ## Bridge settings
 

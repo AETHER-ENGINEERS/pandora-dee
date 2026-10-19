@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jade Link</title>
+<link rel="stylesheet" href="style.css">
+<script src="webxdc.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="who"><span class="gem" aria-hidden="true">◆</span><div><b>JADE</b><span id="status" class="status"><i class="dot"></i><span id="statusText">link idle</span></span></div></div>
+  <nav class="seg" role="tablist">
+    <button role="tab" data-view="chat" aria-selected="true">Chat</button>
+    <button role="tab" data-view="board" aria-selected="false">Board <span id="boardCount" class="count"></span></button>
+  </nav>
+</header>
+
+<main>
+  <section id="chat" class="view">
+    <div id="log" class="log" aria-live="polite">
+      <div id="empty" class="empty">
+        <div class="empty-gem">◆</div>
+        <p>Direct line to Jade.</p>
+        <p class="sub">Messages here wake her up. She answers in this app, and she can put tasks on the board.</p>
+        <div class="chips">
+          <button data-chip="Hey Jade, what's on my board?">What's on my board?</button>
+          <button data-chip="Plan my evening in three tasks and put them on the board.">Plan my evening</button>
+          <button data-chip="Tell me something interesting from my notes.">Surprise me</button>
+        </div>
+      </div>
+    </div>
+    <div id="typing" class="typing" hidden><span></span><span></span><span></span> Jade is thinking</div>
+    <form id="composer" class="composer" autocomplete="off">
+      <textarea id="text" rows="1" placeholder="Message Jade…" enterkeyhint="send"></textarea>
+      <button id="send" type="submit" aria-label="Send">▶</button>
+    </form>
+  </section>
+
+  <section id="board" class="view" hidden>
+    <form id="addCard" class="addcard" autocomplete="off">
+      <input id="cardTitle" placeholder="New task…" maxlength="140">
+      <button type="submit">Add</button>
+    </form>
+    <div class="cols">
+      <div class="col" data-col="todo"><h2>To do <span></span></h2><ul></ul></div>
+      <div class="col" data-col="doing"><h2>Doing <span></span></h2><ul></ul></div>
+      <div class="col" data-col="done"><h2>Done <span></span></h2><ul></ul></div>
+    </div>
+    <button id="askBoard" class="ask" type="button">◆ Ask Jade to sort the board</button>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

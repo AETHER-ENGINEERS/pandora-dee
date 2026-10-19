@@ -1,0 +1,4 @@
+name = "Jade Link"
+source_code_url = "https://claude.ai"
+min_api = 1
+jade_reply = "msg"

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+tests/.work/
+test-results/
+android/build/
+android/.tools/
+android/proj/assets/
+android/proj/classes.dex
+*.jks
+*.keystore
+keystore-password.txt
+.jade-vector/
+__pycache__/
+*.pyc
+.DS_Store

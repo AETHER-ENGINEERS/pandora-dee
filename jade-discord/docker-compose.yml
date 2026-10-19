@@ -1,0 +1,15 @@
+services:
+  jade-discord:
+    build: .
+    image: jade-discord:latest
+    restart: unless-stopped
+    ports:
+      - "8788:8788"
+    volumes:
+      - jade-discord-data:/data          # bot token, bridge token and, with the archive on, the archive
+    environment:
+      # DISCORD_BOT_TOKEN: ...           # alternative to `--set-token`: the bot's token as an environment variable
+      JADE_DISCORD_MAX_AGE: "600"
+      # JADE_DISCORD_ARCHIVE: "1"         # keep every message the bot sees in /data/archive (README: The archive)
+volumes:
+  jade-discord-data:

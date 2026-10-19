@@ -1,0 +1,61 @@
+name: Release
+# Publish a release on GitHub (Releases → Draft a new release → tag vX.Y.Z → Publish).
+# This workflow then builds and attaches: the web page, Jade Link, the Vector bridge kit, checksums,
+# and the signed APK when the signing secrets are set (JADE_KEYSTORE_B64, JADE_KEYSTORE_PASSWORD, JADE_KEY_ALIAS).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to (re)build assets for
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - name: Signed APK
+        env:
+          KS_B64: ${{ secrets.JADE_KEYSTORE_B64 }}
+          JADE_KEYSTORE_PASSWORD: ${{ secrets.JADE_KEYSTORE_PASSWORD }}
+          JADE_KEY_ALIAS: ${{ secrets.JADE_KEY_ALIAS }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::warning::No signing secrets: the APK is not built. Attach a release-signed APK by hand, or add JADE_KEYSTORE_B64 / JADE_KEYSTORE_PASSWORD / JADE_KEY_ALIAS and re-run."
+            exit 0
+          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          JADE_KEYSTORE="$RUNNER_TEMP/release.jks" bash android/build-apk.sh
+          rm -f "$RUNNER_TEMP/release.jks"
+      - name: Bridge kit and checksums
+        run: |
+          V=$(cat VERSION)
+          mkdir -p kit/jade-vector && cp jade-vector/*.py jade-vector/*.sh jade-vector/Dockerfile jade-vector/docker-compose.yml jade-vector/.dockerignore jade-vector/README.md kit/jade-vector/
+          tar -C kit -czf dist/jade-vector-$V.tar.gz jade-vector
+          mkdir -p kit/jade-discord && cp jade-discord/*.py jade-discord/*.sh jade-discord/*.txt jade-discord/Dockerfile jade-discord/docker-compose.yml jade-discord/.dockerignore jade-discord/README.md kit/jade-discord/
+          tar -C kit -czf dist/jade-discord-$V.tar.gz jade-discord
+          cd dist && sha256sum $(ls *.apk 2>/dev/null) jade-vault.html jade-link.xdc jade-vector-$V.tar.gz jade-discord-$V.tar.gz > SHA256SUMS
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" --clobber $(ls dist/*.apk 2>/dev/null) dist/jade-vault.html dist/jade-link.xdc dist/jade-vector-*.tar.gz dist/jade-discord-*.tar.gz dist/SHA256SUMS

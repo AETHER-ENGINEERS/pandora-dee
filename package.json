@@ -1,0 +1,22 @@
+{
+  "name": "jade-vault",
+  "version": "2.9.0",
+  "private": true,
+  "description": "Jade Vault: a mobile, Obsidian-style markdown vault with an AI agent (Jade) that runs in the browser and on Android.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build-web.sh",
+    "build:apk": "bash scripts/build-web.sh && bash android/build-apk.sh",
+    "test": "node tests/run.mjs",
+    "test:quick": "node tests/run.mjs sq_glue_test sq_bridge_test vault_test vector_test"
+  },
+  "devDependencies": {
+    "dompurify": "3.4.14",
+    "katex": "0.16.47",
+    "marked": "18.0.10",
+    "pdfjs-dist": "6.2.108",
+    "playwright": "1.56.0",
+    "tailwindcss": "4.3.3"
+  }
+}

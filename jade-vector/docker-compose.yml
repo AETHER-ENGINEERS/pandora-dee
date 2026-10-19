@@ -1,0 +1,14 @@
+services:
+  jade-vector:
+    build: .
+    image: jade-vector:latest
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - jade-vector-data:/data          # bot key (nsec), bridge token, chats and history
+    environment:
+      # VECTOR_NSEC: nsec1...           # optional: use an existing bot account instead of a new one
+      VECTOR_LOG: warn
+volumes:
+  jade-vector-data:

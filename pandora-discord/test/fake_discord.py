@@ -31,6 +31,8 @@ def user(id, username, global_name=None):
 USERS = {'10000000000000100': user(10000000000000100, 'owner', 'Sam'), '10000000000000111': user(10000000000000111, 'alice', 'Alice'), '10000000000000120': user(10000000000000120, 'mod', 'Mod'), '10000000000000222': user(10000000000000222, 'bob', 'Bob')}
 CHANNELS = {'80000000000000800': {'id': '80000000000000800', 'type': 0, 'guild_id': '70000000000000700', 'name': 'general', 'position': 0, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None, 'topic': 'Books we are reading this month'},
             '80000000000000801': {'id': '80000000000000801', 'type': 0, 'guild_id': '70000000000000700', 'name': 'offtopic', 'position': 1, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None},
+            '80000000000000802': {'id': '80000000000000802', 'type': 0, 'guild_id': '70000000000000700', 'name': 'staff', 'position': 3, 'nsfw': False, 'parent_id': None,
+                                  'topic': 'Mods only', 'permission_overwrites': [{'id': '70000000000000700', 'type': 0, 'allow': '0', 'deny': '1024'}]},
             '80000000000000820': {'id': '80000000000000820', 'type': 15, 'guild_id': '70000000000000700', 'name': 'book-forum', 'position': 2, 'permission_overwrites': [], 'nsfw': False, 'parent_id': None, 'available_tags': [], 'flags': 0}}
 THREADS = {'80000000000000810': {'id': '80000000000000810', 'type': 11, 'guild_id': '70000000000000700', 'name': 'Plot holes', 'parent_id': '80000000000000800',
                                  'owner_id': '10000000000000111', 'message_count': 0, 'member_count': 1, 'rate_limit_per_user': 0, 'flags': 0,
@@ -41,7 +43,7 @@ THREADS = {'80000000000000810': {'id': '80000000000000810', 'type': 11, 'guild_i
            '80000000000000821': {'id': '80000000000000821', 'type': 11, 'guild_id': '70000000000000700', 'name': 'Archived post', 'parent_id': '80000000000000820',
                                  'owner_id': '10000000000000111', 'message_count': 0, 'member_count': 1, 'rate_limit_per_user': 0, 'flags': 0,
                                  'thread_metadata': {'archived': True, 'auto_archive_duration': 1440, 'archive_timestamp': '2026-01-01T00:00:00.000000+00:00', 'locked': False}}}
-GUILD = {'id': '70000000000000700', 'name': 'Book Club', 'owner_id': '10000000000000100', 'member_count': 4, 'unavailable': False, 'channels': list(CHANNELS.values()), 'roles': [], 'emojis': [], 'stickers': [],
+GUILD = {'id': '70000000000000700', 'name': 'Book Club', 'owner_id': '10000000000000100', 'member_count': 4, 'unavailable': False, 'channels': list(CHANNELS.values()), 'roles': [{'id': '70000000000000700', 'name': '@everyone', 'color': 0, 'hoist': False, 'position': 0, 'permissions': '68608', 'managed': False, 'mentionable': False, 'flags': 0}], 'emojis': [], 'stickers': [],
          'features': [], 'system_channel_flags': 0, 'premium_tier': 0, 'verification_level': 0, 'default_message_notifications': 0, 'explicit_content_filter': 0,
          'afk_timeout': 300, 'mfa_level': 0, 'preferred_locale': 'en-US', 'nsfw_level': 0, 'premium_progress_bar_enabled': False}
 FILES = {}
@@ -244,6 +246,7 @@ async def inject(req):
         x.setdefault('proxy_url', x.get('url', 'x'))
     ments = [BOT] if b.get('mention_bot') else []
     m = msg_obj(snow(), cid, {**a, **({'bot': True} if b.get('bot') else {})}, b.get('content') or '', b.get('reply_to'), atts, ments)
+    m['embeds'] = b.get('embeds') or []
     await dispatch('MESSAGE_CREATE', m)
     return _json({'id': m['id']})
 
@@ -258,6 +261,7 @@ async def seed(req):
         x.setdefault('id', snow())
         x.setdefault('proxy_url', x.get('url', 'x'))
     m = msg_obj(snow(), str(b['channel_id']), {**a, **({'bot': True} if b.get('bot') else {})}, b.get('content') or '', b.get('reply_to'), atts)
+    m['embeds'] = b.get('embeds') or []
     return _json({'id': m['id']})
 
 

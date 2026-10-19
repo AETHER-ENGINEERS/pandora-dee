@@ -149,6 +149,50 @@ def main():
     ok(not tool(token, 'archive_search', {'query': 'character bot'}), 'archive_search leaves deleted messages out')
     ok(len(tool(token, 'archive_search', {'query': 'offtopic', 'chat_id': OFF})) == 2, 'archive_search can stay in one channel')
 
+    # ---- the archive database: full-text search at no model cost, scoped, noise flagged
+    STAFF = '80000000000000802'
+    secret = fd('/_seed', {'channel_id': STAFF, 'author': OWNER, 'content': 'secret moderator plans for the property'})['id']
+    tool(token, 'archive_backfill')
+    for _ in range(80):
+        time.sleep(0.25)
+        if not tool(token, 'archive_status')['backfill'].get('running'):
+            break
+    lol = fd('/_inject', {'channel_id': GEN, 'author': ALICE, 'content': 'lol'})['id']
+    fd('/_inject', {'channel_id': GEN, 'author': ALICE, 'content': '🔥🔥'})
+    oracle = fd('/_inject', {'channel_id': GEN, 'author': '30000000000000301', 'bot': True, 'content': '',
+                             'embeds': [{'type': 'rich', 'title': 'Oracle', 'description': 'The tower card means sudden change'}]})['id']
+    time.sleep(1.0)
+    ch = lambda **a: tool(token, 'archive_query', a)
+    st = ch(action='status')
+    ok(st['messages'] >= 10 and st['public_channels'] >= 4 and st['noise'] >= 2, 'archive db: the archive is indexed into a database: ' + json.dumps({k: st[k] for k in ('messages', 'noise', 'channels', 'public_channels')}))
+    hit = ch(action='search', query='properties')
+    ok(f'[{first}]' in hit and '#general' in hit and '(edited)' in hit and 'moderator' not in hit, 'archive db search: word forms match (properties ~ property), edits searched, public scope only: ' + hit[:200])
+    ok('moderator' in ch(action='search', query='moderator', scope='all') and ch(action='search', query='moderator') == 'Nothing found.', 'archive db: a channel hidden from @everyone is searchable by the keyholder only')
+    ok(ch(action='search', query='lol') == 'Nothing found.' and f'[{lol}]' in ch(action='search', query='lol', include_noise=True), 'archive db: noise is kept but left out of search unless asked for')
+    t = ch(action='search', query='"tower card"')
+    ok(f'[{oracle}]' in t and '(bot)' in t, 'archive db: what bots say in embeds is searchable: ' + t[:160])
+    ok(ch(action='search', query='character bot') == 'Nothing found.', 'archive db: deleted messages never come back')
+    pk = ch(action='search', query='pick', channel='general')
+    ok('Old picks' in pk and 'archived' in pk, 'archive db: a channel filter includes its threads: ' + pk[:200] + ' | ' + ch(action='search', query='pick', scope='all')[:200])
+    ok(ch(action='search', query='property AND (moderator OR thing', scope='all') != '', 'archive db: a broken query falls back to plain words')
+    ctx = ch(action='context', message_id=reply, before=2, after=1).split('\n')
+    ok(any(x.startswith('→ ') and 'pancakes' in x for x in ctx) and f'[{first}]' in ctx[0] and len(ctx) == 3, 'archive db context: the conversation around a message: ' + json.dumps(ctx)[:200])
+    tl = ch(action='timeline', channel='#general', limit=3).split('\n')
+    ok(len(tl) == 3 and f'[{oracle}]' in tl[-1], 'archive db timeline: the latest messages of a channel, in order')
+    pub, every = ch(action='channels'), ch(action='channels', scope='all')
+    ok('#general (' in pub and '#general › Plot holes' in pub and 'staff' not in pub and '#staff' in every and '(private)' in every, 'archive db channels: public ones, or all with the private ones marked')
+    try:
+        ch(action='context', message_id=secret)
+        ok(False, 'archive db: context of a private message is refused in the public scope')
+    except RuntimeError as e:
+        ok('no message' in str(e), 'archive db: context of a private message is refused in the public scope')
+
+    tool(token, 'archive_backfill')  # bring the backfill's bookmarks up to date with the live messages above
+    for _ in range(80):
+        time.sleep(0.25)
+        if not tool(token, 'archive_status')['backfill'].get('running'):
+            break
+
     # ---- render: a vault under the user's own name
     bridge.terminate()
     bridge.wait(10)
@@ -165,6 +209,10 @@ def main():
     ok('character bot' not in gen, 'render: deleted messages are left out')
     ok(f'![[{pathlib.Path(saved).name}]]' in gen and (v / '_files' / saved).exists(), 'render: images are embedded from _files')
     ok((v / 'Book Club' / 'general' / 'threads' / f'Plot holes ({TH}).md').exists(), 'render: threads get their own notes under their channel')
+
+    # ---- the database on its own, from the command line
+    r = sh(f'{DC}/archive_db.py {ARC} tower card', wait=True)
+    ok(r.returncode == 0 and 'Oracle' in r.stdout and 'tower' in r.stdout, 'archive_db.py searches the archive from the command line: ' + (r.stdout + r.stderr)[:160])
 
     # ---- --backfill from the command line, then exit
     fd('/_seed', {'channel_id': OFF, 'author': ALICE, 'content': 'newer offtopic'})

@@ -112,13 +112,14 @@ Use the bridge computer's LAN/private-VPN address from a phone, not `localhost`.
 | Role | Implementation behavior |
 | --- | --- |
 | Owner | Full Jade tool access, including vault and scripts |
-| Admin whitelist | Discord messaging/moderation actions, `notify_owner`, and `web_search`; no vault, memory, shell, HTTP, MCP, or file tools |
-| Public | Current-chat actions such as replies, reactions, reading, editing/deleting through supported actions; `notify_owner` and `web_search`; no general vault/tool access or cross-chat sends |
+| Admin whitelist | Discord messaging/moderation actions, `discord_history` (public channels), `notify_owner`, and `web_search`; no vault, memory, shell, HTTP, MCP, or file tools |
+| Public | Current-chat actions such as replies, reactions, reading, editing/deleting through supported actions; `discord_history` (public channels), `notify_owner` and `web_search`; no general vault/tool access or cross-chat sends |
 
 Tool lists are filtered and execution guards run again. Discord actions also have an action allowlist and public target restrictions; Discord itself enforces message ownership and server permissions. Non-owner prompts omit ordinary private vault/memory context but include Jade's SOUL persona, so do not place private facts in persona text expecting it to be owner-only.
 
 The `discord` tool provides send/reply, typing, reaction, edit/delete, read/profile, server/channel lists, moderation, and owner file-transfer capabilities. Use real IDs obtained from the service, not invented examples. Numeric user targets can be expressed as `user:<id>` to disambiguate from channels. Ordinary assistant replies in a Discord session are sent back automatically; avoid sending a duplicate explicit tool reply.
 
+- `discord_history` searches the bridge's archive database (bridge started with `--archive`): one call returns a few compact lines, so recalling the server's past costs no context or rate limit. The owner searches every archived channel; everyone else only channels the whole server can see. Config → Discord → *What you call the archive* gives it your own name in the character's instructions. See the bridge README for the query syntax.
 - `notify_owner` in a Discord chat uses `/Jade/Discord Inbox.md`, not Vector's inbox.
 - Notification settings control inbox-only versus immediate owner notification/DM behavior; urgent requests are handled according to that policy.
 - Attachments saved to the vault use `/attachments/discord/<date>/...` by default. Image interpretation depends on a vision-capable model and image settings.

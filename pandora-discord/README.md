@@ -112,8 +112,25 @@ images embedded from `<name>/_files/`, and an index note. `--name` and `--descri
 a memory, a library or anything else; the folder and the index note take that name. Deleted messages are left out of
 the notes and of search. Render again any time; the notes are rewritten from the archive.
 
+**Search database.** While the bridge runs with `--archive`, it keeps `archive/archive.db` up to date: the archive in
+SQLite with full-text search (`archive_db.py`, standard library only). It reads only what was appended since last
+time, so it stays current within a minute, and every search catches up first. A character searches with one call and
+gets back a few compact lines (`[id] date #channel author: text`) instead of paging through channels, which costs
+nothing in model tokens or rate limits. Nothing is thrown away: join notices, filler ("lol", "ok"), emoji-only replies
+and typed bot commands are flagged as noise and skipped unless asked for; deleted messages never come back; what bots
+post in embeds is searchable. Each channel records whether everyone in the server can see it, and the **public** scope
+only searches those: in Jade, people chatting with your character get the public scope, and only you (the keyholder)
+get every archived channel. The database can be rebuilt any time by deleting it; the JSON lines are the record.
+
+From the command line: `python3 archive_db.py ~/.jade-discord/archive "search words"` (catches up, then searches
+everything).
+
 **Tools.** `archive_status` (size, and how a backfill is going), `archive_backfill`, `archive_search` (text or author;
-`chat_id` to stay in one channel).
+`chat_id` to stay in one channel), and `archive_query`: `action` = `search` (`query` in FTS5 syntax: words,
+`"a phrase"`, `OR`, `NOT`, `prefix*`; optional `channel`, `author`, `since`/`until` as YYYY-MM-DD, `limit`,
+`include_noise`), `context` (`message_id`, `before`, `after`), `timeline` (`channel`, `since`, `until`, `limit`),
+`channels`, `status`; `scope` = `public` (default) or `all`. In Jade it is the `discord_history` tool, and Config →
+Discord lets you give the archive your own name so your character knows what you call it.
 
 **Tell your members.** The archive keeps everyone's messages, not only yours, on whatever computer runs the bridge.
 Say so on the server, keep that computer's disk private, and remember the raw record still holds deleted messages

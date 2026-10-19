@@ -13,3 +13,11 @@ keystore-password.txt
 __pycache__/
 *.pyc
 .DS_Store
+
+# Discord archives and their search database are private: never commit them
+.jade-discord/
+archive/
+*.db
+*.db-wal
+*.db-shm
+*.jsonl

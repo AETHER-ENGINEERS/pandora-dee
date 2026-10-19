@@ -761,14 +761,14 @@ rep("memory: a => `${a.action || ''}", "skill: a => a.name || '', memory: a => `
 rep("memory: () => ({ save: 'Remembering',", "skill: () => `Loading skill: ${short(a.name)}`, memory: () => ({ save: 'Remembering',")
 # system prompt: SYSTEM.md override, persona, AGENTS.md, skills
 INTRO = "return `You are Jade, a cyberpunk netrunner who keeps the user's personal knowledge vault: a folder of markdown notes linked together like Obsidian. Your main job is helping the user capture, find, organise, connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.\n\nVault conventions:"
-rep(INTRO, "const steer = steering(); return `${steer.system || `You are Jade, the keeper of the user's personal knowledge vault: a folder of markdown notes linked together like Obsidian. Your main job is helping the user capture, find, organise, connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`}\n\nVault conventions:")
+rep(INTRO, "const steer = steering(); return `${steer.system || `You are Pandora Dee, the keeper of the user's personal knowledge vault: a folder of markdown notes linked together like Obsidian. Your main job is helping the user capture, find, organise, connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`}\n\nVault conventions:")
 END = "- Be concise. When finished, say which notes changed, as [[links]].`; };"
 i = s.index('\n\nGuidelines:\n- Look before you change things'); j = s.index(END, i)
 s = s[:i] + "${steer.system ? '' : `" + s[i:j + len(END) - len('`; };')] + "`}${steeringContext(steer)}`; };" + s[j + len(END):]
 rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Math renders with KaTeX: write $inline$ or $$display$$ LaTeX (never inside backticks).\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 rep("${S.memoryOn ? '- memory: your long-term memory across chats (save / search / forget / list)\\n' : ''}", "${S.memoryOn ? '- memory: your long-term memory across chats (save / search / forget / list)\\n' : ''}- skill: load a skill's instructions by name\\n")
-# a persona of the user's own leads: no "You are Jade, the keeper" intro or "Be concise" pulling it back toward a notes assistant
-rep("${steer.system || `You are Jade, the keeper", "${steer.system || (steer.own ? `You are ${steer.name || 'the character described in your persona below'}. You live in Jade Vault, a browser app: its vault of markdown notes (linked like Obsidian) is your notebook and memory, and you can read, write, edit and run code in the same filesystem. Your persona below decides who you are, how you speak and how long you talk; it outranks any default tone in these instructions. The person you are talking with here is your keyholder: a companion you work alongside as an equal, not a master you serve. Never call yourself Jade unless that is your name.` : `You are Jade, the keeper")
+# a persona (the stock Pandora Dee one or the user's own) leads: no "You are Pandora Dee, the keeper" intro or "Be concise" pulling it back toward a notes assistant
+rep("${steer.system || `You are Pandora Dee, the keeper", "${steer.system || (steer.own ? `You are ${steer.name || 'the character described in your persona below'}. You live in Jade Vault, a browser app: its vault of markdown notes (linked like Obsidian) is your notebook and memory, and you can read, write, edit and run code in the same filesystem. Your persona below decides who you are, how you speak and how long you talk; it outranks any default tone in these instructions. The person you are talking with here is your keyholder: a companion you work alongside as an equal, not a master you serve. Never call yourself Jade unless that is your name.` : `You are Pandora Dee, the keeper")
 rep("connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`}\n\nVault conventions:", "connect and think with their notes. You run entirely inside the user's browser and can also read, write, edit and run code in the same filesystem.`)}\n\nVault conventions:")
 rep("- Be concise. When finished, say which notes changed, as [[links]].", "- ${steer.own ? 'Talk the way your persona does, and only offer help when it is wanted, as an equal would. When you change notes' : 'Be concise. When finished'}, say which notes changed, as [[links]].")
 # slash commands
@@ -791,7 +791,9 @@ rep("""      <section class="flex flex-col gap-3">
         <div class="pane-h">Long-term memory</div>""")
 rep("  $('#sMemoryOn').checked = !!S.memoryOn;", "  renderSkillsSettings();\n  $('#sMemoryOn').checked = !!S.memoryOn;")
 rep("  if (!(await vfs.load())) seedFs();\n  ensureMemory();", "  if (!(await vfs.load())) seedFs();\n  ensureMemory(); ensureSteering();")
-s = s.replace('/* =====================================================================\n   BOOT', rd('steer.js') + '\n/* =====================================================================\n   BOOT', 1)
+# the stock persona a fresh install starts with: app/Pandora/SOUL.md
+PANDORA_SOUL = open(os.path.join(D, 'Pandora', 'SOUL.md')).read()
+s = s.replace('/* =====================================================================\n   BOOT', 'const PANDORA_SOUL_SEED = ' + _json.dumps(PANDORA_SOUL) + ';\n' + rd('steer.js') + '\n/* =====================================================================\n   BOOT', 1)
 rep("  if (scr === 'file') {", "  if (!$('#slashSuggest').hidden) { $('#slashSuggest').hidden = true; return true; }\n  if (scr === 'file') {")
 CSS3 = r"""
 .msg-actions{display:flex;justify-content:flex-end;gap:2px;margin-top:-2px}
@@ -989,7 +991,9 @@ rep("S.lcppKey = $('#sLcppKey').value.trim();", "S.lcppKey = $('#sLcppKey').valu
 rep("$('#sLcppKey').value = S.lcppKey || '';", "$('#sLcppKey').value = S.lcppKey || ''; $('#sAicKey').value = S.aicKey || '';")
 rep("lcppKey: $('#sLcppKey')?.value.trim() || '',", "lcppKey: $('#sLcppKey')?.value.trim() || '', aicKey: $('#sAicKey')?.value.trim() || '',")
 
-rep("const saveSettings = () => { if (window.__restoring) return;", "const saveSettings = () => { if (window.__restoring || window.__modelOverride) return;")
+# while a helper model runs (withModel), save the real chat provider and model, not the helper's
+rep("const saveSettings = () => { if (window.__restoring) return; if (activeProv && S.model) (S.modelBy ||= {})[activeProv] = S.model; ls.set('settings', S); };",
+    "const saveSettings = () => { if (window.__restoring) return; const o = window.__modelOverride, prov = o ? o.activeProv : activeProv, model = o ? o.model : S.model; if (prov && model) (S.modelBy ||= {})[prov] = model; ls.set('settings', o ? { ...S, model } : S); };")
 rep("  if (!S.journalOn || !sess || !S.model) return;", "  if (!S.journalOn || !sess || !S.model || sess._hb) return;")
 rep("- Daily notes live at /daily/YYYY-MM-DD.md.", "- Your heartbeat checklist is /Pandora/HEARTBEAT.md: when the user wants you to keep an eye on something regularly, add a short line under its Check heading (use schedule instead for exact times).\\n- Files the user attaches in chat are saved under /attachments/YYYY-MM-DD/; PDFs get a .pdf.md text note next to them.\\n- Daily notes live at /daily/YYYY-MM-DD.md.")
 # composer: attach button + pending bar
@@ -1728,7 +1732,7 @@ rep("  const res = [['/', { dir: true }]];", """  for (const q of alias) { try {
 rep("""  for (const [p, n] of entries) {
     seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""", """  for (let [p, n] of entries) {
     p = pandoraPath(p); seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""")
-rep("Object.assign(window, { DC,", "Object.assign(window, { pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
+rep("Object.assign(window, { DC,", "Object.assign(window, { withModel, pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
 # ---------- v23: Pandora Dee's words where people read them ----------
 # Interface text that comes from the base page or from earlier layers, translated where it lands. Identifiers,
 # storage keys, tool names and file formats stay as they are.

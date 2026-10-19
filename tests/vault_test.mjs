@@ -256,14 +256,16 @@ ok(/costs \$5 and \$10 today/.test(mt.txt), 'currency dollars are not math');
 await shot('15_math'); await overflow('math note');
 // ---- v3: SOUL / AGENTS / SYSTEM ----
 const sp = await page.evaluate(() => systemPrompt());
-ok(/neon edge of Night City/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
+ok(/small island town of cicadas/.test(sp) && /Title Case/.test(sp) && !/<!--/.test(sp), 'SOUL + AGENTS in prompt, comments stripped');
 ok(/Skills \(instruction packs/.test(sp) && /daily-review:/.test(sp) && /skill-creator:/.test(sp), 'skills listed in prompt');
 await page.evaluate(() => vfs.write('/Pandora/SYSTEM.md', '# SYSTEM\n<!-- hidden -->\nYou are Bob, a terse librarian.'));
 const sp2 = await page.evaluate(() => systemPrompt());
 ok(sp2.startsWith('# SYSTEM\n\nYou are Bob') || sp2.startsWith('# SYSTEM\nYou are Bob') || /^# SYSTEM\s+You are Bob/.test(sp2), 'SYSTEM.md replaces intro: ' + JSON.stringify(sp2.slice(0, 40)));
-ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /neon edge/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
+ok(!/Guidelines:/.test(sp2) && /Tools:/.test(sp2) && /small island town/.test(sp2), 'SYSTEM.md drops guidelines, keeps tools + soul');
 await page.evaluate(() => vfs.rm('/Pandora/SYSTEM.md'));
-ok(/^You are Jade, the keeper/.test(sp) && /Be concise/.test(sp), 'the stock soul keeps the notes-keeper intro');
+ok(/^You are Pandora Dee\. You live in the Atelier/.test(sp) && /as an equal/.test(sp) && !/Be concise/.test(sp) && await page.evaluate(() => vfs.read('/Pandora/SOUL.md').startsWith('---\nname: Pandora Dee\n---\n# SOUL\n\nI\'m Pandora Dee.')), 'a fresh install starts with the stock Pandora Dee persona, which leads like a persona of her own');
+const sp0 = await page.evaluate(() => { const o = vfs.read('/Pandora/SOUL.md'); vfs.rm('/Pandora/SOUL.md'); const r = systemPrompt(); vfs.write('/Pandora/SOUL.md', o); return r; });
+ok(/^You are Pandora Dee, the keeper/.test(sp0) && /Be concise/.test(sp0), 'with no SOUL.md at all, the plain intro says Pandora Dee: ' + JSON.stringify(sp0.slice(0, 40)));
 const sp3 = await page.evaluate(() => { const o = vfs.read('/Pandora/SOUL.md'); vfs.write('/Pandora/SOUL.md', '---\nname: Pandora Dee\n---\n# SOUL\nI keep the company house in order.'); const r = systemPrompt(); vfs.write('/Pandora/SOUL.md', o); return r; });
 ok(/^You are Pandora Dee\. You live in the Atelier, a browser app grown from Jade Vault: its leaves/.test(sp3) && /speak the Atelier's language: the vault is the Atelier, a note is a leaf/.test(sp3) && /notes_search and the rest\) and paths stay as they are/.test(sp3) && /as an equal/.test(sp3) && !/keeper of the user's personal knowledge vault|Be concise/.test(sp3) && /company house/.test(sp3) && /Vault conventions:/.test(sp3), 'a soul of their own leads: its name, no notes-assistant intro: ' + JSON.stringify(sp3.slice(0, 60)));
 // ---- v3: skills ----

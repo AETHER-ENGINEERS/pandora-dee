@@ -163,5 +163,14 @@ await page.tap('#btnSettings'); await page.waitForTimeout(300);
 void ( await page.isHidden('#settings'), await page.isHidden('#sLcppHost'), await page.inputValue('#sLcppHost').catch(e => 'x'), await page.inputValue('#sProvider'), await page.textContent('#provHint'));
 ok(!(await page.isHidden('#sLcppHost')) && await page.inputValue('#sLcppHost') === 'http://localhost:8080' && /--jinja/.test(await page.textContent('#provHint')), 'llama.cpp settings + hint');
 await page.screenshot({ path: OUT + '/5_lcpp.png' });
+// a setting changed while a helper model runs (journal, compaction, heartbeat) is saved, with the real chat model
+const kept = await page.evaluate(async () => {
+  const before = { prov: S.provider || 'local', model: S.model };
+  const inside = await withModel(before.prov, 'helper-model:1b', async () => withModel(before.prov, 'inner-helper:1b', async () => { S.jadeTheme = 'ruby'; saveSettings(); return { model: S.model, override: !!window.__modelOverride }; }));
+  const stored = JSON.parse(localStorage.getItem('jvault:settings'));
+  return { before, inside, stored: { theme: stored.jadeTheme, model: stored.model, by: stored.modelBy?.[before.prov] }, after: { model: S.model, override: window.__modelOverride } };
+});
+ok(kept.inside.model === 'inner-helper:1b' && kept.inside.override && kept.stored.theme === 'ruby' && kept.stored.model === kept.before.model && kept.stored.by === kept.before.model && kept.after.model === kept.before.model && kept.after.override === false,
+  'a setting changed while a helper model runs is saved, with the real chat model (nested runs too): ' + JSON.stringify(kept));
 console.log(log.join('\n')); console.log('\n' + (fail.length ? fail.join('\n') : 'ALL PASS'));
 await browser.close();

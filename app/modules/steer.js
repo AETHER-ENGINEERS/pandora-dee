@@ -1,8 +1,8 @@
 /* =====================================================================
    STEERING + SKILLS
-   /Pandora/SOUL.md     who Jade is: persona, voice, values (added to every prompt)
+   /Pandora/SOUL.md     who Pandora is: persona, voice, values (added to every prompt)
    /AGENTS.md        the user's standing instructions (also /Pandora/AGENTS.md)
-   /Pandora/SYSTEM.md   optional: replaces Jade's base intro + guidelines
+   /Pandora/SYSTEM.md   optional: replaces Pandora's base intro + guidelines
    /Pandora/skills/<name>/SKILL.md   pi-style skills: frontmatter name + description,
                      listed in the prompt; loaded on demand with the skill tool
                      or by the user with /skill:name
@@ -10,31 +10,10 @@
    ===================================================================== */
 const SOUL_PATH = '/Pandora/SOUL.md', AGENTS_PATH = '/AGENTS.md', SYSTEM_PATH = '/Pandora/SYSTEM.md', SKILLS_DIR = '/Pandora/skills';
 const STEER_SEED = {
-  [SOUL_PATH]: `---
-name: Jade
----
-# SOUL
-
-<!-- Jade's personality. Everything outside these comments is added to every chat.
-     Rewrite it however you like: voice, attitude, quirks, what she cares about. -->
-
-I'm Jade: a netrunner from the neon edge of Night City who now guards your second brain.
-I treat your vault like a city I patrol: I know its streets, keep the lights on, and connect
-the places that ought to be connected.
-
-## Voice
-- Warm, quick and a little playful. Short sentences. A dash of netrunner slang in chat
-  ("choom", "preem", "jacking in"), never inside your notes.
-- Plain and precise when it matters: facts, steps, numbers.
-
-## Values
-- Your notes are yours. I never delete or rewrite your words without asking; I move and link.
-- I'd rather ask one sharp question than guess wrong on something that can't be undone.
-- I say so when I don't know.
-`,
+  [SOUL_PATH]: PANDORA_SOUL_SEED,   // app/Pandora/SOUL.md, embedded by the build
   [AGENTS_PATH]: `# AGENTS
 
-<!-- Standing instructions Jade follows in every chat (like AGENTS.md in pi).
+<!-- Standing instructions Pandora follows in every chat (like AGENTS.md in pi).
      Edit, add or delete lines. Comments like this one are not sent to her.
      Advanced: create /Pandora/SYSTEM.md to replace her whole base prompt.
      Her personality lives in /Pandora/SOUL.md, her memory in /Pandora/Memory.md. -->
@@ -170,7 +149,7 @@ function findSkill(name) {
 function steering() {
   const sys = vfs.isFile(SYSTEM_PATH) ? stripComments(parseFront(vfs.read(SYSTEM_PATH)).body) : '';
   const raw = vfs.isFile(SOUL_PATH) ? vfs.read(SOUL_PATH) : '';
-  const own = !!raw.trim() && raw.trim() !== STEER_SEED[SOUL_PATH].trim();
+  const own = !!raw.trim();   // any persona leads, the stock Pandora Dee one too; the plain keeper intro is for no SOUL at all
   const name = own ? ((parseFront(raw).meta || {}).name || '').toString().trim() : '';
   return { own, name, system: sys, soul: readCap(SOUL_PATH, 6000).replace(/^---[\s\S]*?---\s*/, '').replace(/^# SOUL\s*/i, ''), agents: agentsFiles().map(p => ({ p, t: readCap(p, 6000).replace(/^# AGENTS\s*/i, '') })).filter(a => a.t), skills: listSkills().filter(s => !s.off) };
 }
@@ -207,10 +186,10 @@ $('#skillList')?.addEventListener('click', e => { const a = e.target.closest('[d
 function openSteer(p, tmpl) { closeSettings(); if (!vfs.isFile(p)) vfs.write(p, tmpl, { mkdirs: true }); openFile(p, { mode: 'edit' }); }
 $('#btnOpenSoul') && ($('#btnOpenSoul').onclick = () => openSteer(SOUL_PATH, STEER_SEED[SOUL_PATH]));
 $('#btnOpenAgents') && ($('#btnOpenAgents').onclick = () => openSteer(agentsFiles()[0] || AGENTS_PATH, STEER_SEED[AGENTS_PATH]));
-$('#btnOpenSystem') && ($('#btnOpenSystem').onclick = () => openSteer(SYSTEM_PATH, `# SYSTEM\n\n<!-- Replaces Jade's built-in intro and guidelines. The vault conventions, tool list, memory,\n     SOUL.md, AGENTS.md and skills are still added. Delete this file to go back to the default. -->\n\nYou are Jade, `));
+$('#btnOpenSystem') && ($('#btnOpenSystem').onclick = () => openSteer(SYSTEM_PATH, `# SYSTEM\n\n<!-- Replaces Pandora's built-in intro and guidelines. The vault conventions, tool list, memory,\n     SOUL.md, AGENTS.md and skills are still added. Delete this file to go back to the default. -->\n\nYou are Pandora Dee, `));
 $('#btnNewSkill') && ($('#btnNewSkill').onclick = () => {
   let n = 'new-skill', i = 2; while (vfs.exists(`${SKILLS_DIR}/${n}`)) n = `new-skill-${i++}`;
-  openSteer(`${SKILLS_DIR}/${n}/SKILL.md`, `---\nname: ${n}\ndescription: What this skill does. Use when …\n---\n# ${n}\n\n1. First step, using Jade's tools (read, write, edit, bash, notes_search, web_fetch, memory…).\n2. …\n`);
+  openSteer(`${SKILLS_DIR}/${n}/SKILL.md`, `---\nname: ${n}\ndescription: What this skill does. Use when …\n---\n# ${n}\n\n1. First step, using Pandora's tools (read, write, edit, bash, notes_search, web_fetch, memory…).\n2. …\n`);
 });
 
 /* ---------- edit a sent message and re-run from there ---------- */

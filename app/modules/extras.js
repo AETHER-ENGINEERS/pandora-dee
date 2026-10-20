@@ -46,9 +46,10 @@ const SECRET_KEYS = ['ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', '
 const b64enc = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const b64dec = b => { const s = atob(b); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 function rawDb() { return new Promise((res, rej) => { const r = indexedDB.open('jade-vault', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+// everything in IndexedDB but the vault and the settings copy (it holds API keys; backups carry settings their own way)
 async function dbDump() {
   const db = await rawDb();
-  return new Promise((res, rej) => { const st = db.transaction('kv').objectStore('kv'); const out = {}; const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); if (c.key !== 'vfs') out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); });
+  return new Promise((res, rej) => { const st = db.transaction('kv').objectStore('kv'); const out = {}; const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); if (c.key !== 'vfs' && c.key !== 'settingsCopy') out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); });
 }
 async function dbRestore(obj, wipe) {
   const db = await rawDb();
@@ -156,7 +157,11 @@ $('#btnBattery').onclick = () => { try { window.NetrunnerAndroid.openBatterySett
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#settings').hidden) renderBgSettings(); });
 
 // applied at boot: settings restored from a backup (localStorage writes right before a reload are not always flushed)
+// Settings live in localStorage, with a copy in IndexedDB (keepSettings writes both). A WebView can lose a file:// page's
+// localStorage across a reload while IndexedDB survives: then the newer copy comes back from there.
 async function applyPendingSettings() {
-  const ps = await idb.get('pendingSettings'); if (!ps) return;
-  for (const k of Object.keys(S)) delete S[k]; Object.assign(S, DEFAULTS, ps); ls.set('settings', S); await idb.del('pendingSettings');
+  const ps = await idb.get('pendingSettings');
+  if (ps) { for (const k of Object.keys(S)) delete S[k]; Object.assign(S, DEFAULTS, ps); keepSettings(S); await idb.del('pendingSettings'); applyJadeTheme(S.jadeTheme); return; }
+  const copy = await idb.get('settingsCopy');
+  if (copy?.s && copy.at > (+ls.get('settingsAt', 0) || 0)) { for (const k of Object.keys(S)) delete S[k]; Object.assign(S, DEFAULTS, copy.s); ls.set('settings', S); ls.set('settingsAt', copy.at); applyJadeTheme(S.jadeTheme); }   // the theme was applied from the lost settings at startup
 }

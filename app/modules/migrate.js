@@ -53,7 +53,7 @@ async function movingDay() {
   }
   if (old.length) { for (const p of old) vfs.nodes.delete(p); vfs.changed(); }
   for (const d of [PD_HOME, PD_RITUALS, PD_LOGS]) if (!vfs.isDir(d) && !vfs.isFile(d)) vfs.mkdirp(d);
-  if (migrateSettingPaths(S, 'boot', log)) ls.set('settings', S);
+  if (migrateSettingPaths(S, 'boot', log)) keepSettings(S);
   const runs = await idb.get('flowRuns');
   if (Array.isArray(runs) && runs.some(r => r?.path && pandoraPath(r.path) !== r.path)) { await idb.set('flowRuns', migrateRuns(runs)); log.push('boot: ritual run history now points at /Pandora/Rituals'); }
   if (old.length) log.push(`boot: moving day done, ${moved} file(s) from /Jade now live in /Pandora`);

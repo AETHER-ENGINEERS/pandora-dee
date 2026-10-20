@@ -172,5 +172,11 @@ const kept = await page.evaluate(async () => {
 });
 ok(kept.inside.model === 'inner-helper:1b' && kept.inside.override && kept.stored.theme === 'ruby' && kept.stored.model === kept.before.model && kept.stored.by === kept.before.model && kept.after.model === kept.before.model && kept.after.override === false,
   'a setting changed while a helper model runs is saved, with the real chat model (nested runs too): ' + JSON.stringify(kept));
+// the browser loses localStorage across a reload (a file:// WebView can; IndexedDB survives): settings come back from their IndexedDB copy
+await page.evaluate(async () => { S.jadeTheme = 'emerald'; S.jadeHairMode = 'spectrum'; saveSettings(); await new Promise(r => setTimeout(r, 300)); for (const k of Object.keys(localStorage)) if (k.startsWith('jvault:')) localStorage.removeItem(k); });
+await page.reload();
+await page.waitForFunction(() => typeof runHeartbeat === 'function' && typeof S !== 'undefined', null, { timeout: 90000 }); await page.waitForTimeout(1500);
+const back = await page.evaluate(async () => ({ theme: S.jadeTheme, hair: S.jadeHairMode, groq: S.groqKey, stored: JSON.parse(localStorage.getItem('jvault:settings') || '{}').jadeTheme, accent: getComputedStyle(document.documentElement).getPropertyValue('--yl').trim(), label: document.querySelector('#btnTheme')?.textContent, inBackup: 'settingsCopy' in ((await buildBackup('full', false)).db || {}) }));
+ok(back.theme === 'emerald' && back.hair === 'spectrum' && back.groq === 'gsk_test' && back.stored === 'emerald' && back.accent === '#24d18b' && back.label === 'Emerald' && !back.inBackup, 'settings survive the browser losing localStorage across a reload (restored from their IndexedDB copy): ' + JSON.stringify(back));
 console.log(log.join('\n')); console.log('\n' + (fail.length ? fail.join('\n') : 'ALL PASS'));
 await browser.close();

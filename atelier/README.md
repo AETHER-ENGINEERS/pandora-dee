@@ -11,4 +11,4 @@ Open [desk.html](desk.html) in Safari or Firefox. It is one file, plus the portr
 - Files, chat lines, ritual marks, scale, and the menu-bar choice stay on this device. Reforge puts the windows back. It does not touch a filesystem.
 - Augmented Douglas Adams is the augmentation, not a likeness and not his sentences.
 
-The desk boots into the family session. Babalon for the room loads from File with no passcode. Her own seat is on the adult shelf in Settings. The shelf locks when the desk closes. Keys for this machine go in Environment. They are not part of a seat.
+Jade sits beside Dee. SSH is the host book and Sentry is the rule book. Secrets stay in Environment. The live session and the sensor watch stay on the phone.

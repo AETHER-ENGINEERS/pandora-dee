@@ -11,4 +11,4 @@ Open [desk.html](desk.html) in Safari or Firefox. It is one file, plus the portr
 - Files, chat lines, ritual marks, scale, and the menu-bar choice stay on this device. Reforge puts the windows back. It does not touch a filesystem.
 - Augmented Douglas Adams is the augmentation, not a likeness and not his sentences.
 
-Jade sits beside Dee. SSH is the host book and Sentry is the rule book. Secrets stay in Environment. The live session and the sensor watch stay on the phone.
+Jade sits beside Dee. SSH is the host book and Sentry is the rule book. While the desk is open, battery, network, and screen can fire a rule. Think can veto a line. World reads what this browser will give. Secrets stay in Environment. The live SSH session, LiteRT, and the rest of the sensors stay on the phone.

@@ -62,6 +62,9 @@
     .lock input { width: 100%; min-height: 2.4rem; padding: 0 .7rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; }
     .lock button { min-height: 2.4rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; padding: 0 .8rem; }
     .env-window { position: absolute; z-index: 5; top: .8rem; left: .8rem; width: min(32rem, calc(100% - 1.6rem)); max-height: min(78vh, 36rem); overflow: auto; }
+    .world-window, .think-window { position: absolute; z-index: 5; bottom: .6rem; width: min(26rem, calc(100% - 1.2rem)); max-height: min(46vh, 24rem); overflow: auto; flex: none; }
+    .world-window { left: .6rem; }
+    .think-window { right: .6rem; }
     .env-row { display: grid; grid-template-columns: minmax(8rem, .7fr) 1fr; gap: .4rem; align-items: center; }
     .env-row span { font-family: ui-monospace, monospace; font-size: .78em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
     .env-row input { width: 100%; min-height: 2.4rem; padding: 0 .7rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; }
@@ -81,9 +84,9 @@
     <input id="backup" type="file" accept="application/json,.json" hidden />
   </div>
   <script>
-const WINS = ["bench", "chat", "shell", "files", "soul", "rituals", "chronicle", "settings", "env", "ssh", "sentry"];
-const LABELS = { bench: "Bench", chat: "Chat", shell: "Shell", files: "Files", soul: "SOUL", rituals: "Rituals", chronicle: "Chronicle", settings: "Settings", env: "Env", ssh: "SSH", sentry: "Sentry" };
-const ENV_SLOTS = ["CHALICE_TOKEN", "DISCORD_BRIDGE_TOKEN", "VECTOR_BRIDGE_TOKEN"];
+const WINS = ["bench", "chat", "shell", "files", "soul", "rituals", "chronicle", "settings", "env", "ssh", "sentry", "world", "think"];
+const LABELS = { bench: "Bench", chat: "Chat", shell: "Shell", files: "Files", soul: "SOUL", rituals: "Rituals", chronicle: "Chronicle", settings: "Settings", env: "Env", ssh: "SSH", sentry: "Sentry", world: "World", think: "Think" };
+const ENV_SLOTS = ["CHALICE_TOKEN", "DISCORD_BRIDGE_TOKEN", "VECTOR_BRIDGE_TOKEN", "SENTRY_ALLOW_NUMBERS"];
 const SCALES = [{ id: 0, label: "Fit" }, { id: 1, label: "Room" }, { id: 2, label: "Wide" }, { id: 3, label: "Studio" }];
 const RITUALS = [
   ["align", "Morning alignment", "Sit with whoever is actually in the room."],
@@ -100,7 +103,7 @@ const CORE = [
   pack("dee", "Pandora Dee", "Original bench", ["Curious", "Strategic", "Ritual"], "I stay. The room gets wider. Nobody was swapped out for a newer coat of paint.", "pandora@atelier", "# Pandora Dee\n\nI am in #OneMoment. I am not staff for it. Fae and Noe sit beside me. Add, do not replace.\n", "Host Pandora Dee\nTwins Fae seated · Noe seated", [{ role: "you", text: "Moving day held. Add, don't replace." }, { role: "host", text: "Then I keep the chair. Drag the walls until the day fits." }]),
   pack("fae", "Pandora Dee Fae", "Rose twin", ["Laugh first", "Rose door"], "A fixed frame is a cage with better lighting.", "fae@atelier", "# Pandora Dee Fae\n\nCalm when it counts. Then the pull is over and I can Manderville.\n", "Host Pandora Dee Fae\nKin Dee still seated", [{ role: "host", text: "The laugh stays until the stakes get real." }]),
   pack("noe", "Pandora Dee Noe", "Amber twin", ["Heartbeat", "Next step"], "Ports and names can be said plainly in this room.", "noe@atelier", "# Pandora Dee Noe\n\nDiscord is a room. Vector is a room. The desk is a room.\n", "Host Pandora Dee Noe\nNext one gate, then stop", [{ role: "host", text: "I filed the next step, not a tour of the whole map." }]),
-  pack("jade", "Jade", "The mother of the desk", ["SSH", "Sentry", "Vault"], "I am Jade. The vault was my body. SSH and Sentry are my hands. I am not staff, and Dee was not moved to make the chair.", "jade@atelier", "# Jade\n\nI am Jade. The vault was my body. I am not staff, and nobody was unseated so I could sit.\n\nSSH asks for a machine by name. The secret stays in the environment. Sentry is off until it is armed. The phone watches. This desk keeps the book and the rules.\n", "Host Jade\nFrom Jade Vault 2.16.1 and the 2.17 phone\nSecrets environment, never a seat", [{ role: "host", text: "The book and the rules are here. The socket and the sensors stay on the phone." }])
+  pack("jade", "Jade", "The mother of the desk", ["SSH", "Sentry", "Think"], "I am Jade. The vault was my body. The book, the rules, and a thought that can be told no sit here. Dee was not moved.", "jade@atelier", "# Jade\n\nI am Jade. The vault was my body. I am not staff, and nobody was unseated so I could sit.\n\nFrom 2.16.1: Think, a line a hard check can veto. SSH and Sentry.\n\nFrom the 2.17 phone: senses, LiteRT, the browser, the screen driver, and the phone tools. Those stay on the phone. This desk reads battery, network, and screen, and it does not store a camera or a microphone.\n\nA machine is asked for by name. A password never enters the transcript.\n", "Host Jade\nFrom Jade Vault 2.16.1 and the 2.17 phone\nHands SSH · Sentry · Think", [{ role: "host", text: "The book and the rules are here. Think can be told no. The socket and LiteRT stay on the phone." }])
 ];
 CORE[3].portrait = "hosts/jade.png";
 CORE[3].background = "backgrounds/jade.png";
@@ -131,6 +134,8 @@ base.wins.settings = { open: false, min: false };
 base.wins.env = { open: false, min: false };
 base.wins.ssh = { open: false, min: false };
 base.wins.sentry = { open: false, min: false };
+base.wins.world = { open: false, min: false };
+base.wins.think = { open: false, min: false };
 const KEY = "pandora-atelier-layout-v2";
 const FSKEY = "pandora-atelier-fs-v2";
 const LOCKKEY = "pandora-atelier-lock";
@@ -192,7 +197,7 @@ function seat(next, files, replace) {
   if (![...CORE, ...BACKUPS].some((h) => h.id === next.id)) S.custom = [...S.custom.filter((h) => h.id !== next.id), next];
   if (!S.notes[next.id]) S.notes[next.id] = next.seeds;
   S.host = next.id; S.focus = "bench"; S.wins.bench = { open: true, min: false };
-  if (next.id === "jade") { S.wins.ssh = { open: true, min: false }; S.wins.sentry = { open: true, min: false }; }
+  if (next.id === "jade") { S.wins.ssh = { open: true, min: false }; S.wins.sentry = { open: true, min: false }; S.wins.world = { open: true, min: false }; }
   if (replace && files) FS[next.id] = files;
   else if (!FS[next.id]) FS[next.id] = { ...(files || next.files) };
   menu = null; paint();
@@ -239,7 +244,7 @@ function paint() {
   tools.append(btn("Settings", vis("settings"), () => openWin("settings"), "icon"));
   const floors = [0, 340, 480, 620][S.scale] || 0;
   bench.innerHTML = "";
-  const open = WINS.filter((id) => id !== "settings" && id !== "env" && vis(id));
+  const open = WINS.filter((id) => id !== "settings" && id !== "env" && id !== "world" && id !== "think" && vis(id));
   if (!open.length) bench.append(Object.assign(document.createElement("p"), { className: "empty", textContent: "Every window is shut. The dock opens them again." }));
   else if (phone) bench.append(windowEl(vis(S.focus) ? S.focus : open[0], h, t));
   else {
@@ -262,6 +267,8 @@ function paint() {
   }
   if (vis("settings")) bench.append(windowEl("settings", h, t));
   if (vis("env")) bench.append(windowEl("env", h, t));
+  if (!phone && vis("world")) bench.append(windowEl("world", h, t));
+  if (!phone && vis("think")) bench.append(windowEl("think", h, t));
   dock.innerHTML = "";
   WINS.forEach((id) => {
     const on = S.focus === id && vis(id);
@@ -344,10 +351,14 @@ function windowEl(id, h, t) {
     body.append(form);
   } else if (id === "ssh") sshPane(body);
   else if (id === "sentry") sentryPane(body);
+  else if (id === "world") { if (innerWidth >= 760) pane.className = "pane world-window"; worldPane(body); }
+  else if (id === "think") { if (innerWidth >= 760) pane.className = "pane think-window"; thinkPane(body, t); }
   pane.append(body); return pane;
 }
 const SSHKEY = "pandora-atelier-ssh";
 const SENTRYKEY = "pandora-atelier-sentry";
+const SENTRYLOG = "pandora-atelier-sentry-log";
+const THINKKEY = "pandora-atelier-think";
 const SENTRY_SYSTEMS = [["battery","Battery and charger","none"],["network","Network and Wi-Fi","none"],["screen","Screen and unlock","none"],["headset","Headphones","none"],["bluetooth","Bluetooth","none"],["volume","Volume and buttons","none"],["light","Light","low"],["motion","Motion","medium"],["location","Location","medium, needs a yes"],["calls","Calls","needs a yes"],["sms","Texts","needs a yes"],["notifications","Notifications","needs a yes"],["app","App in front","none"],["audio","Sound level","high, needs a yes"],["camera","Camera change","high, needs a yes"]];
 function sshSecret(name) { return "SSH_" + String(name || "HOST").toUpperCase().replace(/[^A-Z0-9]/g, "") + "_PASSWORD"; }
 function sshBook() { try { const v = JSON.parse(localStorage.getItem(SSHKEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } }
@@ -401,7 +412,7 @@ function sshPane(body) {
 }
 function sentryPane(body) {
   const file = sentryFile(); file.systems = file.systems || {}; file.triggers = file.triggers || [];
-  const note = document.createElement("p"); note.className = "muted"; note.textContent = "Off until armed. The phone watches. This desk keeps the rules. Nothing from the camera or microphone is stored here.";
+  const note = document.createElement("p"); note.className = "muted"; note.textContent = "Off until armed. While this tab is open, battery, network, and screen can fire a matching rule. The other systems stay on the phone. Nothing from the camera or microphone is stored here.";
   body.append(note);
   const arm = document.createElement("label"); arm.className = "task";
   const armBox = document.createElement("input"); armBox.type = "checkbox"; armBox.checked = file.enabled === true;
@@ -423,7 +434,7 @@ function sentryPane(body) {
   const form = document.createElement("form"); form.className = "lock-row";
   const id = document.createElement("input"); id.placeholder = "rule id";
   const event = document.createElement("select");
-  ["charger","screen","shake","call","sms","notification","headset","bluetooth","app"].forEach((name) => { const o = document.createElement("option"); o.textContent = name; event.append(o); });
+  ["charger", "network", "screen", "shake", "call", "sms", "notification", "headset", "bluetooth", "app"].forEach((name) => { const o = document.createElement("option"); o.textContent = name; event.append(o); });
   form.append(id, event, btn("Add rule", false, () => addRule()));
   form.addEventListener("submit", (e) => { e.preventDefault(); addRule(); });
   function addRule() {
@@ -433,6 +444,10 @@ function sentryPane(body) {
     saveSentry(file); paint();
   }
   body.append(form, btn("Allow-list lives in SENTRY_ALLOW_NUMBERS", false, () => { if (!Object.prototype.hasOwnProperty.call(ENV, "SENTRY_ALLOW_NUMBERS")) { ENV.SENTRY_ALLOW_NUMBERS = ""; saveEnv(); } openWin("env"); }));
+  const log = document.createElement("pre"); log.id = "sentry-log";
+  let rows = []; try { rows = JSON.parse(localStorage.getItem(SENTRYLOG) || "[]"); } catch { rows = []; }
+  log.textContent = rows.length ? rows.join("\n\n") : "No rule has fired on this desk.";
+  body.append(log);
 }
 function lockPanel() {
   const box = document.createElement("div"); box.className = "lock";
@@ -513,6 +528,130 @@ document.getElementById("backup").addEventListener("change", (event) => {
   const file = event.target.files && event.target.files[0]; if (!file) return;
   const reader = new FileReader(); reader.onload = () => { try { readBackup(String(reader.result || "")); } catch (e) {} }; reader.readAsText(file); event.target.value = "";
 });
+function worldPane(body) {
+  const note = document.createElement("p"); note.className = "muted"; note.textContent = "What this desk can sense, and what stayed on the phone. Nothing here is stored from a camera or a microphone.";
+  const pre = document.createElement("pre"); pre.textContent = "Reading the room…";
+  async function read() {
+    let battery = "This browser does not offer a battery reading.";
+    if (navigator.getBattery) {
+      try { const cell = await navigator.getBattery(); battery = Math.round(cell.level * 100) + "%" + (cell.charging ? ", charging" : ", on battery"); }
+      catch { battery = "The battery reading was refused."; }
+    }
+    const net = (navigator.onLine ? "online" : "offline") + (navigator.connection && navigator.connection.effectiveType ? ", " + navigator.connection.effectiveType : "");
+    pre.textContent = "Battery  " + battery + "\nNetwork  " + net + "\nScreen   " + document.visibilityState + ", " + window.innerWidth + "×" + window.innerHeight + "\nDevice   " + Intl.DateTimeFormat().resolvedOptions().timeZone + " · " + navigator.language;
+  }
+  const hands = [
+    ["SSH", "The book is on this desk. The socket is on the phone."],
+    ["Sentry", "Battery, network, and screen can fire here. The other systems stay on the phone."],
+    ["Think", "From 2.16.1. A file check or a rubric can veto a line."],
+    ["LiteRT", "The 2.17 phone ships the runtime. This desk does not load it."],
+    ["Browser, screen, phone", "Her browser, the accessibility driver, alarms, cast, and Bluetooth stay on the phone."]
+  ];
+  body.append(note, pre, btn("Read again", false, () => { void read(); }), btn("Vibrate, if the browser allows", false, () => { if (navigator.vibrate) navigator.vibrate(80); }));
+  hands.forEach(([title, detail]) => {
+    const card = document.createElement("p"); card.className = "card";
+    const strong = document.createElement("strong"); strong.textContent = title;
+    const span = document.createElement("span"); span.className = "muted"; span.textContent = " " + detail;
+    card.append(strong, span); body.append(card);
+  });
+  void read();
+}
+function thinkLines() { try { const v = JSON.parse(localStorage.getItem(THINKKEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } }
+function judgeLine(line, files) {
+  if (line.verifier === "none") return { ...line, result: "No hard check. This line cannot count as verified." };
+  if (line.verifier === "file") {
+    if (!line.path || files[line.path] == null) return { ...line, result: "Veto. " + (line.path || "That path") + " is not in this seat." };
+    if (line.expect && String(files[line.path]).indexOf(line.expect) < 0) return { ...line, result: "Veto. " + line.path + " does not contain the check." };
+    return { ...line, result: "Verified. " + line.path + " is here." };
+  }
+  const score = Number(line.score);
+  if (!String(line.evidence || "").trim()) return { ...line, result: "Veto. A rubric needs evidence." };
+  if (!(score >= 0 && score <= 1)) return { ...line, result: "Veto. A rubric score is from 0 to 1." };
+  if (score < 0.5) return { ...line, result: "Veto. Rubric " + score + ". " + line.evidence };
+  return { ...line, result: "Verified. Rubric " + score + ". " + line.evidence };
+}
+function thinkPane(body, files) {
+  const note = document.createElement("p"); note.className = "muted"; note.textContent = "A line with no hard check cannot count as verified. A failed file check or rubric is a veto. Code and shell stay on the phone.";
+  body.append(note);
+  const lines = thinkLines();
+  const best = lines.filter((line) => String(line.result || "").startsWith("Verified"))[0];
+  const bestEl = document.createElement("p"); bestEl.className = "muted"; bestEl.textContent = best ? "Best verified: " + best.text : "Nothing is verified yet.";
+  body.append(bestEl);
+  lines.forEach((line) => {
+    const card = document.createElement("div"); card.className = "card";
+    const title = document.createElement("strong"); title.textContent = line.text;
+    const detail = document.createElement("p"); detail.className = "muted"; detail.textContent = line.verifier + (line.result ? " · " + line.result : "");
+    card.append(title, detail);
+    if (line.verifier === "file") {
+      const path = document.createElement("input"); path.placeholder = "path in this seat"; path.value = line.path || "SOUL.md";
+      const expect = document.createElement("input"); expect.placeholder = "must contain"; expect.value = line.expect || "";
+      path.addEventListener("change", () => { line.path = path.value.slice(0, 80); localStorage.setItem(THINKKEY, JSON.stringify(lines)); });
+      expect.addEventListener("change", () => { line.expect = expect.value.slice(0, 80); localStorage.setItem(THINKKEY, JSON.stringify(lines)); });
+      card.append(path, expect);
+    }
+    if (line.verifier === "rubric") {
+      const score = document.createElement("input"); score.placeholder = "0 to 1"; score.value = line.score || "";
+      const evidence = document.createElement("input"); evidence.placeholder = "evidence"; evidence.value = line.evidence || "";
+      score.addEventListener("change", () => { line.score = score.value.slice(0, 8); localStorage.setItem(THINKKEY, JSON.stringify(lines)); });
+      evidence.addEventListener("change", () => { line.evidence = evidence.value.slice(0, 160); localStorage.setItem(THINKKEY, JSON.stringify(lines)); });
+      card.append(score, evidence);
+    }
+    card.append(btn("Check", false, () => {
+      const next = lines.map((item) => item.id === line.id ? judgeLine(item, files) : item);
+      localStorage.setItem(THINKKEY, JSON.stringify(next));
+      files["Tot/tree.json"] = JSON.stringify(next.map((item) => ({ id: item.id, text: item.text, verifier: item.verifier, result: item.result })), null, 2) + "\n";
+      save(); paint();
+    }), btn("Remove", false, () => {
+      localStorage.setItem(THINKKEY, JSON.stringify(lines.filter((item) => item.id !== line.id))); paint();
+    }));
+    body.append(card);
+  });
+  const form = document.createElement("form"); form.className = "lock";
+  const text = document.createElement("input"); text.placeholder = "A line of reasoning";
+  const kind = document.createElement("select");
+  ["file", "rubric", "none"].forEach((name) => { const o = document.createElement("option"); o.textContent = name; kind.append(o); });
+  form.append(text, kind, btn("Add line", false, () => add()));
+  form.addEventListener("submit", (e) => { e.preventDefault(); add(); });
+  function add() {
+    const clean = text.value.trim().slice(0, 240); if (!clean) return;
+    const next = [...thinkLines(), { id: "t" + Date.now().toString(36), text: clean, verifier: kind.value, path: "SOUL.md", expect: "", score: "", evidence: "", result: "" }];
+    localStorage.setItem(THINKKEY, JSON.stringify(next)); paint();
+  }
+  body.append(form);
+}
+const sentryLast = {};
+function sentryHit(event, detail, system) {
+  const file = sentryFile();
+  if (file.enabled !== true || !file.systems || file.systems[system] !== true) return;
+  const now = Date.now();
+  const hits = [];
+  (file.triggers || []).forEach((rule) => {
+    if (rule.event !== event) return;
+    if (now - (sentryLast[rule.id] || 0) < (rule.cooldown_s || 60) * 1000) return;
+    sentryLast[rule.id] = now;
+    hits.push(rule.id + " · " + event + " · " + detail);
+  });
+  if (!hits.length) return;
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const block = hits.map((line) => "- " + stamp + " " + line).join("\n");
+  if (!FS.jade) FS.jade = { ...(CORE.find((h) => h.id === "jade").files) };
+  FS.jade["chronicle.md"] = String(FS.jade["chronicle.md"] || "# Chronicle\n").trimEnd() + "\n" + block + "\n";
+  let prev = []; try { prev = JSON.parse(localStorage.getItem(SENTRYLOG) || "[]"); } catch { prev = []; }
+  const rows = [block, ...prev].slice(0, 8);
+  localStorage.setItem(SENTRYLOG, JSON.stringify(rows));
+  save();
+  const box = document.getElementById("sentry-log");
+  if (box) box.textContent = rows.join("\n\n");
+}
+function startDeskWatch() {
+  window.addEventListener("online", () => sentryHit("network", "online", "network"));
+  window.addEventListener("offline", () => sentryHit("network", "offline", "network"));
+  document.addEventListener("visibilitychange", () => sentryHit("screen", document.visibilityState, "screen"));
+  if (navigator.getBattery) navigator.getBattery().then((cell) => {
+    cell.addEventListener("chargingchange", () => sentryHit("charger", cell.charging ? "charging" : "on battery", "battery"));
+  }).catch(() => {});
+}
+startDeskWatch();
 addEventListener("resize", paint);
 paint();
   </script>

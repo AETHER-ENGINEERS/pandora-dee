@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0
+- **Liquid desk** (`atelier/desk.html`). Pandora Dee stays seated. Pandora Dee Fae and Pandora Dee Noe are added beside her. The phone atelier, the bridges, and the build are not replaced.
+- **Scale.** Fit, Room, Wide, and Studio. Wide is the default, so a preview or a laptop window no longer crushes every pane to fit. Larger scales give each middle pane a floor and let the bench scroll. Type size stays its own four steps. Scale, type, widths, splits, and which twin you were with stay on the device.
+- `Legends/VERSION-2.9.0` keeps the version mark this release stepped past. Nothing else was retired.
+
 ## 2.9.0
 - **Discord archive** (`--archive`, off by default): the Discord bridge keeps every message the bot can see on the
   computer it runs on, whether or not the app is open, as append-only JSON lines per channel and thread. People, bots,

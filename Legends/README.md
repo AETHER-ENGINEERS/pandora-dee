@@ -13,4 +13,4 @@ Still in place, untouched:
 
 Fae and Noe were added. The fixed single-column phone shell was not deleted to make the desk. If a later pass does replace a layout, the retired file is copied here first, under the version it belonged to.
 
-Archived at the open of this branch: no retired bytes. The 2.9.0 tree on main is the legend of the phone atelier.
+Archived at 3.0.0: the version mark only, in `VERSION-2.9.0`. The phone atelier was not overwritten.

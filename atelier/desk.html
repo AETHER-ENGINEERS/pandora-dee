@@ -39,7 +39,7 @@
   .brand { display: flex; flex-direction: column; min-width: 0; flex: 1 1 9rem; }
   .brand strong { font-family: Rajdhani, sans-serif; letter-spacing: .08em; text-transform: uppercase; font-size: 1.05rem; }
   .muted { color: var(--muted); font-size: .78rem; }
-  .cluster { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; align-items: center; }
+  .cluster { display: flex; flex-wrap: nowrap; gap: .35rem; justify-content: flex-end; align-items: center; min-width: 0; max-width: 100%; overflow-x: auto; }
   .chip, .dock button, .pill {
     border: 1px solid var(--line); background: var(--panel); border-radius: 999px; min-height: 2.75rem; padding: 0 .85rem;
   }
@@ -47,8 +47,12 @@
     border-color: var(--accent); color: var(--accent);
     background: color-mix(in srgb, var(--accent) 14%, var(--panel));
   }
-  .bench { flex: 1; min-height: 0; min-width: 0; display: flex; }
-  .desk { flex: 1; min-height: 0; display: grid; }
+  .bench { flex: 1; min-height: 0; min-width: 0; display: flex; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .desk { flex: 1 0 auto; min-height: 100%; min-width: 100%; width: max-content; display: grid; }
+  .app[data-scale="0"] { --pad: .65rem; }
+  .app[data-scale="1"] { --pad: .85rem; }
+  .app[data-scale="2"] { --pad: 1.05rem; }
+  .app[data-scale="3"] { --pad: 1.25rem; }
   .stack { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .pane {
     min-width: 0; min-height: 0; overflow: auto; background: var(--panel); border: 1px solid var(--line);
@@ -56,9 +60,9 @@
   }
   .pane[data-focus="true"] { box-shadow: inset 0 0 0 1px var(--accent); }
   .pane h2 { margin: 0; font-family: Rajdhani, sans-serif; letter-spacing: .06em; text-transform: uppercase; font-size: 1rem; }
-  .hd, .ft { display: flex; justify-content: space-between; gap: .5rem; align-items: center; padding: .65rem .8rem; border-bottom: 1px solid var(--line); }
+  .hd, .ft { display: flex; justify-content: space-between; gap: .5rem; align-items: center; padding: var(--pad, .8rem); border-bottom: 1px solid var(--line); }
   .ft { border-bottom: 0; border-top: 1px solid var(--line); }
-  .bd { padding: .8rem; overflow: auto; min-height: 0; flex: 1; }
+  .bd { padding: var(--pad, .9rem); overflow: auto; min-height: 0; flex: 1; }
   .gutter { touch-action: none; position: relative; }
   .gutter[data-axis="x"] { cursor: col-resize; }
   .gutter[data-axis="y"] { cursor: row-resize; height: 12px; flex: none; }
@@ -133,8 +137,14 @@ const CHRONICLE = [
   ["Two twins", "Fae and Noe are healthy and separate. The original bench was not retired."],
   ["The desk remembers", "Widths, middle splits, type size, and which twin you were with stay on this device."]
 ];
+const SCALES = [
+  { id: 0, label: "Fit", zoom: 1, floor: 0 },
+  { id: 1, label: "Room", zoom: 1.08, floor: 340 },
+  { id: 2, label: "Wide", zoom: 1.18, floor: 480 },
+  { id: 3, label: "Studio", zoom: 1.34, floor: 620 }
+];
 const base = {
-  size: 1, host: "dee", hostPx: 280, horizonPx: 300, horizonOpen: true,
+  size: 1, scale: 2, host: "dee", hostPx: 280, horizonPx: 300, horizonOpen: true,
   workShare: 0.5, chatSplit: 0.58, forgeSplit: 0.54, pane: "chat", checks: {},
   notes: { dee: HOSTS.dee.seeds, fae: HOSTS.fae.seeds, noe: HOSTS.noe.seeds }
 };
@@ -157,13 +167,20 @@ const modeEl = document.getElementById("mode");
 function paint() {
   const w = window.innerWidth;
   const phone = w < 760;
-  const horizon = w >= 1180 && S.horizonOpen;
+  const step = SCALES[S.scale] || SCALES[2];
+  const horizon = !phone && S.horizonOpen && (w >= 1180 || step.floor >= 480);
   const host = HOSTS[S.host];
   app.dataset.size = String(S.size);
+  app.dataset.scale = String(step.id);
   app.dataset.accent = S.host;
-  modeEl.textContent = (phone ? "Phone" : horizon ? "Horizon" : "Desk") + " · " + host.name + " stays in the room";
+  modeEl.textContent = "3.0.0 · " + (phone ? "Phone" : horizon ? "Horizon" : "Desk") + " · " + host.name + " stays in the room";
   tools.innerHTML = "";
   if (phone) ["dee", "fae", "noe"].forEach((id) => tools.append(btn(id === "dee" ? "Dee" : id[0].toUpperCase() + id.slice(1), S.host === id, () => { S.host = id; paint(); })));
+  const scaleLabel = document.createElement("span");
+  scaleLabel.className = "muted";
+  scaleLabel.textContent = "Scale";
+  tools.append(scaleLabel);
+  SCALES.forEach((s) => tools.append(btn(s.label, S.scale === s.id, () => { S.scale = s.id; paint(); })));
   tools.append(btn("A−", false, () => { S.size = clamp(S.size - 1, 0, 3); paint(); }));
   const label = document.createElement("span");
   label.className = "muted";
@@ -173,21 +190,25 @@ function paint() {
   if (!phone) tools.append(btn("Horizon", S.horizonOpen, () => { S.horizonOpen = !S.horizonOpen; S.pane = "chronicle"; paint(); }));
   tools.append(btn("Reforge", false, () => {
     S.hostPx = base.hostPx; S.horizonPx = base.horizonPx; S.workShare = base.workShare;
-    S.chatSplit = base.chatSplit; S.forgeSplit = base.forgeSplit; S.size = base.size; S.horizonOpen = true;
+    S.chatSplit = base.chatSplit; S.forgeSplit = base.forgeSplit; S.size = base.size; S.scale = base.scale; S.horizonOpen = true;
     paint();
   }));
   bench.innerHTML = "";
   if (phone) {
     const stage = el("div", "phone");
+    stage.style.zoom = String(step.zoom);
     stage.append(room(S.pane));
     bench.append(stage);
   } else {
     const desk = el("div", "desk");
-    const cols = [`${S.hostPx}px`, "12px", `minmax(0, ${S.workShare}fr)`, "12px", `minmax(0, ${1 - S.workShare}fr)`];
+    const span = S.hostPx + step.floor * 2 + (horizon ? S.horizonPx + 36 : 24);
+    const cols = [`${S.hostPx}px`, "12px", `minmax(${step.floor}px, ${S.workShare}fr)`, "12px", `minmax(${step.floor}px, ${1 - S.workShare}fr)`];
     if (horizon) cols.push("12px", `${S.horizonPx}px`);
     desk.style.gridTemplateColumns = cols.join(" ");
+    desk.style.zoom = String(step.zoom);
+    if (step.floor) { desk.style.width = span + "px"; desk.style.minWidth = span + "px"; }
     desk.append(pane("host", hostCard(), false));
-    desk.append(gutter("x", (dx) => { S.hostPx = clamp(S.hostPx + dx, 200, 460); }));
+    desk.append(gutter("x", (dx) => { S.hostPx = clamp(S.hostPx + dx, 220, 640); }));
     const left = el("div", "stack");
     left.append(stackPane("chat", "Chat", host.name, thread(host), S.chatSplit, true));
     left.append(gutter("y", (dy, span) => { S.chatSplit = clamp(S.chatSplit + dy / span, 0.28, 0.78); }, left));
@@ -311,10 +332,14 @@ function gutter(axis, apply, spanEl) {
 function live() {
   const desk = document.querySelector(".desk");
   if (!desk) return;
-  const horizon = window.innerWidth >= 1180 && S.horizonOpen;
-  const cols = [`${S.hostPx}px`, "12px", `minmax(0, ${S.workShare}fr)`, "12px", `minmax(0, ${1 - S.workShare}fr)`];
+  const step = SCALES[S.scale] || SCALES[2];
+  const horizon = (window.innerWidth >= 1180 || step.floor >= 480) && S.horizonOpen;
+  const span = S.hostPx + step.floor * 2 + (horizon ? S.horizonPx + 36 : 24);
+  const cols = [`${S.hostPx}px`, "12px", `minmax(${step.floor}px, ${S.workShare}fr)`, "12px", `minmax(${step.floor}px, ${1 - S.workShare}fr)`];
   if (horizon) cols.push("12px", `${S.horizonPx}px`);
   desk.style.gridTemplateColumns = cols.join(" ");
+  desk.style.zoom = String(step.zoom);
+  if (step.floor) { desk.style.width = span + "px"; desk.style.minWidth = span + "px"; }
   const stacks = desk.querySelectorAll(".stack");
   const left = stacks[0] && stacks[0].querySelectorAll(".pane");
   const right = stacks[1] && stacks[1].querySelectorAll(".pane");

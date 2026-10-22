@@ -11,4 +11,4 @@ Open [desk.html](desk.html) in Safari or Firefox. It is one file, plus the portr
 - Files, chat lines, ritual marks, scale, and the menu-bar choice stay on this device. Reforge puts the windows back. It does not touch a filesystem.
 - Augmented Douglas Adams is the augmentation, not a likeness and not his sentences.
 
-Dee, Fae, and Noe are already in the house. The other three join when you load them.
+Dee, Fae, and Noe are already in the house. Babalon, DouglasAdams, and LUCIDForge join from File → Load, with the faces and words that came in with their backups. Original work on those seats is under the AETHER-ENGINEERS Multiversal License. They built the seats.

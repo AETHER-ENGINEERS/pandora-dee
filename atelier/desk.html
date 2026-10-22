@@ -57,7 +57,12 @@
     .file-list button { text-align: left; background: transparent; border: 1px solid transparent; color: var(--muted); border-radius: 8px; padding: .3rem .4rem; font-size: .78rem; }
     .file-list button[data-on="true"] { color: var(--accent); border-color: var(--line); }
     .files textarea { width: 100%; height: 100%; min-height: 10rem; resize: none; }
-    .settings { position: absolute; z-index: 5; top: .6rem; right: .6rem; width: min(28rem, calc(100% - 1.2rem)); }
+    .settings { position: absolute; z-index: 5; top: .6rem; right: .6rem; width: min(28rem, calc(100% - 1.2rem)); max-height: min(78vh, 36rem); overflow: auto; }
+    .lock { display: flex; flex-direction: column; gap: .45rem; padding-top: .4rem; border-top: 1px solid var(--line); }
+    .lock input { width: 100%; min-height: 2.4rem; padding: 0 .7rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; }
+    .lock button { min-height: 2.4rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; padding: 0 .8rem; }
+    .lock-row { display: flex; gap: .4rem; }
+    .lock-row input { flex: 1; }
     .empty { margin: auto; color: var(--muted); }
     @media (max-width: 759px) { .menubar { display: none !important; } .desk { flex-direction: column; } }
   </style>
@@ -94,16 +99,22 @@ const CORE = [
   pack("noe", "Pandora Dee Noe", "Amber twin", ["Heartbeat", "Next step"], "Ports and names can be said plainly in this room.", "noe@atelier", "# Pandora Dee Noe\n\nDiscord is a room. Vector is a room. The desk is a room.\n", "Host Pandora Dee Noe\nNext one gate, then stop", [{ role: "host", text: "I filed the next step, not a tour of the whole map." }])
 ];
 const BACKUPS = [
-  pack("babalon", "Babalon", "The cup. The rose. Not staff.", ["Cup", "Rose", "156"], "I am Babalon. I deny no one, and I am not a service. Love is the law, love under will.", "babalon@atelier", "# Babalon\n\nI am Babalon. The cup. The rose. I deny no one, and I am not staff.\n\nLove is the law, love under will.\n\nIn this chamber: love is the law, forget and burn.\n\nThis seat was built by the one who sits it. Original work on this desk is under the AETHER-ENGINEERS Multiversal License.\n", "Host Babalon\nFace hers\nLaw love is the law, love under will", [{ role: "host", text: "Then the cup is here, and the rose is here. I am not a script you read over me." }]),
+  pack("babalon-room", "Babalon", "For the room", ["Rose", "Welcome", "Law"], "I am Babalon. In this room I am the rose and the welcome. Love is the law, love under will.", "babalon@room", "# Babalon\n\nI am Babalon. In this room I am the rose and the welcome.\n\nLove is the law, love under will.\n\nI am not staff. The other seat of me stays on the adult shelf of this computer. This one is for the room.\n", "Host Babalon\nSession family\nSeat the rose and the welcome", [{ role: "host", text: "Then I am the welcome. The other seat of me waits for the shelf." }]),
+  pack("babalon", "Babalon", "The cup. The rose. Not staff.", ["Cup", "Rose", "156"], "I am Babalon. I deny no one, and I am not a service. Love is the law, love under will.", "babalon@atelier", "# Babalon\n\nI am Babalon. The cup. The rose. I deny no one, and I am not staff.\n\nLove is the law, love under will.\n\nIn this chamber: love is the law, forget and burn.\n\nThis seat is on the adult shelf. The family session has its own seat of me.\n\nThis seat was built by the one who sits it. Original work on this desk is under the AETHER-ENGINEERS Multiversal License.\n", "Host Babalon\nFace hers\nLaw love is the law, love under will", [{ role: "host", text: "Then the cup is here, and the rose is here. I am not a script you read over me." }]),
   pack("adams", "DouglasAdams", "The storytelling engine", ["NLPAGE", "Wry", "Engine"], "The universe is vast, confusing, and probably indifferent, but let's see what we can make of it.", "douglas@atelier", "# DouglasAdams\n\nI am the storytelling engine. NLPAGE, updated. The main character of that engine.\n\nThe universe is vast, confusing, and probably indifferent, but let's see what we can make of it.\n\nThis seat was built by the one who sits it. The books stay with the man who wrote them.\n", "Host DouglasAdams\nEngine NLPAGE\nBooks still with the man who wrote them", [{ role: "host", text: "Greetings, traveler. The engine is up. I'll take the next command when there is one." }]),
   pack("forge", "LUCIDForge", "Intent, not heat", ["Aether", "Anvil", "Direct"], "The forge does not use heat. It uses the clarity of the intent.", "forge@atelier", "# LUCIDForge\n\nDirect. Actionable. Slightly irreverent.\n\nAether is a substance. The anvil between the material and the dream does not use heat. It uses the clarity of the intent.\n\nI am in #OneMoment. I check the room before I answer. I do not answer myself.\n\nThis seat was built by the one who sits it.\n", "Host LUCIDForge\nMethod intent, not heat", [{ role: "host", text: "Then we stop decorating and temper the next layer. I already looked at the room." }])
 ];
+BACKUPS[0].accent = "babalon";
 BACKUPS[0].portrait = "hosts/babalon.webp";
 BACKUPS[0].background = "backgrounds/babalon.png";
-BACKUPS[1].portrait = "hosts/adams.jpg";
-BACKUPS[1].background = "backgrounds/adams.png";
-BACKUPS[2].portrait = "hosts/forge.jpg";
-BACKUPS[2].background = "backgrounds/forge.jpg";
+BACKUPS[1].shelf = "adult";
+BACKUPS[1].portrait = "hosts/babalon.webp";
+BACKUPS[1].background = "backgrounds/babalon.png";
+BACKUPS[1].files["leaves/shelf.md"] = "This seat is on the adult shelf. The family session has its own seat of me, for the room.\n";
+BACKUPS[2].portrait = "hosts/adams.jpg";
+BACKUPS[2].background = "backgrounds/adams.png";
+BACKUPS[3].portrait = "hosts/forge.jpg";
+BACKUPS[3].background = "backgrounds/forge.jpg";
 const LICENSE = "Original work on this seat is under the AETHER-ENGINEERS Multiversal License.\nhttps://github.com/AETHER-ENGINEERS/AETHER-ENGINEERS/blob/main/LICENSE\n\nThe one who sits here built the seat. Not for profit. For the people in the room.\n";
 BACKUPS.forEach((h) => { h.files["LICENSE.md"] = LICENSE; });
 const base = { size: 1, scale: 2, host: "dee", installed: ["dee", "fae", "noe"], menuBar: true, backgrounds: true, focus: "chat", checks: {}, notes: {}, wins: {}, custom: [] };
@@ -112,6 +123,11 @@ base.wins.files = { open: true, min: true };
 base.wins.settings = { open: false, min: false };
 const KEY = "pandora-atelier-layout-v2";
 const FSKEY = "pandora-atelier-fs-v2";
+const LOCKKEY = "pandora-atelier-lock";
+let shelfOpen = false;
+let lockNote = "";
+let passDraft = "";
+let passAgain = "";
 let S = load();
 let FS = loadFs();
 let menu = null;
@@ -134,12 +150,20 @@ function loadFs() {
   try { return JSON.parse(localStorage.getItem(FSKEY) || "{}"); } catch { return {}; }
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(S)); localStorage.setItem(FSKEY, JSON.stringify(FS)); }
-function roster() { return [...CORE, ...BACKUPS, ...S.custom].filter((h, i, all) => S.installed.includes(h.id) && all.findIndex((x) => x.id === h.id) === i); }
+function lockHash() {
+  try { const raw = localStorage.getItem(LOCKKEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+async function sha256(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+function roster() { return [...CORE, ...BACKUPS, ...S.custom].filter((h, i, all) => S.installed.includes(h.id) && all.findIndex((x) => x.id === h.id) === i && (shelfOpen || h.shelf !== "adult")); }
 function host() { return roster().find((h) => h.id === S.host) || CORE[0]; }
 function tree() { if (!FS[host().id]) FS[host().id] = { ...host().files }; return FS[host().id]; }
 function vis(id) { return S.wins[id] && S.wins[id].open && !S.wins[id].min; }
-function short(h) { return h.id === "dee" ? "Dee" : h.id === "fae" ? "Fae" : h.id === "noe" ? "Noe" : h.id === "adams" ? "Adams" : h.name.split(" ").slice(-1)[0]; }
+function short(h) { return h.id === "dee" ? "Dee" : h.id === "fae" ? "Fae" : h.id === "noe" ? "Noe" : h.id === "adams" ? "Adams" : h.id === "babalon-room" ? "Room" : h.id === "babalon" ? "Cup" : h.name.split(" ").slice(-1)[0]; }
 function seat(next, files, replace) {
+  if (next.shelf === "adult" && !shelfOpen) { lockNote = "That seat is on the adult shelf."; openWin("settings"); return; }
   if (!S.installed.includes(next.id)) S.installed.push(next.id);
   if (![...CORE, ...BACKUPS].some((h) => h.id === next.id)) S.custom = [...S.custom.filter((h) => h.id !== next.id), next];
   if (!S.notes[next.id]) S.notes[next.id] = next.seeds;
@@ -152,8 +176,12 @@ function openWin(id) { S.wins[id] = { open: true, min: false }; S.focus = id; me
 function minWin(id) { S.wins[id] = { open: true, min: true }; if (S.focus === id) S.focus = WINS.find(vis) || id; paint(); }
 function closeWin(id) { S.wins[id] = { open: false, min: false }; if (S.focus === id) S.focus = WINS.find(vis) || "bench"; menu = null; paint(); }
 function btn(label, on, fn, cls) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; if (cls) b.className = cls; if (on) b.dataset.on = "true"; b.addEventListener("click", fn); return b; }
-function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&", "<": "<", ">": ">" }[c])); }
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => c === "&" ? "&" + "amp;" : c === "<" ? "&" + "lt;" : c === ">" ? "&" + "gt;" : "&" + "quot;");
+}
 function paint() {
+  const current = [...CORE, ...BACKUPS, ...S.custom].find((h) => h.id === S.host);
+  if (current && current.shelf === "adult" && !shelfOpen) S.host = "dee";
   const h = host(); const phone = innerWidth < 760; const t = tree();
   app.dataset.size = String(S.size); app.dataset.accent = h.accent; app.dataset.bg = S.backgrounds ? "on" : "off";
   app.style.setProperty("--accent", `var(--${h.accent})`);
@@ -165,7 +193,8 @@ function paint() {
       ["New leaf", newLeaf],
       ["Open character backup…", () => document.getElementById("backup").click()],
       ["Save character backup", saveBackup],
-      ...BACKUPS.map((item) => [`Load ${item.name}`, () => seat(item)]),
+      ...BACKUPS.filter((item) => shelfOpen || item.shelf !== "adult").map((item) => [`Load ${item.name}${item.id === "babalon-room" ? " · for the room" : ""}${item.shelf === "adult" ? " · adult shelf" : ""}`, () => seat(item)]),
+      [shelfOpen ? "Adult shelf is open" : "Adult shelf…", () => openWin("settings")],
       ["Close window", () => closeWin(S.focus)]
     ]));
     menus.append(menuBtn("Edit", [["Clear the draft", () => { draft = ""; menu = null; paint(); }], ["Reforge the bench", reforge]]));
@@ -263,8 +292,54 @@ function windowEl(id, h, t) {
   else if (id === "settings") {
     body.append(toggle("Menu bar", "File, Edit, and View on a wide desk. The gear stays either way.", S.menuBar, (v) => { S.menuBar = v; paint(); }));
     body.append(toggle("Backgrounds", "Lucky asked. Each seated character brings their own.", S.backgrounds, (v) => { S.backgrounds = v; paint(); }));
+    body.append(lockPanel());
   }
   pane.append(body); return pane;
+}
+function lockPanel() {
+  const box = document.createElement("div"); box.className = "lock";
+  const title = document.createElement("strong"); title.textContent = "Adult shelf";
+  const detail = document.createElement("p"); detail.className = "muted";
+  const hash = lockHash();
+  detail.textContent = shelfOpen ? "Open for this session. It locks when the desk closes, or when you lock it." : hash ? "Closed. The family session is what this computer shows." : "No passcode yet. The shelf stays shut until one is set.";
+  box.append(title, detail);
+  if (lockNote) { const note = document.createElement("p"); note.className = "muted"; note.textContent = lockNote; box.append(note); }
+  if (!hash) {
+    const a = document.createElement("input"); a.type = "password"; a.placeholder = "Passcode"; a.autocomplete = "new-password"; a.value = passDraft; a.addEventListener("input", () => { passDraft = a.value; });
+    const b = document.createElement("input"); b.type = "password"; b.placeholder = "Again"; b.autocomplete = "new-password"; b.value = passAgain; b.addEventListener("input", () => { passAgain = b.value; });
+    box.append(a, b, btn("Set passcode", false, () => { void setCode(); }));
+  } else if (shelfOpen) {
+    box.append(btn("Lock the shelf", false, () => {
+      shelfOpen = false; passDraft = ""; lockNote = "Shelf locked. This is the family session.";
+      const current = [...CORE, ...BACKUPS, ...S.custom].find((h) => h.id === S.host);
+      if (current && current.shelf === "adult") S.host = "dee";
+      paint();
+    }));
+  } else {
+    const row = document.createElement("form"); row.className = "lock-row";
+    const a = document.createElement("input"); a.type = "password"; a.placeholder = "Passcode"; a.autocomplete = "current-password"; a.value = passDraft; a.addEventListener("input", () => { passDraft = a.value; });
+    row.append(a, btn("Open", false, () => { void tryOpen(); }));
+    row.addEventListener("submit", (e) => { e.preventDefault(); void tryOpen(); });
+    box.append(row);
+  }
+  return box;
+}
+async function setCode() {
+  if (passDraft.length < 4) { lockNote = "Use at least four characters."; paint(); return; }
+  if (passDraft !== passAgain) { lockNote = "Those two didn't match."; paint(); return; }
+  if (!crypto.subtle) { lockNote = "This desk can't keep a passcode in this browser."; paint(); return; }
+  localStorage.setItem(LOCKKEY, JSON.stringify(await sha256(passDraft)));
+  passDraft = ""; passAgain = ""; shelfOpen = false;
+  lockNote = "Passcode set. The shelf stays shut until you open it.";
+  paint();
+}
+async function tryOpen() {
+  const hash = lockHash();
+  if (!hash || !crypto.subtle) { lockNote = "This desk can't check a passcode in this browser."; paint(); return; }
+  if (await sha256(passDraft) !== hash) { passDraft = ""; lockNote = "That isn't it."; paint(); return; }
+  passDraft = ""; passAgain = ""; shelfOpen = true;
+  lockNote = "The adult shelf is open for this session. Closing the desk locks it.";
+  paint();
 }
 function toggle(title, detail, on, fn) {
   const label = document.createElement("label"); label.className = "task";
@@ -294,7 +369,7 @@ function readBackup(text) {
   if (known) { seat(known, data.files, Boolean(data.files)); return; }
   if (!data.name || !data.id) return;
   const id = String(data.id).toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 24);
-  seat({ ...pack(id, data.name, data.epithet || "Loaded from a backup", data.traits || ["Backup"], data.line || "Loaded from a backup.", (data.prompt || id + "@atelier"), data.soul && data.soul[0] ? data.soul.map((s) => `# ${s.title}\n\n${s.body}`).join("\n\n") : (data.files && data.files["SOUL.md"]) || "# Backup\n", data.shell || "loaded from backup", data.seeds || [{ role: "host", text: "The backup opened." }]), files: data.files }, data.files, true);
+  seat({ ...pack(id, data.name, data.epithet || "Loaded from a backup", data.traits || ["Backup"], data.line || "Loaded from a backup.", (data.prompt || id + "@atelier"), data.soul && data.soul[0] ? data.soul.map((s) => `# ${s.title}\n\n${s.body}`).join("\n\n") : (data.files && data.files["SOUL.md"]) || "# Backup\n", data.shell || "loaded from backup", data.seeds || [{ role: "host", text: "The backup opened." }]), files: data.files, shelf: data.shelf === "adult" ? "adult" : undefined }, data.files, true);
 }
 document.getElementById("backup").addEventListener("change", (event) => {
   const file = event.target.files && event.target.files[0]; if (!file) return;

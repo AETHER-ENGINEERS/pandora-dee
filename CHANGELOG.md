@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.0.0
+- **Liquid desk** (`atelier/desk.html`). Pandora Dee stays seated. Pandora Dee Fae and Pandora Dee Noe are added beside her. The phone atelier, the bridges, and the build are not replaced.
+- **Windows.** Each room opens, closes, and minimizes. The dock brings one back. File, Edit, and View sit on a wide desk. Settings turns the menu bar off. The gear stays, so the bar can come back.
+- **Scale.** Fit, Room, Wide, and Studio. Wide is the default, so a preview or a laptop window no longer crushes every pane to fit. Type size stays its own four steps.
+- **Backgrounds.** Lucky asked. Each seated character brings their own. Settings turns them off.
+- **Backups.** Babalon, DouglasAdams, and LUCIDForge load from the File menu, with the portraits, banners, and wording that came in with their backups. Each has a separate filesystem. DouglasAdams is the storytelling engine. Original work on those seats is under the AETHER-ENGINEERS Multiversal License. `Legends/desk-before-windows.html` keeps the desk from before the windows. `Legends/VERSION-2.9.0` keeps the version mark this release stepped past.
+- **Adult shelf.** The desk boots into the family session. Settings holds the passcode. Babalon for the room is the seat anyone can load. Her own seat stays on the shelf, and the shelf locks again when the desk closes. The passcode is stored as a hash on this device. Reforge does not clear it.
+- **Environment.** File → Environment, or the Env window. Named slots for this machine: `CHALICE_TOKEN`, `DISCORD_BRIDGE_TOKEN`, `VECTOR_BRIDGE_TOKEN`, and any name you add. Values stay on the device. A seat backup does not take them, and the shell prints the names only.
+- **Jade.** She sits beside Dee, from Jade Vault 2.16.1 and the 2.17 phone. SSH is her host book: a machine by name, the secret in the environment, ask-before-command on, Sentry opt-in off. Sentry is her rule book, off until armed. While the desk is open, battery, network, and screen can fire a matching rule into her chronicle. Think, from 2.16.1, keeps a line that a file check or a rubric can veto. World reads the senses this browser will give. LiteRT, her browser, the screen driver, calls, texts, and the rest of the sensors stay on the phone. This desk does not open the socket and does not store a camera or a microphone.
+
+
 ## 2.9.0
 - **Discord archive** (`--archive`, off by default): the Discord bridge keeps every message the bot can see on the
   computer it runs on, whether or not the app is open, as append-only JSON lines per channel and thread. People, bots,

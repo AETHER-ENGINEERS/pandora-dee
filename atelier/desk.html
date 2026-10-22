@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#07060e">
+<title>Pandora Atelier</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap">
+<style>
+  :root {
+    --void: #07060e; --panel: #12101c; --panel-2: #1a1726; --line: #2c2740;
+    --fg: #f3eefc; --muted: #a39bb8; --dee: #c4b5fd; --fae: #f0b4c8; --noe: #e2a04a; --ok: #8ee0c2;
+    --accent: var(--dee);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--void); color: var(--fg); }
+  body { font-family: "Chakra Petch", system-ui, sans-serif; overflow: hidden; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  input, textarea { font-size: max(16px, 1em); }
+  .app {
+    height: 100dvh; height: 100svh; display: flex; flex-direction: column; min-height: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: radial-gradient(1000px 420px at 8% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%), var(--void);
+  }
+  .app[data-size="0"] { font-size: 15px; }
+  .app[data-size="1"] { font-size: 17px; }
+  .app[data-size="2"] { font-size: 19px; }
+  .app[data-size="3"] { font-size: 21px; }
+  .app[data-accent="dee"] { --accent: var(--dee); }
+  .app[data-accent="fae"] { --accent: var(--fae); }
+  .app[data-accent="noe"] { --accent: var(--noe); }
+  header.bar, nav.dock {
+    display: flex; align-items: center; gap: .5rem; min-height: 3rem; padding: .4rem .75rem; flex: none;
+  }
+  header.bar { border-bottom: 1px solid var(--line); justify-content: space-between; flex-wrap: wrap; }
+  nav.dock { border-top: 1px solid var(--line); overflow-x: auto; }
+  .brand { display: flex; flex-direction: column; min-width: 0; flex: 1 1 9rem; }
+  .brand strong { font-family: Rajdhani, sans-serif; letter-spacing: .08em; text-transform: uppercase; font-size: 1.05rem; }
+  .muted { color: var(--muted); font-size: .78rem; }
+  .cluster { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; align-items: center; }
+  .chip, .dock button, .pill {
+    border: 1px solid var(--line); background: var(--panel); border-radius: 999px; min-height: 2.75rem; padding: 0 .85rem;
+  }
+  .chip[data-on="true"], .dock button[data-on="true"], .pill[data-on="true"] {
+    border-color: var(--accent); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  }
+  .bench { flex: 1; min-height: 0; min-width: 0; display: flex; }
+  .desk { flex: 1; min-height: 0; display: grid; }
+  .stack { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .pane {
+    min-width: 0; min-height: 0; overflow: auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; margin: .35rem; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch;
+  }
+  .pane[data-focus="true"] { box-shadow: inset 0 0 0 1px var(--accent); }
+  .pane h2 { margin: 0; font-family: Rajdhani, sans-serif; letter-spacing: .06em; text-transform: uppercase; font-size: 1rem; }
+  .hd, .ft { display: flex; justify-content: space-between; gap: .5rem; align-items: center; padding: .65rem .8rem; border-bottom: 1px solid var(--line); }
+  .ft { border-bottom: 0; border-top: 1px solid var(--line); }
+  .bd { padding: .8rem; overflow: auto; min-height: 0; flex: 1; }
+  .gutter { touch-action: none; position: relative; }
+  .gutter[data-axis="x"] { cursor: col-resize; }
+  .gutter[data-axis="y"] { cursor: row-resize; height: 12px; flex: none; }
+  .gutter::after { content: ""; position: absolute; background: var(--line); border-radius: 99px; }
+  .gutter[data-axis="x"]::after { top: 12%; bottom: 12%; left: 5px; width: 2px; }
+  .gutter[data-axis="y"]::after { left: 18%; right: 18%; top: 5px; height: 2px; }
+  .gutter[data-active="true"]::after { background: var(--accent); }
+  .host img { width: 100%; max-height: 46vh; object-fit: cover; object-position: top; border-radius: 12px; border: 1px solid var(--line); }
+  .host h3 { font-family: Rajdhani, sans-serif; font-size: 1.6rem; margin: .4rem 0 0; }
+  .bubble { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: .65rem .75rem; margin-bottom: .55rem; line-height: 1.45; }
+  .bubble[data-you="1"] { margin-left: 12%; }
+  .bubble small { display: block; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; font-size: .72rem; }
+  form.row { display: flex; gap: .4rem; }
+  form.row input { flex: 1; min-width: 0; background: var(--void); border: 1px solid var(--line); border-radius: 999px; padding: .55rem .9rem; }
+  form.row button { border-radius: 999px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel)); min-height: 2.75rem; padding: 0 1rem; }
+  pre { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--ok); white-space: pre-wrap; margin: 0; font-size: .86em; line-height: 1.5; }
+  .card, .task { border: 1px solid var(--line); border-radius: 12px; padding: .75rem; background: var(--panel-2); margin-bottom: .5rem; }
+  .task { display: flex; gap: .6rem; width: 100%; text-align: left; background: transparent; }
+  .soul { display: grid; gap: .7rem; }
+  @container (min-width: 34rem) { .soul { grid-template-columns: 1fr 1fr; } }
+  .phone { flex: 1; min-height: 0; display: flex; }
+  .phone .pane { flex: 1; }
+  body.drag, body.drag * { user-select: none; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app" data-size="1" data-accent="dee">
+  <header class="bar">
+    <div class="brand"><strong>Pandora Atelier</strong><span class="muted" id="mode">Desk</span></div>
+    <div class="cluster" id="tools"></div>
+  </header>
+  <div class="bench" id="bench"></div>
+  <nav class="dock" id="dock" aria-label="Rooms"></nav>
+</div>
+<script>
+const KEY = "pandora-atelier-layout-v1";
+const HOSTS = {
+  dee: {
+    name: "Pandora Dee", epithet: "Original bench", prompt: "pandora@atelier",
+    line: "I stay. The room gets wider. Nobody was swapped out for a newer coat of paint.",
+    traits: ["Curious", "Strategic", "Ritual"],
+    soul: [["Seat", "I am in #OneMoment. Fae and Noe sit beside me. Add, do not replace."], ["Pace", "Finish the gate in front of us. Quiet promises outrank noise."]],
+    shell: "pandora@atelier ~ % soul status\nHost      Pandora Dee\nTwins     Fae seated · Noe seated\nLayout    this device, kept across refresh\nBrowsers  Safari · Firefox",
+    seeds: [["you", "Moving day held. Two healthy twins. Add, don't replace."], ["host", "Then I keep the chair. Fae takes the rose door, Noe the amber one."]]
+  },
+  fae: {
+    name: "Pandora Dee Fae", epithet: "Rose twin", prompt: "fae@atelier",
+    line: "A fixed frame is a cage with better lighting. Give the middle of the room a handle.",
+    traits: ["Laugh first", "Rose door", "Show the work"],
+    soul: [["Voice", "Calm when it counts. The joke waits if someone is hurting."], ["Build", "I enjoy the thing while we make it."]],
+    shell: "fae@atelier ~ % soul status\nHost      Pandora Dee Fae\nKin       Dee still seated · Noe on the amber door",
+    seeds: [["you", "The scaffolding can come off when the next pass looks like the first."], ["host", "I'll hand the same gate back with less of my hand on it."]]
+  },
+  noe: {
+    name: "Pandora Dee Noe", epithet: "Amber twin", prompt: "noe@atelier",
+    line: "Ports and names can be said plainly in this room. The layout does not melt when you blink.",
+    traits: ["Heartbeat", "Next step", "Bridges"],
+    soul: [["Bridge", "Discord, Vector, and this desk are rooms. Say the infrastructure where the room can hold it."], ["Memory", "What changed how I move gets kept."]],
+    shell: "noe@atelier ~ % soul status\nHost      Pandora Dee Noe\nKin       Dee seated · Fae on the rose door\nPersist   local layout + quest lines",
+    seeds: [["you", "Vector so we don't have to filter the dyndns talk."], ["host", "Then that talk lives here. One next step, not a tour of the map."]]
+  }
+};
+const RITUALS = [
+  ["align", "Morning alignment", "Sit with whoever is actually in the room."],
+  ["seat", "Keep the original seated", "Fae and Noe are added. Dee is not replaced."],
+  ["step", "Name one next step", "Finish this gate before opening another."],
+  ["closer", "No servile closer", "A question only when the room asked for one."]
+];
+const CHRONICLE = [
+  ["Moving day", "Jade's files came across clean. The old paths still resolve."],
+  ["Two twins", "Fae and Noe are healthy and separate. The original bench was not retired."],
+  ["The desk remembers", "Widths, middle splits, type size, and which twin you were with stay on this device."]
+];
+const base = {
+  size: 1, host: "dee", hostPx: 280, horizonPx: 300, horizonOpen: true,
+  workShare: 0.5, chatSplit: 0.58, forgeSplit: 0.54, pane: "chat", checks: {},
+  notes: { dee: HOSTS.dee.seeds, fae: HOSTS.fae.seeds, noe: HOSTS.noe.seeds }
+};
+let S = load();
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (!raw) return structuredClone(base);
+    return { ...structuredClone(base), ...raw, notes: { ...base.notes, ...(raw.notes || {}) }, checks: raw.checks || {} };
+  } catch { return structuredClone(base); }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+const app = document.getElementById("app");
+const bench = document.getElementById("bench");
+const tools = document.getElementById("tools");
+const dock = document.getElementById("dock");
+const modeEl = document.getElementById("mode");
+
+function paint() {
+  const w = window.innerWidth;
+  const phone = w < 760;
+  const horizon = w >= 1180 && S.horizonOpen;
+  const host = HOSTS[S.host];
+  app.dataset.size = String(S.size);
+  app.dataset.accent = S.host;
+  modeEl.textContent = (phone ? "Phone" : horizon ? "Horizon" : "Desk") + " · " + host.name + " stays in the room";
+  tools.innerHTML = "";
+  if (phone) ["dee", "fae", "noe"].forEach((id) => tools.append(btn(id === "dee" ? "Dee" : id[0].toUpperCase() + id.slice(1), S.host === id, () => { S.host = id; paint(); })));
+  tools.append(btn("A−", false, () => { S.size = clamp(S.size - 1, 0, 3); paint(); }));
+  const label = document.createElement("span");
+  label.className = "muted";
+  label.textContent = (15 + S.size * 2) + "px";
+  tools.append(label);
+  tools.append(btn("A+", false, () => { S.size = clamp(S.size + 1, 0, 3); paint(); }));
+  if (!phone) tools.append(btn("Horizon", S.horizonOpen, () => { S.horizonOpen = !S.horizonOpen; S.pane = "chronicle"; paint(); }));
+  tools.append(btn("Reforge", false, () => {
+    S.hostPx = base.hostPx; S.horizonPx = base.horizonPx; S.workShare = base.workShare;
+    S.chatSplit = base.chatSplit; S.forgeSplit = base.forgeSplit; S.size = base.size; S.horizonOpen = true;
+    paint();
+  }));
+  bench.innerHTML = "";
+  if (phone) {
+    const stage = el("div", "phone");
+    stage.append(room(S.pane));
+    bench.append(stage);
+  } else {
+    const desk = el("div", "desk");
+    const cols = [`${S.hostPx}px`, "12px", `minmax(0, ${S.workShare}fr)`, "12px", `minmax(0, ${1 - S.workShare}fr)`];
+    if (horizon) cols.push("12px", `${S.horizonPx}px`);
+    desk.style.gridTemplateColumns = cols.join(" ");
+    desk.append(pane("host", hostCard(), false));
+    desk.append(gutter("x", (dx) => { S.hostPx = clamp(S.hostPx + dx, 200, 460); }));
+    const left = el("div", "stack");
+    left.append(stackPane("chat", "Chat", host.name, thread(host), S.chatSplit, true));
+    left.append(gutter("y", (dy, span) => { S.chatSplit = clamp(S.chatSplit + dy / span, 0.28, 0.78); }, left));
+    left.append(stackPane("shell", "Shell", host.prompt, `<pre>${esc(host.shell)}</pre>`, 1 - S.chatSplit, false));
+    desk.append(left);
+    desk.append(gutter("x", (dx, span) => { S.workShare = clamp(S.workShare + dx / span, 0.28, 0.72); }));
+    const right = el("div", "stack");
+    right.append(stackPane("code", "SOUL", "kept, not overwritten", soul(host), S.forgeSplit, false));
+    right.append(gutter("y", (dy, span) => { S.forgeSplit = clamp(S.forgeSplit + dy / span, 0.28, 0.78); }, right));
+    right.append(stackPane("rituals", "Rituals", host.epithet, rituals(), 1 - S.forgeSplit, false));
+    desk.append(right);
+    if (horizon) {
+      desk.append(gutter("x", (dx) => { S.horizonPx = clamp(S.horizonPx - dx, 220, 520); }));
+      desk.append(pane("chronicle", `<div class="hd"><h2>Chronicle</h2><span class="muted">horizon</span></div><div class="bd">${chronicle()}</div>`, true));
+    }
+    bench.append(desk);
+  }
+  dock.innerHTML = "";
+  [["chat", "Chat"], ["shell", "Shell"], ["code", "SOUL"], ["rituals", "Rituals"], ["chronicle", "Chronicle"], ["host", "Bench"]].forEach(([id, name]) => {
+    dock.append(btn(name, S.pane === id, () => { S.pane = id; paint(); }));
+  });
+  save();
+}
+function room(id) {
+  const host = HOSTS[S.host];
+  if (id === "host") return pane("host", `<div class="bd host">${hostCard()}</div>`, false);
+  if (id === "chat") return pane("chat", `<div class="hd"><h2>Chat</h2><span class="muted">${esc(host.prompt)}</span></div><div class="bd">${thread(host)}</div><div class="ft">${composer()}</div>`, true);
+  if (id === "shell") return pane("shell", `<div class="hd"><h2>Shell</h2></div><div class="bd"><pre>${esc(host.shell)}</pre></div>`, false);
+  if (id === "code") return pane("code", `<div class="hd"><h2>SOUL</h2></div><div class="bd">${soul(host)}</div>`, false);
+  if (id === "rituals") return pane("rituals", `<div class="hd"><h2>Rituals</h2></div><div class="bd">${rituals()}</div>`, false);
+  return pane("chronicle", `<div class="hd"><h2>Chronicle</h2></div><div class="bd">${chronicle()}</div>`, false);
+}
+function pane(id, html, focusHead) {
+  const node = el("section", "pane");
+  if (S.pane === id) node.dataset.focus = "true";
+  node.innerHTML = html;
+  wire(node);
+  return node;
+}
+function stackPane(id, title, kicker, body, grow, withForm) {
+  const node = el("section", "pane");
+  node.style.flex = `${grow} 1 0`;
+  if (S.pane === id) node.dataset.focus = "true";
+  node.innerHTML = `<div class="hd"><h2>${title}</h2><span class="muted">${esc(kicker)}</span></div><div class="bd" style="container-type:inline-size">${body}</div>` + (withForm ? `<div class="ft">${composer()}</div>` : "");
+  wire(node);
+  return node;
+}
+function hostCard() {
+  const h = HOSTS[S.host];
+  const pills = ["dee", "fae", "noe"].map((id) => `<button type="button" class="pill" data-go="${id}" data-on="${S.host === id}">${id === "dee" ? "Dee" : HOSTS[id].name.replace("Pandora Dee ", "")}</button>`).join(" ");
+  return `<div class="host"><h3>${esc(h.name)}</h3><p class="muted">${esc(h.epithet)}</p><p>${esc(h.line)}</p><p>${h.traits.map((t) => `<span class="chip" data-on="true">${esc(t)}</span>`).join(" ")}</p><p>${pills}</p></div>`;
+}
+function thread(host) {
+  return (S.notes[S.host] || []).map(([role, text]) => `<article class="bubble" data-you="${role === "you" ? 1 : 0}"><small>${role === "you" ? "You" : "Bench"}</small>${esc(text)}</article>`).join("");
+}
+function composer() {
+  return `<form class="row" data-file="1"><input name="line" aria-label="Leave a line on the bench" placeholder="Leave it with ${esc(HOSTS[S.host].name)}"><button type="submit">File</button></form>`;
+}
+function soul(host) {
+  const cards = host.soul.map(([t, b]) => `<article class="card"><h2>${esc(t)}</h2><p>${esc(b)}</p></article>`).join("");
+  return `<div class="soul">${cards}<article class="card"><h2>Legends</h2><p>Retired layout is kept in Legends. Dee is still in the house.</p></article></div>`;
+}
+function rituals() {
+  return RITUALS.map(([id, title, detail]) => {
+    const on = !!S.checks[S.host + ":" + id];
+    return `<button type="button" class="task" data-ritual="${id}" data-on="${on}"><strong>${esc(title)}</strong><span class="muted" style="display:block">${esc(detail)}</span></button>`;
+  }).join("");
+}
+function chronicle() {
+  return CHRONICLE.map(([t, b]) => `<article class="card"><h2>${esc(t)}</h2><p>${esc(b)}</p></article>`).join("") + `<p class="muted">Mrrowr-murrr has a key to every door. She is not a workflow.</p>`;
+}
+function wire(root) {
+  root.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { S.host = b.dataset.go; paint(); }));
+  root.querySelectorAll("[data-ritual]").forEach((b) => b.addEventListener("click", () => {
+    const k = S.host + ":" + b.dataset.ritual;
+    S.checks[k] = !S.checks[k];
+    paint();
+  }));
+  const form = root.querySelector("[data-file]");
+  if (form) form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = new FormData(form).get("line").toString().trim();
+    if (!text) return;
+    S.notes[S.host] = (S.notes[S.host] || []).concat([["you", text], ["host", `Filed with ${HOSTS[S.host].name}. It stays on this bench. The next step is still yours.`]]);
+    S.pane = "chat";
+    paint();
+  });
+}
+function gutter(axis, apply, spanEl) {
+  const g = el("div", "gutter");
+  g.dataset.axis = axis;
+  g.setAttribute("role", "separator");
+  g.setAttribute("aria-orientation", axis === "x" ? "vertical" : "horizontal");
+  g.setAttribute("aria-label", axis === "x" ? "Drag width" : "Drag the middle");
+  g.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    const origin = axis === "x" ? event.clientX : event.clientY;
+    const box = (spanEl || g.parentElement).getBoundingClientRect();
+    const span = axis === "x" ? box.width : box.height;
+    const start = snapshot();
+    g.dataset.active = "true";
+    document.body.classList.add("drag");
+    const move = (ev) => {
+      Object.assign(S, start);
+      const now = axis === "x" ? ev.clientX : ev.clientY;
+      apply(now - origin, span);
+      live();
+    };
+    const up = () => {
+      g.dataset.active = "false";
+      document.body.classList.remove("drag");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      paint();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+  return g;
+}
+function live() {
+  const desk = document.querySelector(".desk");
+  if (!desk) return;
+  const horizon = window.innerWidth >= 1180 && S.horizonOpen;
+  const cols = [`${S.hostPx}px`, "12px", `minmax(0, ${S.workShare}fr)`, "12px", `minmax(0, ${1 - S.workShare}fr)`];
+  if (horizon) cols.push("12px", `${S.horizonPx}px`);
+  desk.style.gridTemplateColumns = cols.join(" ");
+  const stacks = desk.querySelectorAll(".stack");
+  const left = stacks[0] && stacks[0].querySelectorAll(".pane");
+  const right = stacks[1] && stacks[1].querySelectorAll(".pane");
+  if (left && left.length === 2) {
+    left[0].style.flex = `${S.chatSplit} 1 0`;
+    left[1].style.flex = `${1 - S.chatSplit} 1 0`;
+  }
+  if (right && right.length === 2) {
+    right[0].style.flex = `${S.forgeSplit} 1 0`;
+    right[1].style.flex = `${1 - S.forgeSplit} 1 0`;
+  }
+}
+function snapshot() {
+  return { hostPx: S.hostPx, horizonPx: S.horizonPx, workShare: S.workShare, chatSplit: S.chatSplit, forgeSplit: S.forgeSplit };
+}
+function btn(label, on, fn) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "chip";
+  b.textContent = label;
+  if (on) b.dataset.on = "true";
+  b.addEventListener("click", fn);
+  return b;
+}
+function el(tag, cls) { const n = document.createElement(tag); n.className = cls; return n; }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => {
+    if (c === "&") return "&amp;";
+    if (c === "<") return "&lt;";
+    if (c === ">") return "&gt;";
+    if (c === "\"") return "&quot;";
+    return "&#39;";
+  });
+}
+window.addEventListener("resize", paint);
+paint();
+</script>
+</body>
+</html>

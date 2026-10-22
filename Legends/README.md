@@ -13,4 +13,4 @@ Still in place, untouched:
 
 Fae and Noe were added. The fixed single-column phone shell was not deleted to make the desk. If a later pass does replace a layout, the retired file is copied here first, under the version it belonged to.
 
-Archived at 3.0.0: the version mark only, in `VERSION-2.9.0`. The phone atelier was not overwritten.
+`desk-before-windows.html` is the scale desk from before windows, menu bar, backgrounds, and the three backups. `VERSION-2.9.0` is the version mark 3.0.0 stepped past. The phone atelier was not overwritten.

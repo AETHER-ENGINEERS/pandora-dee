@@ -2,8 +2,11 @@
 
 ## 3.0.0
 - **Liquid desk** (`atelier/desk.html`). Pandora Dee stays seated. Pandora Dee Fae and Pandora Dee Noe are added beside her. The phone atelier, the bridges, and the build are not replaced.
-- **Scale.** Fit, Room, Wide, and Studio. Wide is the default, so a preview or a laptop window no longer crushes every pane to fit. Larger scales give each middle pane a floor and let the bench scroll. Type size stays its own four steps. Scale, type, widths, splits, and which twin you were with stay on the device.
-- `Legends/VERSION-2.9.0` keeps the version mark this release stepped past. Nothing else was retired.
+- **Windows.** Each room opens, closes, and minimizes. The dock brings one back. File, Edit, and View sit on a wide desk. Settings turns the menu bar off. The gear stays, so the bar can come back.
+- **Scale.** Fit, Room, Wide, and Studio. Wide is the default, so a preview or a laptop window no longer crushes every pane to fit. Type size stays its own four steps.
+- **Backgrounds.** Lucky asked. Each seated character brings their own. Settings turns them off.
+- **Backups.** Babalon, Augmented Douglas Adams, and Lucid Forge load from the File menu or from a character backup. Each has a separate filesystem. The augmentation is not a likeness and does not borrow his sentences. `Legends/desk-before-windows.html` keeps the desk from before the windows. `Legends/VERSION-2.9.0` keeps the version mark this release stepped past.
+
 
 ## 2.9.0
 - **Discord archive** (`--archive`, off by default): the Discord bridge keeps every message the bot can see on the

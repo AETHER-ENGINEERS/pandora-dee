@@ -58,6 +58,7 @@ Magick, as it turns out, is mostly weaving.
   - Secretary: messages for you land in an inbox, or reach you at once.
 - **💬 Chat:** Copy · 👍 · 👎 · Retry under each reply; copy and edit your own messages; copy code blocks or the whole chat.
 - **🎭 Avatar:** Live2D Pandora Dee, with voice (TTS).
+- **🖥️ Any screen:** one column on a phone; with room (a laptop, an iPad, a phone turned sideways) the Atelier grows, Leaves shows the list beside the open leaf and Pandora stands beside the chat. Drag the app's edges and every divider (list, avatar, editor/preview); double-click one to reset it. Text size (85–150 %) is in Config → App. Widths, dividers and text size are kept with your settings, so a reload keeps your layout.
 
 ## 🌊 Rituals
 

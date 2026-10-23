@@ -106,7 +106,8 @@ ok(r.mem >= 20 && r.db === r.mem && r.first === 'Long' && /steps/.test(r.keys), 
 
 // ---------- triggers ----------
 await E(() => flowSave({ name: 'Ticker', trigger: { type: 'schedule', when: 'every 5 minutes' }, steps: [{ type: 'note', action: 'append', path: '/out/ticks.md', content: 'tick {{ $input.trigger }}' }] }));
-r = await E(async () => { flowsArm(); const p = flowFind('Ticker')._path; const next = FlowTrig.next.get(p); FlowTrig.next.set(p, Date.now() - 1000); flowTick(); await new Promise(r => setTimeout(r, 1500)); return { next: next - Date.now(), again: FlowTrig.next.get(p) - Date.now() }; });
+// each time is measured from when it was taken: just before a 5-minute mark, the 1.5 s wait would pass it
+r = await E(async () => { flowsArm(); const p = flowFind('Ticker')._path; const armedAt = Date.now(), next = FlowTrig.next.get(p); FlowTrig.next.set(p, Date.now() - 1000); const tickAt = Date.now(); flowTick(); await new Promise(r => setTimeout(r, 1500)); return { next: next - armedAt, again: FlowTrig.next.get(p) - tickAt }; });
 ok(r.next > 0 && r.next <= 300e3 && r.again > 0, 'a schedule trigger is armed for the next matching time: ' + JSON.stringify(r));
 ok((await read('/out/ticks.md') || '').includes('tick schedule'), 'a due schedule trigger runs the flow (input.trigger = schedule)');
 await E(() => { const f = flowFind('Ticker'); f.enabled = false; flowSave(f, f._path); });

@@ -1732,7 +1732,7 @@ rep("  const res = [['/', { dir: true }]];", """  for (const q of alias) { try {
 rep("""  for (const [p, n] of entries) {
     seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""", """  for (let [p, n] of entries) {
     p = pandoraPath(p); seen.add(p); const b = base.get(p), cur = vfs.nodes.get(p);""")
-rep("Object.assign(window, { DC,", "Object.assign(window, { withModel, pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
+rep("Object.assign(window, { DC,", "Object.assign(window, { layoutApply, layoutInit, uiZoom, withModel, pandoraPath, movingDay, migrateBackup, MIGRATION_LOG, DC,")
 # ---------- v23: Pandora Dee's words where people read them ----------
 # Interface text that comes from the base page or from earlier layers, translated where it lands. Identifiers,
 # storage keys, tool names and file formats stay as they are.
@@ -1791,6 +1791,69 @@ for old, new, *n in VOCAB:
 # her own words for people, while tool names and paths stay as she knows them
 rep("`)}\n\nVault conventions:", "`)}\n\nVault conventions:\n- With people, speak the Atelier's language: the vault is the Atelier, a note is a leaf, a folder is a workshop, a tag is a sigil, a link is a thread, a daily note is a chronicle, your journal is the quest log, a flow is a ritual, and the person who shares the Atelier with you is your Partner. Tool names (notes_search and the rest) and paths stay as they are.")
 rep("You live in Jade Vault, a browser app: its vault of markdown notes (linked like Obsidian) is your notebook and memory", "You live in the Atelier, a browser app grown from Jade Vault: its leaves, markdown notes threaded together like Obsidian, are your notebook and memory")
+# ---------- v24: roomy layout: wider screens, draggable widths and dividers, text size (layout.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('layout.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("  await movingDay();\n", "  await movingDay();\n  layoutInit();\n")
+rep("  document.body.dataset.screen = name;\n", "  document.body.dataset.screen = name; if (typeof layoutPanes === 'function') layoutPanes();\n")
+# the app's height in CSS px of the zoomed page (text size zooms the whole page)
+rep("const h = vv ? vv.height : innerHeight; root.style.setProperty('--vvh', h + 'px');", "const h = vv ? vv.height : innerHeight; root.style.setProperty('--vvh', (h / (+root.style.zoom || 1)) + 'px');")
+rep('id="btnShowJade" hidden>Jade</button>', 'id="btnShowJade" hidden>Pandora</button>')
+rep("""      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>""", """      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Text &amp; layout</div>
+        <div><label class="lbl" for="sUiScale">Text size</label><select id="sUiScale" class="field mt-1"></select><div class="hint mt-1">Scales the whole interface, on this device.</div></div>
+        <p class="hint leading-relaxed">With room to spare the Atelier widens; drag the handles beside it to set its width. When it is wide, Leaves shows the list beside the open leaf and Chat puts Pandora beside the conversation, each with a divider to drag. The editor's Split mode and Pandora's height (on a phone) drag too. Double-click a handle to reset it. Your layout is kept with your settings.</p>
+        <div><button type="button" class="btn" id="btnUiReset">Reset layout</button></div>
+      </section>
+      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>""")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- roomy layout (layout.js) ---- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body #app{max-width:var(--app-w,560px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+body .modal-bg>.frame{max-width:min(var(--app-w,560px),920px)!important}
+/* iOS Safari zooms into any field under 16px (on screen, so after the text size) when it gets focus */
+@media (pointer:coarse){ :is(textarea,input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]){font-size:max(calc(16px / var(--ui-zoom,1)),1em)!important} }
+.ui-handle{position:absolute;z-index:20;touch-action:none}
+.ui-handle::after{content:'';position:absolute;background:var(--yl);opacity:0;transition:opacity .15s}
+.ui-handle:hover::after,.ui-handle.dragging::after{opacity:.9}
+body.ui-dragging,body.ui-dragging *{-webkit-user-select:none!important;user-select:none!important}
+body.ui-dragging .jade-stage{transition:none}
+@media (pointer:coarse){.ui-handle::after{opacity:.35}}
+.ui-app-left,.ui-app-right{display:none;top:0;bottom:0;width:12px;cursor:ew-resize}
+.ui-app-left{left:-12px} .ui-app-right{right:-12px}
+.ui-app-left::after,.ui-app-right::after{top:0;bottom:0;left:5px;width:2px}
+body.room .ui-app-left,body.room .ui-app-right{display:block}
+/* wide: Leaves shows the list beside the open leaf */
+.ui-tree{display:none;top:0;bottom:0;left:calc(var(--tree-w) - 5px);width:10px;cursor:ew-resize}
+.ui-tree::after{top:0;bottom:0;left:4px;width:2px}
+body.wide:is([data-screen=files],[data-screen=file]) .ui-tree{display:block}
+body.wide:is([data-screen=files],[data-screen=file]) .m-screens [data-panel=files]{right:auto;width:var(--tree-w);border-right:1px solid var(--line)}
+body.wide:is([data-screen=files],[data-screen=file]) .m-screens [data-panel=file]{left:var(--tree-w)}
+body.wide [data-panel=files]>.m-sub{flex-wrap:wrap;row-gap:6px}
+body.wide [data-panel=files]>.m-sub .pane-h{flex:1 0 auto}
+/* wide: Pandora beside the conversation (when she is shown full size) */
+body.wide #app:not(.jade-hidden):not(.jade-compact) [data-panel=chat]:not([hidden]){display:grid;grid-template-columns:var(--stage-w) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+body.wide #app:not(.jade-hidden):not(.jade-compact) [data-panel=chat]>.jade-stage{grid-column:1;grid-row:1/-1;height:auto;border-right:1px solid var(--line)}
+body.wide #app:not(.jade-hidden):not(.jade-compact) [data-panel=chat]>:not(.jade-stage):not(.ui-handle){grid-column:2}
+.ui-stage{display:none;top:0;bottom:0;left:calc(var(--stage-w) - 5px);width:10px;cursor:ew-resize}
+.ui-stage::after{top:0;bottom:0;left:4px;width:2px}
+body.wide #app:not(.jade-hidden):not(.jade-compact) .ui-stage{display:block}
+/* a phone: Pandora's height, dragged from the bottom edge of her stage */
+body:not(.kb) #app:not(.jade-compact) .jade-stage{height:var(--stage-h,clamp(150px,30vh,300px))}
+.ui-stage-h{left:0;right:0;bottom:0;height:16px;cursor:ns-resize}
+.ui-stage-h::after{left:calc(50% - 28px);width:56px;bottom:4px;height:3px;border-radius:2px}
+body.wide .ui-stage-h,#app.jade-compact .ui-stage-h,body.kb .ui-stage-h{display:none}
+/* the editor's Split mode: stacked on a phone, side by side when wide, with a divider between */
+.ui-ed{display:none;position:relative;flex:none;height:10px;cursor:ns-resize}
+.ui-ed::after{left:0;right:0;top:4px;height:2px;opacity:.55;background:var(--line-hot)}
+.note-body[data-mode=split] .ui-ed{display:block}
+#app .note-body[data-mode=split] textarea{flex:0 0 calc(var(--ed-split,.45) * 100%);border-bottom:0}
+#app .note-body[data-mode=split] .note-prev{flex:1 1 0}
+body.wide .note-body[data-mode=split]{flex-direction:row}
+body.wide .note-body[data-mode=split] .ui-ed{height:auto;width:10px;cursor:ew-resize}
+body.wide .note-body[data-mode=split] .ui-ed::after{left:4px;right:auto;top:0;bottom:0;width:2px;height:auto}
+body.kb .note-body .ui-ed{display:none}
+""")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w').write(s)

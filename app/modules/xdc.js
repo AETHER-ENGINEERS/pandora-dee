@@ -16,6 +16,15 @@ const XdcDB = (() => {
     apps: () => tx('apps', 'readonly', st => st.getAll()),
     app: id => tx('apps', 'readonly', st => st.get(id)),
     putApp: a => tx('apps', 'readwrite', st => st.put(a)),
+    // read, change and write an app in one transaction, so two changes at once (its storage saved while an update
+    // is sent, two updates sent together) cannot undo each other. fn changes the app in place (it may also put
+    // updates) and must not await; its result is returned, or null when the app is not installed
+    edit: async (id, fn) => { const db = await open(); return new Promise((res, rej) => {
+      const t = db.transaction(['apps', 'updates'], 'readwrite'); let out = null, err = null;
+      const q = t.objectStore('apps').get(id);
+      q.onsuccess = () => { const a = q.result; if (!a) return; try { out = fn(a, t.objectStore('updates')); t.objectStore('apps').put(a); } catch (e) { err = e; t.abort(); } };
+      t.oncomplete = () => res(out); t.onerror = () => rej(err || t.error); t.onabort = () => rej(err || t.error);
+    }); },
     delApp: async id => { await tx('apps', 'readwrite', st => st.delete(id)); await tx('updates', 'readwrite', st => st.delete(IDBKeyRange.bound([id, 0], [id, Infinity]))); },
     clearUpdates: id => tx('updates', 'readwrite', st => st.delete(IDBKeyRange.bound([id, 0], [id, Infinity]))),
     updates: (id, after = 0, limit = 100000) => tx('updates', 'readonly', st => st.getAll(IDBKeyRange.bound([id, after + 1], [id, Infinity]), limit)),
@@ -72,13 +81,15 @@ async function xdcSendUpdate(app, update, who) {
   if (!update || typeof update !== 'object' || !('payload' in update)) throw new Error('an update needs a payload');
   const json = JSON.stringify(update.payload); if (json === undefined) throw new Error('payload must be JSON');
   if (json.length > 128000) throw new Error('update payload is over 128 KB');
-  const full = await XdcDB.app(app.id); if (!full) throw new Error(`${app.name} is not installed any more`);
-  const serial = (full.serial || 0) + 1;
-  const u = { app: app.id, serial, payload: JSON.parse(json), sender: who.addr, senderName: who.name, ts: Date.now() };
-  for (const k of ['info', 'document', 'summary', 'href', 'notify']) if (update[k] != null) u[k] = update[k];
-  await XdcDB.putUpdate(u);
-  full.serial = serial; full.lastActive = u.ts; if (u.summary != null) full.summary = String(u.summary); if (u.document != null) full.document = String(u.document); if (u.info) full.lastInfo = String(u.info);
-  await XdcDB.putApp(full);
+  const sent = await XdcDB.edit(app.id, (full, updates) => {
+    const u = { app: app.id, serial: (full.serial || 0) + 1, payload: JSON.parse(json), sender: who.addr, senderName: who.name, ts: Date.now() };
+    for (const k of ['info', 'document', 'summary', 'href', 'notify']) if (update[k] != null) u[k] = update[k];
+    updates.put(u);
+    full.serial = u.serial; full.lastActive = u.ts; if (u.summary != null) full.summary = String(u.summary); if (u.document != null) full.document = String(u.document); if (u.info) full.lastInfo = String(u.info);
+    return { u, full };
+  });
+  if (!sent) throw new Error(`${app.name} is not installed any more`);
+  const { u, full } = sent, serial = u.serial;
   const lite = XDC.apps.find(a => a.id === app.id); if (lite) Object.assign(lite, { serial, summary: full.summary, document: full.document, lastInfo: full.lastInfo, lastActive: u.ts });
   if (XDC.session?.app.id === app.id) xdcDeliver(XDC.session, [u]);
   if (u.info && who.addr !== XDC_USER().addr) toast(`${esc(app.name)}: ${esc(u.info)}`);
@@ -190,7 +201,7 @@ function openApp(idOrName) {
   const load = async () => { sess.listening = false; sess.lastSent = 0; sess.rt = false; const full = await XdcDB.app(app.id); sess.app = full; frame.srcdoc = xdcPage(full); };
   ov.onclick = e => { const b = e.target.closest('[data-x]'); if (!b) return; if (b.dataset.x === 'back') closeApp(); else if (b.dataset.x === 'reload') load(); else if (b.dataset.x === 'jade') { closeApp(); setTab('chat'); $('#input').value = `About the ${app.name} app: `; $('#input').focus(); } };
   load().catch(e => { toast(`Could not start ${esc(app.name)}: ${esc(e.message)}`, 'err'); closeApp(); });
-  XdcDB.app(app.id).then(a => { if (a) { a.opened = Date.now(); XdcDB.putApp(a); } });
+  XdcDB.edit(app.id, a => { a.opened = Date.now(); }).catch(() => {});
   return sess;
 }
 function closeApp(quiet) { const s = XDC.session; if (!s) return; s.ov.remove(); XDC.session = null; if (!quiet) xdcRefresh(); }
@@ -201,7 +212,7 @@ window.addEventListener('message', async (e) => {
     if (m.t === 'listen') { const ups = await XdcDB.updates(s.app.id, +m.serial || 0); s.listening = true; s.lastSent = +m.serial || 0; xdcDeliver(s, ups); s.post({ t: 'listen-done' }); }
     else if (m.t === 'send') { await xdcSendUpdate(s.app, m.update, XDC_USER()); s.ov.querySelector('.xdc-t .hud').textContent = XDC.apps.find(a => a.id === s.app.id)?.summary || ''; }
     else if (m.t === 'all') { const ups = await XdcDB.updates(s.app.id, 0); reply(ups.map(u => xdcPublic(u, ups.at(-1)?.serial || 0))); }
-    else if (m.t === 'ls') { const a = await XdcDB.app(s.app.id); if (a) { a.ls = m.data || {}; await XdcDB.putApp(a); } }
+    else if (m.t === 'ls') await XdcDB.edit(s.app.id, a => { a.ls = m.data || {}; });
     else if (m.t === 'file') { const d = s.app.files[m.data]; if (!d) reply(null, 'not found: ' + m.data); else reply({ bytes: d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength), type: xmime(m.data) }); }
     else if (m.t === 'chat') {
       const files = []; if (m.data.file?.base64) { const b = Uint8Array.from(atob(m.data.file.base64), c => c.charCodeAt(0)); files.push(new File([b], m.data.file.name, { type: m.data.file.type || xmime(m.data.file.name) })); }
@@ -231,12 +242,12 @@ async function appMenu(id) {
     if (e.target === bg) return bg.remove(); const b = e.target.closest('[data-m]'); if (!b) return; const k = b.dataset.m;
     if (k === 'close') return bg.remove();
     if (k === 'open') { bg.remove(); openApp(a); }
-    if (k === 'wake') { fullA.jadeWake = fullA.jadeWake === false; await XdcDB.putApp(fullA); paintWake(); return; }
+    if (k === 'wake') { const on = fullA.jadeWake === false; fullA.jadeWake = on; await XdcDB.edit(a.id, x => { x.jadeWake = on; }); paintWake(); return; }
     if (k === 'ask') { bg.remove(); setTab('chat'); $('#input').value = `About the ${a.name} app: `; $('#input').focus(); }
     if (k === 'export') { const full = await XdcDB.app(a.id); const p = await xdcExportToVault(full); bg.remove(); toast(`Saved ${esc(p)}`, 'ok'); }
     if (k === 'reset' || k === 'remove') {
       if (armed !== k) { armed = k; b.textContent = 'Tap again to confirm'; return; }
-      if (k === 'reset') { await XdcDB.clearUpdates(a.id); const full = await XdcDB.app(a.id); Object.assign(full, { serial: 0, ls: {}, summary: '', document: '', lastInfo: '' }); await XdcDB.putApp(full); toast(`${esc(a.name)} reset`, 'ok'); }
+      if (k === 'reset') { await XdcDB.clearUpdates(a.id); await XdcDB.edit(a.id, full => { Object.assign(full, { serial: 0, ls: {}, summary: '', document: '', lastInfo: '' }); }); toast(`${esc(a.name)} reset`, 'ok'); }
       else { await XdcDB.delApp(a.id); toast(`${esc(a.name)} removed`, 'ok'); }
       bg.remove(); xdcRefresh();
     }

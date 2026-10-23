@@ -130,6 +130,13 @@ ok(/Installed Test List/.test(r) && await page.evaluate(() => vfs.isFile('/Apps/
 r = await page.evaluate(() => appsTool({ action: 'export', app: 'Hello Jade' }));
 const rt = await page.evaluate(async () => { const f = await unzip(vfs.readBytes('/Apps/Hello Jade.xdc')); return Object.keys(f).sort().join(','); });
 ok(rt === 'index.html,manifest.toml', 'export writes a valid .xdc: ' + rt);
+// two changes to an app's record at once must not undo each other: its storage saved while an update is sent,
+// or several updates sent together (each used to read the record and write it back in separate transactions)
+await page.evaluate(() => appsTool({ action: 'open', app: 'Hello Jade' })); await page.waitForTimeout(800);
+await page.frameLocator('#xdcOverlay iframe').locator('body').evaluate(() => { parent.postMessage({ __xdc: 1, t: 'ls', data: { kept: 'yes' } }, '*'); webxdc.sendUpdate({ payload: { msg: 'at once' } }, ''); });
+await page.waitForTimeout(500);
+const race = await page.evaluate(async () => { const app = XDC.apps.find(a => a.name === 'Hello Jade'); const sent = await Promise.all([1, 2, 3].map(i => xdcSendUpdate(app, { payload: { msg: 'n' + i } }, XDC_JADE))); const a = await XdcDB.app(app.id); closeApp(); return { ls: a.ls, serial: a.serial, serials: sent.map(u => u.serial), stored: (await XdcDB.updates(app.id)).length }; });
+ok(race.ls.kept === 'yes' && race.serial === 5 && new Set(race.serials).size === 3 && race.stored === 5, 'changes at the same moment keep each other: app storage survives an update sent with it, and updates sent together each get their own number: ' + JSON.stringify(race));
 r = await page.evaluate(() => appsTool({ action: 'source', app: 'Test List', file: 'main.js' }));
 ok(/setUpdateListener/.test(r), 'Jade can read app source');
 ok(await page.evaluate(() => /apps: webxdc apps in the Apps tab \(installed: [^)]*Test List/.test(systemPrompt()) && activeTools().some(t => t.function.name === 'apps')), 'prompt + tool list mention apps');

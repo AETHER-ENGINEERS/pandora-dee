@@ -114,8 +114,10 @@ async function runPython(c) {
   else { code = c.stdin; argv = ['']; }
   if (!String(code).trim()) { c.e('python: no script given. Use python file.py or python -c "code"\n'); return 2; }
   let assets; try { assets = await mpyAssets(); } catch (e) { c.e(`python: ${e.message}\n`); return 1; }
+  // files under 4 MB go to every script; a bigger one (a backup, say) only when the script names it, by path or file name, in its code or arguments
+  const named = s => String(code).includes(s) || argv.some(x => String(x).includes(s)); let room = 64e6, bigBytes = 0;
   const files = {}, dirs = [];
-  for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (n.data.length < 4e6) files[p] = n.data; }
+  for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (n.data.length < 4e6) files[p] = n.data; else if (n.data.length <= room && (named(p) || named(vfs.base(p)))) { files[p] = n.data; room -= n.data.length; bigBytes += n.data.length; } }
   // SQLite rides along only when something mentions it (the script or any .py it may import)
   let sqMod = null;
   if (/sqlite/i.test(code) || [...vfs.nodes].some(([p, n]) => !n.dir && p.endsWith('.py') && n.data.length < 2e6 && /sqlite/i.test(dec.decode(n.data)))) {
@@ -129,7 +131,7 @@ async function runPython(c) {
     const poll = setInterval(() => { if (c.sh.aborted) done({ out: [['e', '^C\n']], code: 130 }); }, 250);
     w.onmessage = e => done(e.data);
     w.onerror = e => { e.preventDefault?.(); done({ out: [['e', `python: ${e.message || 'worker error'}\n`]], code: 1 }); };
-    w.postMessage({ sqliteModule: sqMod, sqliteShim: SQLITE_PY_SHIM, compat: MPY_COMPAT, wasm: assets.wasm, files, dirs, cwd: c.sh.cwd, argv, code, stdin: a[0] === '-c' || a.length && a[0] !== '-' ? c.stdin : '', heap: 16 * 1024 * 1024 });
+    w.postMessage({ sqliteModule: sqMod, sqliteShim: SQLITE_PY_SHIM, compat: MPY_COMPAT, wasm: assets.wasm, files, dirs, cwd: c.sh.cwd, argv, code, stdin: a[0] === '-c' || a.length && a[0] !== '-' ? c.stdin : '', heap: Math.min(256 * 1024 * 1024, Math.max(16 * 1024 * 1024, 4 * bigBytes)) });
   });
   URL.revokeObjectURL(wurl);
   for (const [k, v] of r.out || []) k === 'o' ? c.o(v) : c.e(v);

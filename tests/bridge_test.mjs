@@ -56,6 +56,16 @@ ok(await read('/sync/late.md') === 'not awaited', 'the script waits for jade cal
 await write('/scripts/bridge.js', "const n = (await jade.search('Inbox')).length > 0;\nconsole.log('search ok', n);\nprocess.exit(n ? 0 : 3);\n");
 r = await sh('node /scripts/bridge.js');
 ok(r.code === 0 && /search ok true/.test(r.out), 'node file.js gets the bridge too');
+// files of 2 MB and more (a backup, say): always visible, loaded when the script names them
+const BIGP = '/backups/jade-vault-backup-2026-10-19(2).json';
+await E(p => { vfs.write(p, JSON.stringify({ app: 'jade-vault', n: 2, pad: 'x'.repeat(3e6) }), { mkdirs: true }); vfs.write('/backups/small(1).json', '{"n":1}'); }, BIGP);
+r = await sh(`node -e "const fs = require('fs'); console.log(fs.readdirSync('/backups').join('|'), fs.existsSync('${BIGP}'), fs.statSync('${BIGP}').size, JSON.parse(fs.readFileSync('${BIGP}', 'utf8')).n, JSON.parse(fs.readFileSync('/backups/small(1).json', 'utf8')).n)"`);
+ok(r.code === 0 && r.out.trim() === 'jade-vault-backup-2026-10-19(2).json|small(1).json true 3000035 2 1', 'node: a 3 MB file (parentheses and all) is listed, exists, has its size, and loads when the script names it: ' + JSON.stringify(r));
+await write('/scripts/count.js', "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).pad.length);\n");
+r = await sh(`node /scripts/count.js '${BIGP}'`);
+ok(r.code === 0 && r.out.trim() === '3000000', 'node: a big file given as an argument loads too: ' + JSON.stringify(r).slice(0, 200));
+r = await sh(`node -e "const fs = require('fs'); const f = '/backups/' + fs.readdirSync('/backups').find(n => n.startsWith('jade')); try { fs.readFileSync(f, 'utf8'); console.log('read it') } catch (e) { console.log(e.code, e.message) }"`);
+ok(/^EFBIG EFBIG: \/backups\/jade-vault-backup-2026-10-19\(2\)\.json is 3\.0 MB/.test(r.out) && /Write its path in the script/.test(r.out), 'node: a big file the script does not name says why it is not loaded (not "no such file"): ' + r.out.trim().slice(0, 160));
 r = await sh(`node -e "await jade.notify('From node', 'body text')"`);
 ok(await E(() => window.__notes.some(n => n[0] === 'From node' && n[1] === 'body text')), 'node: jade.notify sends a notification');
 r = await sh(`node -e "const r = await jade.agent('hello from node'); console.log(r.reply)"`);

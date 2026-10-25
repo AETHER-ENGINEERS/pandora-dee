@@ -10,15 +10,15 @@ const FLOW_MAX_DEPTH = 5;
 // what changed in the vault while a tool ran
 function vfsStamp() { const m = new Map(); for (const [p, n] of vfs.nodes) m.set(p, n.dir ? 'd' : n); return m; }
 function vfsChangesSince(before) {
-  const files = {}, deleted = [], dirs = [], rmdirs = [];
+  const files = {}, big = {}, deleted = [], dirs = [], rmdirs = [];
   for (const [p, n] of vfs.nodes) {
     const b = before.get(p);
     if (n.dir) { if (b !== 'd') dirs.push(p); continue; }
     if (b === n) continue;
-    if (isSqliteBytes(n.data)) files[p] = n.data; else if (n.data.length < 2e6) files[p] = dec.decode(n.data);
+    if (isSqliteBytes(n.data)) files[p] = n.data; else if (n.data.length < 2e6) files[p] = dec.decode(n.data); else big[p] = n.data.length;
   }
   for (const [p, b] of before) if (!vfs.nodes.has(p)) (b === 'd' ? rmdirs : deleted).push(p);
-  return Object.keys(files).length || deleted.length || dirs.length || rmdirs.length ? { files, deleted, dirs, rmdirs } : null;
+  return Object.keys(files).length || Object.keys(big).length || deleted.length || dirs.length || rmdirs.length ? { files, big, deleted, dirs, rmdirs } : null;
 }
 function applyNodeWrites(r, onErr) {
   if (!r) return;
@@ -38,7 +38,9 @@ async function runNodeScript({ code, argv = ['[eval]'], cwd = '/', globals = nul
   code = String(code ?? '').replace(/^#!.*\n/, '');
   if (/^\s*(import|export)\s/m.test(code)) code = code.replace(/^\s*import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"];?/gm, 'const $1 = require("$2");').replace(/^\s*import\s+(\w+)\s+from\s+['"]([^'"]+)['"];?/gm, 'const $1 = require("$2");').replace(/^\s*import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/gm, (x, a, b) => 'const {' + a.replace(/\s+as\s+/g, ': ') + '} = require("' + b + '");').replace(/^\s*import\s+['"]([^'"]+)['"];?/gm, 'require("$1");').replace(/^\s*export\s+(default\s+)?/gm, '');
   const useSq = !noNet && (/sqlite/i.test(code) || [...vfs.nodes].some(([p, n]) => !n.dir && /\.[cm]?js$/.test(p) && n.data.length < 2e6 && /sqlite/i.test(dec.decode(n.data))));
-  const files = {}, dirs = [], bins = {}; for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (isSqliteBytes(n.data)) { bins[p] = n.data; files[p] = n.data; } else if (n.data.length < 2e6) files[p] = dec.decode(n.data); }
+  // files under 2 MB go to every script; a bigger one (a backup, say) only when the script names it, by path or file name, in its code or arguments
+  const named = s => code.includes(s) || argv.some(a => String(a).includes(s)); let room = 64e6;
+  const files = {}, dirs = [], bins = {}, big = {}; for (const [p, n] of vfs.nodes) { if (n.dir) dirs.push(p); else if (isSqliteBytes(n.data)) { bins[p] = n.data; files[p] = n.data; } else if (n.data.length < 2e6) files[p] = dec.decode(n.data); else if (n.data.length <= room && (named(p) || named(vfs.base(p)))) { files[p] = dec.decode(n.data); room -= n.data.length; } else big[p] = n.data.length; }
   let sqMod = null; if (useSq) { try { sqMod = await sqliteModule(); } catch (e) { onErr?.(`node: could not load SQLite (${e.message})\n`); } }
   // TensorFlow.js 4.22 (embedded): loaded when the script (or a local .js it may require) uses tf; not in note scripts
   const useTf = !noNet && tfUsed(code, argv[0] && String(argv[0]).startsWith('/') ? vfs.parent(argv[0]) : cwd);
@@ -72,7 +74,7 @@ async function runNodeScript({ code, argv = ['[eval]'], cwd = '/', globals = nul
     };
     w.onerror = e => { e.preventDefault?.(); finish({ out: [['e', `${e.message || 'SyntaxError'}${e.lineno ? ` (line ${Math.max(1, e.lineno - off)})` : ''}\n`]], writes: {}, code: 1 }); };
     if (!bridge) ctx.off = bridgeWhy || 'turned off';
-    w.postMessage({ files, dirs, bins, sqliteModule: sqMod, env: noNet ? {} : { ...secretsMap() }, cwd, argv, globals: globals ? cloneSafe(globals) : {}, bridge, bridgeWhy, noNet });
+    w.postMessage({ files, dirs, bins, big, sqliteModule: sqMod, env: noNet ? {} : { ...secretsMap() }, cwd, argv, globals: globals ? cloneSafe(globals) : {}, bridge, bridgeWhy, noNet });
   });
   URL.revokeObjectURL(url);
   if (!readOnly) applyNodeWrites(r, onErr);

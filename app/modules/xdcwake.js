@@ -37,7 +37,7 @@ async function xdcWakeJade(appId, batch) {
   xdcRealtime(appId, { jade: 'thinking' });
   const prevCur = cur, prevId = cur?.id; const screen = document.body.dataset.screen || 'chat';
   if (app.jadeSession && sessions.some(x => x.id === app.jadeSession)) { if (cur?.id !== app.jadeSession) await openSession(app.jadeSession); }
-  else { newSession(); cur.title = `📱 ${app.name}`; cur._named = true; app.jadeSession = cur.id; await XdcDB.putApp(app); renderSessions?.(); }
+  else { newSession(); cur.title = `📱 ${app.name}`; cur._named = true; const sid = app.jadeSession = cur.id; await XdcDB.edit(appId, x => { x.jadeSession = sid; }); renderSessions?.(); }
   const first = !cur.messages.length;
   const readme = first && app.files['README.md'] ? dec.decode(app.files['README.md']).slice(0, 4000) : '';
   const who = a => a === XDC_USER().addr ? 'the user' : a;

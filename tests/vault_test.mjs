@@ -57,7 +57,7 @@ ok(await page.title() === 'Pandora Dee', 'title');
 ok(/An Atelier that lives in this tab/.test(await page.textContent('#chat')), 'empty state hero');
 // Jade's gem palette changes the companion accents and app colors, and persists like other settings.
 await page.tap('#btnTheme'); await page.waitForTimeout(250);
-ok(await page.locator('#jadeThemePicker .gem-theme').count() === 12, 'ten gemstone palettes plus Spectrum and Custom Gradient are available');
+ok(await page.locator('#jadeThemePicker .gem-theme').count() === 12, 'ten gemstone palettes plus Spectrum and Gradient are available');
 await page.tap('#jadeThemePicker [data-jade-theme="ruby"]');
 const ruby = await page.evaluate(() => ({ setting: S.jadeTheme, avatar: Jade.state.theme, accent: getComputedStyle(document.documentElement).getPropertyValue('--yl').trim(), label: document.querySelector('#btnTheme')?.textContent, selected: document.querySelector('#jadeThemePicker [data-jade-theme="ruby"]')?.getAttribute('aria-pressed'), saved: JSON.parse(localStorage.getItem('jvault:settings') || '{}').jadeTheme }));
 ok(ruby.setting === 'ruby' && ruby.avatar === 'ruby' && ruby.accent === '#f34b68' && ruby.label === 'Ruby' && ruby.selected === 'true' && ruby.saved === 'ruby', 'Ruby theme updates Jade, app accent, picker, and saved settings: ' + JSON.stringify(ruby));
@@ -322,7 +322,7 @@ await page.tap('#btnCancel'); await page.waitForTimeout(150);
 // persistence across reload
 await page.reload(); await page.waitForFunction(() => typeof vfs !== 'undefined' && vfs.isFile('/Map of Content.md'), null, { timeout: 30000 }).catch(() => {});
 ok(await page.evaluate(() => vfs.isFile('/Map of Content.md') && /\[x\] Write/.test(vfs.read('/Todo List.md'))), 'vault persists across reload');
-ok(await page.evaluate(() => S.jadeTheme === 'custom-gradient' && S.jadeGradientStart === '#fd8b32' && S.jadeGradientEnd === '#5874f7' && S.jadeGradientDirection === 'horizontal' && /90deg/.test(getComputedStyle(document.documentElement).getPropertyValue('--theme-gradient')) && document.querySelector('#btnTheme').textContent === 'Custom Gradient'), 'custom gradient and direction persist after reload');
+ok(await page.evaluate(() => S.jadeTheme === 'custom-gradient' && S.jadeGradientStart === '#fd8b32' && S.jadeGradientEnd === '#5874f7' && S.jadeGradientDirection === 'horizontal' && /90deg/.test(getComputedStyle(document.documentElement).getPropertyValue('--theme-gradient')) && document.querySelector('#btnTheme').textContent === 'Gradient'), 'custom gradient and direction persist after reload');
 ok(await page.evaluate(() => S.jadeHairMode === 'spectrum' && S.jadeHairColor === '#d342e8' && S.jadeSkinMode === 'natural' && S.jadeSkinTone === 'tan' && S.jadeClothesMode === 'gradient' && S.jadeClothesColor === '#fa354c' && S.jadeClothesEnd === '#449de3' && S.jadeClothesDirection === 'horizontal'), 'per-part colors, gradients, and natural skin tone persist after reload');
 ok(await page.evaluate(() => Object.keys(localStorage).every(k => !k.startsWith('pinet:'))), 'separate storage prefix');
 

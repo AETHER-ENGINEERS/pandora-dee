@@ -51,7 +51,7 @@ JADE_THEMES_JS = r'''const JADE_THEMES = Object.freeze({
   obsidian:  { name: 'Obsidian',  accent: '#aebbd0', rgb: [174, 187, 208], highlight: '#d6dfec', highlightRgb: [214, 223, 236], line: '#515e72', ink: '#111722' },
   quartz:    { name: 'Quartz',    accent: '#e3b5ed', rgb: [227, 181, 237], highlight: '#f5dcfb', highlightRgb: [245, 220, 251], line: '#705478', ink: '#211224' },
   spectrum:  { name: 'Spectrum', accent: '#bd72f3', rgb: [189, 114, 243], highlight: '#e1c0fa', highlightRgb: [225, 192, 250], line: '#57366f', ink: '#160d1c' },
-  'custom-gradient': { name: 'Custom Gradient', accent: '#f34b68', rgb: [243, 75, 104], highlight: '#62a4ff', highlightRgb: [98, 164, 255], line: '#792a3d', ink: '#160a1d' },
+  'custom-gradient': { name: 'Gradient', accent: '#f34b68', rgb: [243, 75, 104], highlight: '#62a4ff', highlightRgb: [98, 164, 255], line: '#792a3d', ink: '#160a1d' },
 });'''
 JADE_THEME_UTILS_JS = r'''const JADE_APPEARANCE_PARTS = Object.freeze([
   { id: 'hair', label: 'Hair' }, { id: 'clothes', label: 'Clothes' }, { id: 'stockings', label: 'Stockings' }, { id: 'boots', label: 'Boots' }, { id: 'skin', label: 'Skin' },
@@ -1864,6 +1864,154 @@ def _inline_js(path):
 rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>', '<script>' + _inline_js(NM + 'marked/lib/marked.umd.js') + '</script>')
 rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>', '<script>' + _inline_js(NM + 'dompurify/dist/purify.min.js') + '</script>')
 rep('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" id="katex-js"></script>', '<script id="katex-js">' + _inline_js(_K + 'katex.min.js') + '</script>')
+# ---------- v26: a fantasy companion: no pointer-following, scanlines or cyber grid unless asked for ----------
+# All three came from the cyberpunk original. They are off by default (for existing installs too) and switch back
+# on in Config. In the grid's place she stands in a soft pool of her gem's light, with a little drifting dust.
+rep("jadeShow: true,", "jadeShow: true, jadeFollow: false, scanlines: false, cyberGrid: false,")
+rep("    else if (now - state.pointer.t < 4000) {", "    else if (S.jadeFollow && now - state.pointer.t < 4000) {")
+rep('body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;', 'body.scanlines::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;')
+rep("$('#sJadeShow').checked = S.jadeShow;", "$('#sJadeShow').checked = S.jadeShow; $('#sJadeFollow').checked = !!S.jadeFollow; $('#sScanlines').checked = !!S.scanlines; $('#sCyberGrid').checked = !!S.cyberGrid;")
+rep("Object.assign(S, { memoryOn: $('#sMemoryOn').checked,", "Object.assign(S, { jadeFollow: $('#sJadeFollow').checked, scanlines: $('#sScanlines').checked, cyberGrid: $('#sCyberGrid').checked, memoryOn: $('#sMemoryOn').checked,")
+rep("applyJadeVisibility(); updateShellChip(); closeSettings();", "applyJadeVisibility(); applyLook(); updateShellChip(); closeSettings();")
+rep("  layoutInit();\n", "  layoutInit(); applyLook();\n")
+s = s.replace('/* =====================================================================\n   BOOT', "const applyLook = () => { document.body.classList.toggle('scanlines', !!S.scanlines); document.body.classList.toggle('cybergrid', !!S.cyberGrid); };\n/* =====================================================================\n   BOOT", 1)
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- the fantasy look (v26): no grid unless body.cybergrid ---- */
+body:not(.cybergrid)::before{background:radial-gradient(1200px 600px at 85% -10%,rgba(var(--theme-rgb),.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(var(--theme-highlight-rgb),.06),transparent 60%)}
+body:not(.cybergrid) .jade-stage::before{left:0;right:0;height:46%;transform:none;-webkit-mask-image:none;mask-image:none;
+  background:radial-gradient(ellipse 46% 34% at 50% 100%,rgba(var(--theme-rgb),.26),transparent 72%),radial-gradient(ellipse 80% 50% at 50% 110%,rgba(var(--theme-highlight-rgb),.10),transparent 70%)}
+body:not(.cybergrid) .jade-stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.55;
+  background:radial-gradient(1.5px 1.5px at 18% 72%,rgba(var(--theme-highlight-rgb),.9),transparent 60%),radial-gradient(1px 1px at 30% 40%,rgba(var(--theme-rgb),.9),transparent 60%),radial-gradient(1.5px 1.5px at 72% 64%,rgba(var(--theme-rgb),.9),transparent 60%),radial-gradient(1px 1px at 84% 30%,rgba(var(--theme-highlight-rgb),.9),transparent 60%),radial-gradient(1px 1px at 60% 86%,rgba(var(--theme-highlight-rgb),.8),transparent 60%),radial-gradient(1.5px 1.5px at 10% 22%,rgba(var(--theme-rgb),.7),transparent 60%);
+  animation:jadeDust 9s ease-in-out infinite alternate}
+@keyframes jadeDust{from{opacity:.3;transform:translateY(4px)}to{opacity:.7;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){body:not(.cybergrid) .jade-stage::after{animation:none}}
+/* her name and mood sit beside the controls when there is room, and just below them when there is not */
+.jade-stage{container-type:inline-size}
+@container (max-width:420px){.jade-stage .jade-label{top:44px}}
+""")
+# ---------- v27: layer colours reach the screen ----------
+# The recolour repainted the texture's canvas and marked it changed, but Live2D draws with the GL texture it was
+# first given and never asks PIXI to re-upload, so hair, clothes, stockings, boots and skin kept their old colours.
+rep("    state.appearanceTexture?.baseTexture?.update();\n", "    state.appearanceTexture?.baseTexture?.update();\n    // the model draws with the GL texture it was first given, so upload the new pixels to it now\n    try { if (state.app && state.appearanceTexture) state.app.renderer.texture.bind(state.appearanceTexture.baseTexture); } catch (e) { console.warn('Pandora appearance upload failed', e); }\n")
+# ---------- v28: an Appearance tab in Config ----------
+# Pandora's colours, the atmosphere switches and Text & layout get a tab of their own; App keeps her companion
+# behaviour (showing her, reading aloud, the voice).
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + '''/* layer colour cards: the label above a full-width menu, so it fits at any text size */
+.jade-appearance-card .appearance-field{flex-direction:column;align-items:stretch}
+.jade-appearance-card .appearance-field .field{width:100%}
+''')
+rep('data-tab="connect" aria-selected="false">Connect</button>', 'data-tab="connect" aria-selected="false">Connect</button><button type="button" role="tab" class="set-tab" data-tab="look" aria-selected="false">Appearance</button>')
+_tl_start = '      <section data-tab="app" class="flex flex-col gap-3">\n        <div class="pane-h">Text &amp; layout</div>'
+_i = s.index(_tl_start); _j = s.index('</section>\n', _i) + len('</section>\n')
+_text_layout = s[_i:_j].replace('data-tab="app"', 'data-tab="look"', 1); s = s[:_i] + s[_j:]
+rep("""      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>
+        <div><div class="lbl">Pandora's gemstone theme</div>""", """      <section data-tab="look" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora's colors</div>
+        <div><div class="lbl">Gemstone theme</div>""")
+rep("""
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label class="flex items-center gap-2 text-sm" for="sJadeShow">""", """
+      </section>
+      <section data-tab="look" class="flex flex-col gap-3">
+        <div class="pane-h">Atmosphere</div>
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label class="flex items-center gap-2 text-sm" for="sJadeFollow"><input type="checkbox" id="sJadeFollow" class="accent-emerald-400 w-4 h-4"> Her eyes follow the pointer</label>
+          <label class="flex items-center gap-2 text-sm" for="sScanlines"><input type="checkbox" id="sScanlines" class="accent-emerald-400 w-4 h-4"> Scanlines over the screen (the old CRT look)</label>
+          <label class="flex items-center gap-2 text-sm" for="sCyberGrid"><input type="checkbox" id="sCyberGrid" class="accent-emerald-400 w-4 h-4"> Cyber grid (the floor under her and the page background)</label>
+        </div>
+        <p class="hint leading-relaxed">Pandora is a fantasy companion: these bring back the cyberpunk touches she came with. Saved when you press Save.</p>
+      </section>
+""" + _text_layout + """      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label class="flex items-center gap-2 text-sm" for="sJadeShow">""")
+# ---------- v29: strips of buttons drag to scroll (dragscroll.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('dragscroll.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("  layoutInit(); applyLook();\n", "  layoutInit(); applyLook(); dragScrollInit();\n")
+rep("""<div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
+        <button class="btn btn-ghost" id="btnLinks" hidden>Threads</button>""", """<div class="m-sub" id="noteFoot" style="border-top:1px solid var(--line);border-bottom:0">
+        <button class="btn btn-ghost" id="btnLinks" hidden>Threads</button>""")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- drag to scroll (dragscroll.js) ---- */
+#noteFoot{overflow-x:auto;scrollbar-width:none}
+#noteFoot::-webkit-scrollbar{display:none}
+#noteFoot>.btn{flex:none}
+.can-drag{cursor:grab}
+.can-drag.dragging,.can-drag.dragging *{cursor:grabbing;-webkit-user-select:none;user-select:none}
+.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
+.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+""")
+# ---------- v30: rename leaves and workshops, delete empty workshops, tidy (tidy.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('tidy.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""        <button class="btn btn-ghost" id="btnFileCopy">Copy</button>""", """        <button class="btn btn-ghost" id="btnFileRename">Rename</button>
+        <button class="btn btn-ghost" id="btnFileCopy">Copy</button>""")
+rep("""<div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
+        <div class="hud flex-1 min-w-0 truncate" id="fsStats">—</div>
+        <button class="btn btn-ghost" id="btnNewDir" title="New workshop">+ Workshop</button>""", """<div class="m-sub" id="leavesFoot" style="border-top:1px solid var(--line);border-bottom:0">
+        <div class="hud flex-1 min-w-0 truncate" id="fsStats">—</div>
+        <button class="btn btn-ghost" id="btnNewDir" title="New workshop">+ Workshop</button>
+        <button class="btn btn-ghost" id="btnTidy" title="Remove every empty workshop">Tidy</button>""")
+rep("const DRAG_STRIPS = '.qk, .tag-bar, #noteFoot, #setTabs';", "const DRAG_STRIPS = '.qk, .tag-bar, #noteFoot, #leavesFoot, #setTabs';")
+rep("Object.assign(window, { layoutApply,", "Object.assign(window, { renderTree, openDirs, noteBack, treeMenu, renameLeaf, renameWorkshop, deleteWorkshop, tidyWorkshops, layoutApply,")
+rep("  layoutInit(); applyLook(); dragScrollInit();\n", "  layoutInit(); applyLook(); dragScrollInit();\n  $('#btnFileRename').onclick = () => editing && renameLeaf(editing); $('#btnTidy').onclick = () => tidyWorkshops();\n")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- rename & tidy (tidy.js) ---- */
+.tree-more{flex:none;margin-left:2px;width:30px;height:26px;line-height:1;border:0;background:none;color:var(--dim);font-size:16px;opacity:.35;cursor:pointer}
+.tree-row:hover .tree-more,.tree-row:focus-within .tree-more,.tree-more:focus-visible{opacity:1}
+.tree-more:hover{color:var(--yl)}
+@media (pointer:coarse){.tree-more{opacity:.7;width:36px;height:32px}}
+.tree-row .truncate{min-width:0}
+#leavesFoot{overflow-x:auto;scrollbar-width:none}
+#leavesFoot::-webkit-scrollbar{display:none}
+#leavesFoot>.btn{flex:none}
+""")
+# ---------- v31: find & replace in the leaf editor (findbar.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('findbar.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""      <div class="note-body" id="noteBody" data-mode="read">""", """      <div class="find-bar" id="findBar" role="search" aria-label="Find in this leaf" hidden>
+        <div class="find-row">
+          <button type="button" class="find-btn" id="findToggle" title="Show or hide replace" aria-label="Show or hide replace">⇅</button>
+          <input id="findQ" class="field" placeholder="Find in this leaf" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Find">
+          <span class="find-count mono" id="findCount" aria-live="polite"></span>
+          <button type="button" class="find-btn" id="findCase" aria-pressed="false" title="Match case" aria-label="Match case">Aa</button>
+          <button type="button" class="find-btn" id="findRe" aria-pressed="false" title="Regular expression" aria-label="Regular expression">.*</button>
+          <button type="button" class="find-btn" id="findPrev" title="Previous (Shift+Enter)" aria-label="Previous match">↑</button>
+          <button type="button" class="find-btn" id="findNext" title="Next (Enter)" aria-label="Next match">↓</button>
+          <button type="button" class="find-btn" id="findClose" title="Close (Esc)" aria-label="Close find">✕</button>
+        </div>
+        <div class="find-row find-rep">
+          <input id="findR" class="field" placeholder="Replace with" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Replace with">
+          <button type="button" class="btn btn-ghost" id="findOne" title="Replace this match (Enter)">Replace</button>
+          <button type="button" class="btn btn-ghost" id="findAll" title="Replace every match (Ctrl/Cmd+Enter)">All</button>
+        </div>
+      </div>
+      <div class="note-body" id="noteBody" data-mode="read">""")
+rep("  layoutInit(); applyLook(); dragScrollInit();\n", "  layoutInit(); applyLook(); dragScrollInit(); findInit();\n")
+rep("Object.assign(window, { renderTree,", "Object.assign(window, { openFind, closeFind, findGo, findReplace, findReplaceAll, Find, renderTree,")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- find & replace (findbar.js) ---- */
+.find-bar{flex:none;display:flex;flex-direction:column;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel)}
+.find-row{display:flex;align-items:center;gap:4px;min-width:0}
+.find-row .field{flex:1 1 auto;min-width:0;padding:6px 8px}
+.find-rep{display:none}
+.find-bar.with-replace .find-rep{display:flex}
+.find-btn{flex:none;min-width:32px;height:32px;padding:0 6px;border:1px solid var(--line);background:transparent;color:var(--dim);font-family:var(--f-mono);font-size:12px;cursor:pointer}
+.find-btn:hover{color:var(--fg)}
+.find-btn[aria-pressed=true]{color:var(--yl);border-color:var(--yl)}
+.find-bar.with-replace #findToggle{color:var(--yl)}
+.find-count{flex:none;font-size:11px;color:var(--dim);min-width:4.5em;text-align:right;white-space:nowrap}
+#findQ.bad{border-color:var(--rd)}
+""")
+# ---------- v32: import from notes apps (notes_import.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('notes_import.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""<label class="btn btn-ghost" title="Import markdown files as leaves" for="upload">Import</label>
+        <input type="file" id="upload" multiple accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>""", """<label class="btn btn-ghost" title="Import leaves: markdown or text, or notes from Google Keep (Takeout .zip), Samsung Notes (Word, PDF, text) and Apple Notes (iCloud .zip, PDF), and HTML" for="upload">Import</label>
+        <input type="file" id="upload" multiple accept=".md,.markdown,.txt,.zip,.json,.html,.htm,.docx,.pdf,.sdocx,text/markdown,text/plain,text/html,application/zip,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>""")
+rep("Object.assign(window, { openFind,", "Object.assign(window, { importNotes, importAny, htmlToMd, docxToMd, zipStore, openFind,")
+# ---------- v33: a chat save writes the chat it was asked for ----------
+# It used to write whichever chat was current when its 250 ms wait ended. The heartbeat prunes its silent OK run
+# and goes straight back to your chat, so with any real model (slower than 250 ms) the pruned run was never
+# written and its prompt and tool calls piled up in the ♥ Heartbeat chat.
+rep("const saveSession = (() => { let t; const f = () => { if (window.__restoring) return; clearTimeout(t); t = setTimeout(async () => { if (!cur) return; if (!cur.messages.length && !sessions.find(s => s.id === cur.id)) { renderSessions(); return; } cur.updated = Date.now(); await idb.set('session:' + cur.id, cur); const m = sessions.find(s => s.id === cur.id); if (m) { m.title = cur.title; m.updated = cur.updated; } else sessions.unshift({ id: cur.id, title: cur.title, updated: cur.updated }); sessions.sort((a, b) => b.updated - a.updated); await idb.set('sessions', sessions); renderSessions(); }, 250); }; f.flush = () => { if (!cur || window.__restoring) return; clearTimeout(t); if (!cur.messages.length) return; cur.updated = Date.now(); idb.set('session:' + cur.id, cur); const m = sessions.find(s => s.id === cur.id); if (m) { m.title = cur.title; m.updated = cur.updated; } else sessions.unshift({ id: cur.id, title: cur.title, updated: cur.updated }); idb.set('sessions', sessions); }; return f; })();", "const saveSession = (() => {\n  // a save is for the chat it was asked for: when another chat is current by the time it runs (the heartbeat\n  // goes back to yours, you open another), the waiting one is written first instead of the wrong one\n  let t, pend = null;\n  const write = async s => {\n    if (!s.messages.length && !sessions.find(x => x.id === s.id)) { renderSessions(); return; }\n    s.updated = Date.now(); await idb.set('session:' + s.id, s);\n    const m = sessions.find(x => x.id === s.id); if (m) { m.title = s.title; m.updated = s.updated; } else sessions.unshift({ id: s.id, title: s.title, updated: s.updated });\n    sessions.sort((a, b) => b.updated - a.updated); await idb.set('sessions', sessions); renderSessions();\n  };\n  const f = () => { if (window.__restoring || !cur) return; if (pend && pend !== cur) write(pend); pend = cur; clearTimeout(t); t = setTimeout(() => { const s = pend; pend = null; if (s) write(s); }, 250); };\n  f.flush = () => {\n    if (window.__restoring) return; clearTimeout(t); const s = pend; pend = null; if (s && s !== cur) write(s);\n    if (!cur || !cur.messages.length) return; cur.updated = Date.now(); idb.set('session:' + cur.id, cur);\n    const m = sessions.find(x => x.id === cur.id); if (m) { m.title = cur.title; m.updated = cur.updated; } else sessions.unshift({ id: cur.id, title: cur.title, updated: cur.updated }); idb.set('sessions', sessions);\n  };\n  // a deleted chat is not written back by a save that was waiting for it\n  f.drop = id => { if (!pend || id == null || pend.id === id) { pend = null; clearTimeout(t); } };\n  return f;\n})();")
+rep("  await idb.del('session:' + id); sessions = sessions.filter(s => s.id !== id);", "  saveSession.drop(id); await idb.del('session:' + id); sessions = sessions.filter(s => s.id !== id);")
+rep("  for (const s of sessions) await idb.del('session:' + s.id);", "  saveSession.drop(); for (const s of sessions) await idb.del('session:' + s.id);")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

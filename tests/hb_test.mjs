@@ -15,7 +15,7 @@ await ctx.addInitScript(() => {
 });
 const page = autoTabs(await ctx.newPage());
 page.on('pageerror', e => fail.push('[pageerror] ' + e.message));
-let hbMode = 'ok', noVision = false; const chats = [], groqBodies = [], lcppBodies = [];
+let hbMode = 'ok', noVision = false, slow = 0; const chats = [], groqBodies = [], lcppBodies = [];
 const nd = (lines) => lines.map(l => JSON.stringify(l)).join('\n') + '\n';
 const sse = (objs) => objs.map(o => 'data: ' + JSON.stringify(o) + '\n\n').join('') + 'data: [DONE]\n\n';
 const PDFJS = process.env.JV_NM + 'pdfjs-dist/build/';
@@ -32,6 +32,7 @@ await page.route('**/*', async route => {
   if (url === 'http://localhost:11434/api/tags') return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ models: [{ name: 'qwen3:8b' }] }) });
   if (url === 'http://localhost:11434/api/chat') {
     const b = JSON.parse(req.postData()); chats.push(b);
+    if (slow) await new Promise(r => setTimeout(r, slow));   // a model slower than the 250 ms a chat save waits
     const lastUser = [...b.messages].reverse().find(m => m.role === 'user'); const nTool = b.messages.filter(m => m.role === 'tool').length;
     if (noVision && b.messages.some(m => m.images)) return route.fulfill({ status: 500, headers: CORS, contentType: 'application/json', body: JSON.stringify({ error: 'this model is missing data required for image input (no vision support)' }) });
     let lines;
@@ -69,16 +70,18 @@ ok(await page.evaluate(() => /Inbox\.md has more/.test(heartbeatBody())), 'check
 await page.fill('#input', 'hello there'); await page.tap('#btnSend');
 await page.waitForFunction(() => !running && document.querySelectorAll('#chat .msg-ai').length, null, { timeout: 20000 });
 const mainId = await page.evaluate(() => cur.id);
-n0 = chats.length; hbMode = 'ok';
-await page.evaluate(() => runHeartbeat()); await page.waitForTimeout(500);
+n0 = chats.length; hbMode = 'ok'; slow = 300;
+await page.evaluate(() => runHeartbeat()); slow = 0; await page.waitForTimeout(500);
 const hb1 = await page.evaluate(() => ({ status: HB.status, cur: cur.id, hbId: ls.get('hbSession'), notes: (window.__notes || []).length }));
 ok(chats.length - n0 === 2 && /\[Heartbeat/.test(chats[n0].messages.at(-1).content) && /If \/Inbox\.md has more/.test(chats[n0].messages.at(-1).content), 'heartbeat prompt includes HEARTBEAT.md');
 ok(/^OK \(1 check\)/.test(hb1.status) && hb1.cur === mainId && hb1.notes === 0, 'HEARTBEAT_OK is silent and returns to your chat: ' + hb1.status);
+const hbLeft = await page.evaluate(async () => { const x = await idb.get('session:' + ls.get('hbSession')); return x ? x.messages.map(m => m.role) : []; });
+ok(!hbLeft.length, 'the silent run leaves nothing in the saved ♥ Heartbeat chat, even with a model slower than a save (it used to keep its prompt and tool calls): ' + JSON.stringify(hbLeft));
 // alert run: kept + notification
 hbMode = 'alert';
 await page.evaluate(() => runHeartbeat()); await page.waitForTimeout(500);
 const hb2 = await page.evaluate(() => ({ status: HB.status, title: cur.title, msgs: cur.messages.length, notes: window.__notes || [], txt: document.querySelector('#chat').textContent }));
-ok(/^alert: Your Inbox has 3 items/.test(hb2.status) && hb2.title === '♥ Heartbeat' && hb2.msgs >= 4, 'alert stays in the ♥ Heartbeat chat: ' + hb2.status);
+ok(/^alert: Your Inbox has 3 items/.test(hb2.status) && hb2.title === '♥ Heartbeat' && hb2.msgs >= 4, 'alert stays in the ♥ Heartbeat chat: ' + hb2.status + ' ' + JSON.stringify({ title: hb2.title, msgs: hb2.msgs }));
 ok(hb2.notes.length === 1 && /Inbox has 3 items/.test(hb2.notes[0][1]), 'alert sends a notification');
 ok(/♥ Heartbeat check/.test(hb2.txt) && !/HEARTBEAT\.md:/.test(hb2.txt), 'chat shows a short heartbeat label, not the raw prompt');
 await page.screenshot({ path: OUT + '/1_alert.png' });
@@ -95,8 +98,9 @@ ok(JSON.stringify(due2) === '[true,false]', 'active hours across midnight');
 n0 = chats.length;
 await page.evaluate(() => { S.hbProv = ''; S.hbOn = true; S.hbStart = ''; S.hbEnd = ''; HB.last = Date.now() - 31 * 60000; HB.lastActive = Date.now(); hbTick(); }); await page.waitForTimeout(300);
 ok(chats.length === n0, 'no heartbeat while you are actively using the app');
-await page.evaluate(() => { document.activeElement?.blur(); HB.lastActive = Date.now() - 5 * 60000; hbTick(); }); await page.waitForTimeout(800);
-ok(chats.length > n0, 'heartbeat fires when due and idle');
+await page.evaluate(() => { document.activeElement?.blur(); HB.lastActive = Date.now() - 5 * 60000; hbTick(); });
+for (let i = 0; i < 50 && chats.length === n0; i++) await page.waitForTimeout(100);   // its model request, however slow the machine
+ok(chats.length > n0, 'heartbeat fires when due and idle: ' + JSON.stringify(await page.evaluate(() => ({ status: HB.status, hbRunning: HB.running, running, settings: !$('#settings').hidden, typing: !!input.value.trim(), idleFor: Date.now() - HB.lastActive, sinceLast: Date.now() - HB.last }))));
 // settings UI
 await page.tap('#btnSettings'); await page.waitForTimeout(300);
 ok(await page.isChecked('#sHbOn') && /Last .*OK/.test(await page.textContent('#hbStatus')), 'heartbeat settings show status: ' + await page.textContent('#hbStatus'));

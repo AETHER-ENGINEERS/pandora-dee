@@ -34,11 +34,11 @@ Typical release artifacts:
 
 | Artifact | Contents |
 | --- | --- |
-| `jade-vault.html` | Browser app |
-| `jade-vault-<version>.apk` | Signed Android application, if signing secrets are configured |
-| `jade-link.xdc` | Built-in mini-app package |
-| `jade-vector-<version>.tar.gz` | Vector bridge setup/source kit |
-| `jade-discord-<version>.tar.gz` | Discord bridge setup/source kit, including Python requirements |
+| `pandora-dee-<version>.html` | Browser app |
+| `pandora-dee-<version>.apk` | Signed Android application, if signing secrets are configured |
+| `jade-link-<version>.xdc` | Built-in mini-app package |
+| `pandora-vector-<version>.tar.gz` | Vector bridge setup/source kit |
+| `pandora-discord-<version>.tar.gz` | Discord bridge setup/source kit, including Python requirements |
 | `SHA256SUMS` | Checksums of attached build artifacts |
 
 ## GitHub release workflow

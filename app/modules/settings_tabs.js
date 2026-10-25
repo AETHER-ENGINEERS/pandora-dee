@@ -2,7 +2,7 @@
    SETTINGS TABS — the Config panel is split into a few tabs, with a search box that looks
    through all of them. build.py tags every settings <section> with data-tab.
    ===================================================================== */
-const SET_TABS = ['model', 'memory', 'tools', 'connect', 'app'];
+const SET_TABS = ['model', 'memory', 'tools', 'connect', 'look', 'app'];
 let setTabNow = 'model';
 function setSettingsTab(name) {
   if (!SET_TABS.includes(name)) name = 'model';

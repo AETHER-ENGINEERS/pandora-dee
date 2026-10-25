@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.9.9.2
+- **A fantasy companion.** Pandora no longer follows the pointer, and the scanlines and cyber grid are off unless you
+  switch them on; she stands in a soft pool of her gem's light. Custom Gradient is now Gradient.
+- **Config → Appearance:** her gemstone theme and the colours of her hair, clothes, stockings, boots and skin; the
+  atmosphere switches; text size and layout.
+- **Fixes from 2.9.0 reports:** layer colours now reach the screen, and images picked for a leaf go in (in the APK,
+  gallery picks were read as nothing picked; files with no type were dropped).
+- **Leaves:** rename a leaf or a workshop from its ⋯ menu (threads follow), delete an empty workshop, Tidy them all
+  away; find and replace in the editor (Ctrl/Cmd+F, Ctrl+H); button strips scroll with a mouse drag or the wheel.
+- **Import from Google Keep, Samsung Notes and Apple Notes,** plus HTML, Word and PDF, into `/Imported/`.
+- **Release files carry the version:** `pandora-dee-<version>.html` and `jade-link-<version>.xdc`, like the APK and
+  the bridge kits.
+
+## 2.9.9.0
+- Scripts see big files such as backups (the "parentheses" loop); the roomy layout for wide screens, with draggable
+  widths and dividers and a text size; webxdc apps no longer lose changes made at the same moment; the web page runs
+  the patched DOMPurify 3.4.17 and KaTeX 0.19.0.
+
 ## 2.9.0
 - **Discord archive** (`--archive`, off by default): the Discord bridge keeps every message the bot can see on the
   computer it runs on, whether or not the app is open, as append-only JSON lines per channel and thread. People, bots,

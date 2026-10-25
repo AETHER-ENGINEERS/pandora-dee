@@ -83,6 +83,16 @@ const ins = await page.evaluate(async () => {
   return { big: blob.size, small: vfs.readBytes(p).length, w: bmp.width, h: bmp.height, text: document.querySelector('#fileEd').value.slice(-60), saved: vfs.read('/Pics.md').slice(-40) };
 });
 ok(ins.w === 1800 && ins.h === 1200 && ins.small < ins.big && /!\[\[photo\.jpg\]\]/.test(ins.text), 'inserted photo scaled to 1800px and embedded: ' + JSON.stringify(ins));
+// the 🖼 button, as a person uses it: the picker's file goes into the leaf
+const jpeg = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 40; c.height = 30; c.getContext('2d').fillRect(0, 0, 40, 30); const b = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9)); return [...new Uint8Array(await b.arrayBuffer())]; });
+const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#mdTools [data-img]')]);
+await chooser.setFiles({ name: 'beach.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpeg) }); await page.waitForTimeout(600);
+ok(await page.evaluate(() => /!\[\[beach\.jpg\]\]/.test(document.querySelector('#fileEd').value) && vfs.isFile('/attachments/images/beach.jpg')), 'the image button: the picked photo is saved and embedded in the leaf');
+// some pickers (Android galleries) hand over a photo with no type: it used to be dropped without a word
+let pick = await page.evaluate(async (bytes) => { await addImagesToNote([new File([new Uint8Array(bytes)], 'gallery.JPG', { type: '' })]); return { text: document.querySelector('#fileEd').value.slice(-40), file: vfs.isFile('/attachments/images/gallery.JPG') || vfs.isFile('/attachments/images/gallery.jpg') }; }, jpeg);
+ok(/!\[\[gallery\.(JPG|jpg)\]\]/.test(pick.text) && pick.file, 'a photo the picker gave no type still goes in, by its name: ' + JSON.stringify(pick));
+pick = await page.evaluate(async () => { const before = document.querySelector('#fileEd').value; await addImagesToNote([]); return { same: document.querySelector('#fileEd').value === before, toast: [...document.querySelectorAll('.toast')].map(t => t.textContent).join(' | ') }; });
+ok(pick.same && /No image came back from the picker/.test(pick.toast), 'an empty pick says so instead of doing nothing: ' + pick.toast.slice(-120));
 await page.evaluate(() => openFile('/attachments/images/cat.png')); await page.waitForTimeout(400);
 ok(await page.evaluate(() => document.querySelector('#notePrev .image-file img')?.naturalWidth === 40), 'opening an image file shows it: ' + await page.evaluate(() => document.querySelector('#noteBody').dataset.mode + ' ' + document.querySelector('#notePrev').innerHTML.slice(0, 200)));
 ok(/binary file .*cat\.png/.test(await page.evaluate(() => runTool('read', { path: '/attachments/images/cat.png' }))), 'read tool does not dump image bytes');

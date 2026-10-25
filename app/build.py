@@ -1854,6 +1854,16 @@ body.wide .note-body[data-mode=split] .ui-ed{height:auto;width:10px;cursor:ew-re
 body.wide .note-body[data-mode=split] .ui-ed::after{left:4px;right:auto;top:0;bottom:0;width:2px;height:auto}
 body.kb .note-body .ui-ed{display:none}
 """)
+# ---------- v25: marked, DOMPurify and KaTeX from node_modules, in the web page too ----------
+# The page used to load pinned copies from CDNs (DOMPurify 3.1.6, KaTeX 0.16.11), so a bump in package.json
+# reached only the APK. Now both pages run the versions package.json names (build_index.py starts from this page).
+def _inline_js(path):
+    js = open(path, encoding='utf-8').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+    assert '</script' not in js.lower(), path
+    return js
+rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>', '<script>' + _inline_js(NM + 'marked/lib/marked.umd.js') + '</script>')
+rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>', '<script>' + _inline_js(NM + 'dompurify/dist/purify.min.js') + '</script>')
+rep('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" id="katex-js"></script>', '<script id="katex-js">' + _inline_js(_K + 'katex.min.js') + '</script>')
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

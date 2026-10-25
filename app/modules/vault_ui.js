@@ -278,11 +278,11 @@ $('#newEntryInput').addEventListener('keydown', e => {
   } catch (err) { toast(esc(err.message), 'err'); }
 });
 async function uploadFiles(fileList, dir = '/') { for (const f of fileList) { const buf = new Uint8Array(await f.arrayBuffer()); vfs.write(vfs.norm(f.webkitRelativePath || f.name, dir), buf, { mkdirs: true }); } toast(`Imported ${fileList.length} file${fileList.length > 1 ? 's' : ''}`, 'ok'); }
-$('#upload').onchange = e => { uploadFiles(e.target.files); e.target.value = ''; };
+$('#upload').onchange = e => { importAny(e.target.files); e.target.value = ''; };
 const side = $('#tree');
 side.addEventListener('dragover', e => { e.preventDefault(); side.style.borderColor = 'var(--cy)'; });
 side.addEventListener('dragleave', () => side.style.borderColor = '');
-side.addEventListener('drop', e => { e.preventDefault(); side.style.borderColor = ''; if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); });
+side.addEventListener('drop', e => { e.preventDefault(); side.style.borderColor = ''; if (e.dataTransfer.files.length) importAny(e.dataTransfer.files); });
 
 /* ---------- wiki links + tags anywhere (notes, chat, links panel) ---------- */
 document.addEventListener('click', e => {

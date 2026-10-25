@@ -2001,6 +2001,12 @@ rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' +
 .find-count{flex:none;font-size:11px;color:var(--dim);min-width:4.5em;text-align:right;white-space:nowrap}
 #findQ.bad{border-color:var(--rd)}
 """)
+# ---------- v32: import from notes apps (notes_import.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('notes_import.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""<label class="btn btn-ghost" title="Import markdown files as leaves" for="upload">Import</label>
+        <input type="file" id="upload" multiple accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>""", """<label class="btn btn-ghost" title="Import leaves: markdown or text, or notes from Google Keep (Takeout .zip), Samsung Notes (Word, PDF, text) and Apple Notes (iCloud .zip, PDF), and HTML" for="upload">Import</label>
+        <input type="file" id="upload" multiple accept=".md,.markdown,.txt,.zip,.json,.html,.htm,.docx,.pdf,.sdocx,text/markdown,text/plain,text/html,application/zip,application/json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>""")
+rep("Object.assign(window, { openFind,", "Object.assign(window, { importNotes, importAny, htmlToMd, docxToMd, zipStore, openFind,")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

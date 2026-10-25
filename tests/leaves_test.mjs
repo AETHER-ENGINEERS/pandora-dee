@@ -96,4 +96,54 @@ await page.click('#mdTools [data-find]'); await page.fill('#findQ', 'needle'); a
 const sc = await E(() => { const t = document.querySelector('#fileEd'); return { top: t.scrollTop, h: t.clientHeight, sel: t.value.slice(t.selectionStart, t.selectionEnd) }; });
 ok(sc.sel === 'needle' && sc.top > 3000, 'in a long leaf the editor scrolls to the match (the 🔍 button opens the bar too): ' + JSON.stringify(sc));
 await page.keyboard.press('Escape');
+
+// ---------- import from notes apps ----------
+const files = await E(async () => {
+  const enc = new TextEncoder(), png = async (w = 8) => { const c = document.createElement('canvas'); c.width = w; c.height = w; c.getContext('2d').fillRect(0, 0, w, w); return new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/png'))).arrayBuffer()); };
+  const us = d => String(Date.parse(d) * 1000);
+  const keep = zipStore({
+    'Takeout/Keep/Shopping.json': enc.encode(JSON.stringify({ title: 'Shopping', isPinned: true, isArchived: false, isTrashed: false, color: 'YELLOW', listContent: [{ text: 'Milk', isChecked: false }, { text: 'Bread', isChecked: true }], labels: [{ name: 'Home stuff' }], attachments: [{ filePath: '1a2b3c.png', mimetype: 'image/png' }], createdTimestampUsec: us('2025-03-01T10:00:00Z'), userEditedTimestampUsec: us('2025-03-02T11:30:00Z') })),
+    'Takeout/Keep/Shopping.html': enc.encode('<html><body><div class="title">Shopping</div></body></html>'),
+    'Takeout/Keep/1a2b3c.png': await png(),
+    'Takeout/Keep/Old idea.json': enc.encode(JSON.stringify({ title: 'Old idea', textContent: 'gone', isTrashed: true, userEditedTimestampUsec: us('2024-01-01T00:00:00Z') })),
+    'Takeout/Keep/Someday.json': enc.encode(JSON.stringify({ title: 'Someday', textContent: 'Learn the harp', isArchived: true, isTrashed: false, userEditedTimestampUsec: us('2024-06-01T00:00:00Z') })),
+    'Takeout/Keep/2025-05-05T10_00_00.000Z.json': enc.encode(JSON.stringify({ title: '', textContent: 'Call the vet\nabout Mrrowr', isTrashed: false, userEditedTimestampUsec: us('2025-05-05T10:00:00Z') })),
+    'Takeout/Keep/Labels.txt': enc.encode('Home stuff\n'),
+  });
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
+  const docx = zipStore({
+    'word/document.xml': enc.encode(`<?xml version="1.0"?><w:document ${W}><w:body>
+      <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Trip plan</w:t></w:r></w:p>
+      <w:p><w:r><w:t xml:space="preserve">Pack the </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>passport</w:t></w:r><w:r><w:t xml:space="preserve"> and </w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>maps</w:t></w:r></w:p>
+      <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Tickets</w:t></w:r></w:p>
+      <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>Hotel</w:t></w:r></w:p>
+      <w:p><w:r><w:t>☐ Book the train</w:t></w:r></w:p><w:p><w:r><w:t>☑ Ask for leave</w:t></w:r></w:p>
+      <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Day</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>City</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Lisbon</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+      <w:p><w:r><w:drawing><a:blip r:embed="rId5"/></w:drawing></w:r></w:p>
+    </w:body></w:document>`),
+    'word/_rels/document.xml.rels': enc.encode('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId5" Target="media/image1.png"/></Relationships>'),
+    'word/media/image1.png': await png(12),
+  });
+  const apple = zipStore({ 'iCloud Notes/Notes/Recipes/Pancakes.txt': enc.encode('Pancakes\n\n2 eggs, flour, milk\n'), 'iCloud Notes/Notes/Hello.txt': enc.encode('Hello from my iPhone\n') });
+  const html = enc.encode('<html><head><title>Garden ideas</title></head><body><h1>Garden ideas</h1><p>Plant <b>roses</b> by the <a href="https://example.org/fence">fence</a>.</p><ul><li><input type="checkbox" checked> Buy seeds</li><li><input type="checkbox"> Dig</li></ul></body></html>');
+  return { keep: [...keep], docx: [...docx], apple: [...apple], html: [...html] };
+});
+const buf = a => Buffer.from(Uint8Array.from(a));
+await E(() => setTab('files'));
+await page.setInputFiles('#upload', [
+  { name: 'takeout-20251020T101010Z-001.zip', mimeType: 'application/zip', buffer: buf(files.keep) },
+  { name: 'Trip plan.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: buf(files.docx) },
+  { name: 'iCloud Notes.zip', mimeType: 'application/zip', buffer: buf(files.apple) },
+  { name: 'Garden.html', mimeType: 'text/html', buffer: buf(files.html) },
+  { name: 'Diary.sdocx', mimeType: 'application/octet-stream', buffer: Buffer.from('PK\u0003\u0004 not really') },
+]);
+await page.waitForFunction(() => [...vfs.nodes.keys()].some(p => p.startsWith('/Imported/Import report')), null, { timeout: 20000 });
+const im = await E(() => { const r = p => vfs.isFile(p) ? vfs.read(p) : null; const all = [...vfs.nodes.keys()].filter(p => p.startsWith('/Imported/')); return { all, shop: r('/Imported/Google Keep/Shopping.md'), someday: r('/Imported/Google Keep/Archived/Someday.md'), vet: r('/Imported/Google Keep/Call the vet.md'), trip: r('/Imported/Trip plan.md'), cakes: r('/Imported/iCloud Notes/Notes/Recipes/Pancakes.md'), hello: r('/Imported/iCloud Notes/Notes/Hello.md'), garden: r('/Imported/Garden ideas.md'), report: r(all.find(p => p.includes('Import report'))), tags: [...vaultIndex().tags.keys()] }; });
+ok(im.shop && /^---\nsource: Google Keep\ncreated: 2025-03-01 10:00:00\nupdated: 2025-03-02 11:30:00\npinned: true\ncolor: yellow\n---/.test(im.shop) && im.shop.includes('- [ ] Milk\n- [x] Bread') && /!\[\[1a2b3c\.png\]\]/.test(im.shop) && im.shop.includes('#Home-stuff') && im.tags.includes('home-stuff'), 'Google Keep: a checklist becomes tasks, its label a sigil, its picture comes along, pin, colour and dates go in the front matter:\n' + im.shop);
+ok(im.someday && /archived: true/.test(im.someday) && !im.all.some(p => /Old idea|Labels|Shopping \d|Shopping\.html/.test(p)), 'Keep: archived notes go to Archived; the trash, the .html copies and Labels.txt stay out: ' + JSON.stringify(im.all.filter(p => p.includes('Keep'))));
+ok(im.vet && im.vet.includes('Call the vet\nabout Mrrowr'), 'a Keep note with no title is named by its first line');
+ok(im.trip && im.trip.startsWith('# Trip plan\n\nPack the **passport** and *maps*\n\n- Tickets\n- Hotel\n- [ ] Book the train\n- [x] Ask for leave') && im.trip.includes('| Day | City |\n| --- | --- |\n| 1 | Lisbon |') && /!\[\[image1\.png\]\]/.test(im.trip), 'Samsung Notes (Word): heading, bold, italic, list, checkboxes, table and picture:\n' + im.trip);
+ok(im.cakes === 'Pancakes\n\n2 eggs, flour, milk\n' && im.hello, 'Apple Notes (the iCloud .zip of .txt notes): every note, in its folders');
+ok(im.garden && im.garden.startsWith('# Garden ideas\n\nPlant **roses** by the [fence](https://example.org/fence).\n\n- [x] Buy seeds\n- [ ] Dig'), 'HTML becomes markdown, checkboxes and all:\n' + im.garden);
+ok(im.report && /9 leaves from Google Keep/.test(im.report) === false && /from Google Keep/.test(im.report) && /1 note was in the Keep trash/.test(im.report) && /Diary\.sdocx: Samsung Notes' own format can't be read here/.test(im.report), 'a report leaf says what came in, what the trash kept, and why the .sdocx could not be read:\n' + im.report);
 await done();

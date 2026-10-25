@@ -36,7 +36,8 @@ Magick, as it turns out, is mostly weaving.
 
 ## 🛠️ What Pandora Dee can do
 
-- **🍃 Leaves:** markdown Atelier with `[[threads]]`, backlinks, sigils, graph, KaTeX math, images (`![[photo.png|300]]`), leaf embeds and a split editor.
+- **🍃 Leaves:** markdown Atelier with `[[threads]]`, backlinks, sigils, graph, KaTeX math, images (`![[photo.png|300]]`), leaf embeds and a split editor. Find and replace in a leaf (Ctrl/Cmd+F, Ctrl+H; match case and regular expressions). Rename a leaf or a workshop from its ⋯ menu and the threads to it follow; delete an empty workshop, or Tidy them all away.
+- **📥 Import from other notes apps:** Google Keep, Samsung Notes and Apple Notes, plus markdown, text, HTML, Word and PDF. See [Importing notes](#-importing-notes).
 - **🤖 Agent:** read/write/edit leaves, a BusyBox shell (WebAssembly), `node` with `fs`, `fetch` and `https`, MicroPython, SQLite (`sqlite3`, `node:sqlite`, Python `sqlite3`), web search and fetch, `http_request` for any API (secrets as `{{NAME}}`), MCP servers (pi-style codemode, deferred or direct), skills.
 - **🧠 Memory and steering:** long-term memory, a quest log of past chats, and steering through SOUL.md, AGENTS.md and SYSTEM.md.
 - **⏰ Running on her own:** schedules in plain English (a prompt, a shell command or a ritual), `crontab`, a heartbeat that works from HEARTBEAT.md, and a background mode on Android.
@@ -57,8 +58,21 @@ Magick, as it turns out, is mostly weaving.
   - She joins and leaves communities and plays Mini Apps.
   - Secretary: messages for you land in an inbox, or reach you at once.
 - **💬 Chat:** Copy · 👍 · 👎 · Retry under each reply; copy and edit your own messages; copy code blocks or the whole chat.
-- **🎭 Avatar:** Live2D Pandora Dee, with voice (TTS).
-- **🖥️ Any screen:** one column on a phone; with room (a laptop, an iPad, a phone turned sideways) the Atelier grows, Leaves shows the list beside the open leaf and Pandora stands beside the chat. Drag the app's edges and every divider (list, avatar, editor/preview); double-click one to reset it. Text size (85–150 %) is in Config → App. Widths, dividers and text size are kept with your settings, so a reload keeps your layout.
+- **🎭 Avatar:** Live2D Pandora Dee, with voice (TTS). Config → Appearance holds her gemstone theme and the colours of her hair, clothes, stockings, boots and skin; she stands in a soft pool of her gem's light (the old scanlines, cyber grid and pointer-following are switches there).
+- **🖥️ Any screen:** one column on a phone; with room (a laptop, an iPad, a phone turned sideways) the Atelier grows, Leaves shows the list beside the open leaf and Pandora stands beside the chat. Drag the app's edges and every divider (list, avatar, editor/preview); double-click one to reset it. Text size (85–150 %) is in Config → Appearance. Widths, dividers and text size are kept with your settings, so a reload keeps your layout.
+
+## 📥 Importing notes
+
+Leaves → **Import** (or drop the files on the leaf list). Everything lands in `/Imported/`, with a report leaf that says what came in and what didn't.
+
+| From | How to export | What you get |
+| --- | --- | --- |
+| **Google Keep** | [Google Takeout](https://takeout.google.com) → select only Keep → import the `.zip` | A leaf per note in `/Imported/Google Keep/`. Checklists become tasks, labels become #sigils, pictures come along, and pinned, colour and the dates go in the front matter. Archived notes go in `Archived/`; the trash stays out. |
+| **Samsung Notes** | Open a note → ⋮ → Save as file (or Share) → **Microsoft Word**, **PDF** or **Text file** | Word keeps headings, lists, checkboxes, bold, italic, tables and pictures; PDF comes in as its text. Samsung's own `.sdocx` can't be read. |
+| **Apple Notes** | [privacy.apple.com](https://privacy.apple.com) → Request a copy of your data → iCloud Notes, then import the `.zip`. One note: ⋯ → Export as PDF. Or an exporter app's Markdown | Every note, in its folders. |
+| **Anything else** | `.md`, `.txt`, `.html`, `.docx`, `.pdf`, or a `.zip` of them | Markdown and text as they are, HTML and Word as markdown, PDF as text. |
+
+The PDF reader loads from the internet the first time it's needed.
 
 ## 🌊 Rituals
 

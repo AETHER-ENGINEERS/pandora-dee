@@ -1864,20 +1864,69 @@ def _inline_js(path):
 rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>', '<script>' + _inline_js(NM + 'marked/lib/marked.umd.js') + '</script>')
 rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>', '<script>' + _inline_js(NM + 'dompurify/dist/purify.min.js') + '</script>')
 rep('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" id="katex-js"></script>', '<script id="katex-js">' + _inline_js(_K + 'katex.min.js') + '</script>')
-# ---------- v26: a fantasy companion: no pointer-following and no scanlines unless asked for ----------
-# Both came from the cyberpunk original. They are off by default (for existing installs too) and switch back on
-# in Config → Pandora companion.
-rep("jadeShow: true,", "jadeShow: true, jadeFollow: false, scanlines: false,")
+# ---------- v26: a fantasy companion: no pointer-following, scanlines or cyber grid unless asked for ----------
+# All three came from the cyberpunk original. They are off by default (for existing installs too) and switch back
+# on in Config. In the grid's place she stands in a soft pool of her gem's light, with a little drifting dust.
+rep("jadeShow: true,", "jadeShow: true, jadeFollow: false, scanlines: false, cyberGrid: false,")
 rep("    else if (now - state.pointer.t < 4000) {", "    else if (S.jadeFollow && now - state.pointer.t < 4000) {")
 rep('body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;', 'body.scanlines::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;')
-rep("> Read replies aloud</label>", """> Read replies aloud</label>
+rep("$('#sJadeShow').checked = S.jadeShow;", "$('#sJadeShow').checked = S.jadeShow; $('#sJadeFollow').checked = !!S.jadeFollow; $('#sScanlines').checked = !!S.scanlines; $('#sCyberGrid').checked = !!S.cyberGrid;")
+rep("Object.assign(S, { memoryOn: $('#sMemoryOn').checked,", "Object.assign(S, { jadeFollow: $('#sJadeFollow').checked, scanlines: $('#sScanlines').checked, cyberGrid: $('#sCyberGrid').checked, memoryOn: $('#sMemoryOn').checked,")
+rep("applyJadeVisibility(); updateShellChip(); closeSettings();", "applyJadeVisibility(); applyLook(); updateShellChip(); closeSettings();")
+rep("  layoutInit();\n", "  layoutInit(); applyLook();\n")
+s = s.replace('/* =====================================================================\n   BOOT', "const applyLook = () => { document.body.classList.toggle('scanlines', !!S.scanlines); document.body.classList.toggle('cybergrid', !!S.cyberGrid); };\n/* =====================================================================\n   BOOT", 1)
+rep("  const label = $('#btnTheme'); if (label) label.textContent = theme.name;", "  const label = $('#btnTheme'); if (label) { label.textContent = 'Pandora'; label.title = `Gemstone: ${theme.name}. Choose Pandora's colors`; }")
+rep('title="Choose Pandora\'s gemstone colors">Jade</button>', 'title="Choose Pandora\'s gemstone colors">Pandora</button>')
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- the fantasy look (v26): no grid unless body.cybergrid ---- */
+body:not(.cybergrid)::before{background:radial-gradient(1200px 600px at 85% -10%,rgba(var(--theme-rgb),.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(var(--theme-highlight-rgb),.06),transparent 60%)}
+body:not(.cybergrid) .jade-stage::before{left:0;right:0;height:46%;transform:none;-webkit-mask-image:none;mask-image:none;
+  background:radial-gradient(ellipse 46% 34% at 50% 100%,rgba(var(--theme-rgb),.26),transparent 72%),radial-gradient(ellipse 80% 50% at 50% 110%,rgba(var(--theme-highlight-rgb),.10),transparent 70%)}
+body:not(.cybergrid) .jade-stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.55;
+  background:radial-gradient(1.5px 1.5px at 18% 72%,rgba(var(--theme-highlight-rgb),.9),transparent 60%),radial-gradient(1px 1px at 30% 40%,rgba(var(--theme-rgb),.9),transparent 60%),radial-gradient(1.5px 1.5px at 72% 64%,rgba(var(--theme-rgb),.9),transparent 60%),radial-gradient(1px 1px at 84% 30%,rgba(var(--theme-highlight-rgb),.9),transparent 60%),radial-gradient(1px 1px at 60% 86%,rgba(var(--theme-highlight-rgb),.8),transparent 60%),radial-gradient(1.5px 1.5px at 10% 22%,rgba(var(--theme-rgb),.7),transparent 60%);
+  animation:jadeDust 9s ease-in-out infinite alternate}
+@keyframes jadeDust{from{opacity:.3;transform:translateY(4px)}to{opacity:.7;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){body:not(.cybergrid) .jade-stage::after{animation:none}}
+/* her name and mood sit beside the controls when there is room, and just below them when there is not */
+.jade-stage{container-type:inline-size}
+@container (max-width:420px){.jade-stage .jade-label{top:44px}}
+""")
+# ---------- v27: layer colours reach the screen ----------
+# The recolour repainted the texture's canvas and marked it changed, but Live2D draws with the GL texture it was
+# first given and never asks PIXI to re-upload, so hair, clothes, stockings, boots and skin kept their old colours.
+rep("    state.appearanceTexture?.baseTexture?.update();\n", "    state.appearanceTexture?.baseTexture?.update();\n    // the model draws with the GL texture it was first given, so upload the new pixels to it now\n    try { if (state.app && state.appearanceTexture) state.app.renderer.texture.bind(state.appearanceTexture.baseTexture); } catch (e) { console.warn('Pandora appearance upload failed', e); }\n")
+# ---------- v28: an Appearance tab in Config ----------
+# Pandora's colours, the atmosphere switches and Text & layout get a tab of their own; App keeps her companion
+# behaviour (showing her, reading aloud, the voice).
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + '''/* layer colour cards: the label above a full-width menu, so it fits at any text size */
+.jade-appearance-card .appearance-field{flex-direction:column;align-items:stretch}
+.jade-appearance-card .appearance-field .field{width:100%}
+''')
+rep('data-tab="connect" aria-selected="false">Connect</button>', 'data-tab="connect" aria-selected="false">Connect</button><button type="button" role="tab" class="set-tab" data-tab="look" aria-selected="false">Appearance</button>')
+_tl_start = '      <section data-tab="app" class="flex flex-col gap-3">\n        <div class="pane-h">Text &amp; layout</div>'
+_i = s.index(_tl_start); _j = s.index('</section>\n', _i) + len('</section>\n')
+_text_layout = s[_i:_j].replace('data-tab="app"', 'data-tab="look"', 1); s = s[:_i] + s[_j:]
+rep("""      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>
+        <div><div class="lbl">Pandora's gemstone theme</div>""", """      <section data-tab="look" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora's colors</div>
+        <div><div class="lbl">Gemstone theme</div>""")
+rep("""
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label class="flex items-center gap-2 text-sm" for="sJadeShow">""", """
+      </section>
+      <section data-tab="look" class="flex flex-col gap-3">
+        <div class="pane-h">Atmosphere</div>
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
           <label class="flex items-center gap-2 text-sm" for="sJadeFollow"><input type="checkbox" id="sJadeFollow" class="accent-emerald-400 w-4 h-4"> Her eyes follow the pointer</label>
-          <label class="flex items-center gap-2 text-sm" for="sScanlines"><input type="checkbox" id="sScanlines" class="accent-emerald-400 w-4 h-4"> Scanlines over the screen (the old CRT look)</label>""")
-rep("$('#sJadeShow').checked = S.jadeShow;", "$('#sJadeShow').checked = S.jadeShow; $('#sJadeFollow').checked = !!S.jadeFollow; $('#sScanlines').checked = !!S.scanlines;")
-rep("Object.assign(S, { memoryOn: $('#sMemoryOn').checked,", "Object.assign(S, { jadeFollow: $('#sJadeFollow').checked, scanlines: $('#sScanlines').checked, memoryOn: $('#sMemoryOn').checked,")
-rep("applyJadeVisibility(); updateShellChip(); closeSettings();", "applyJadeVisibility(); applyScanlines(); updateShellChip(); closeSettings();")
-rep("  layoutInit();\n", "  layoutInit(); applyScanlines();\n")
-s = s.replace('/* =====================================================================\n   BOOT', "const applyScanlines = () => document.body.classList.toggle('scanlines', !!S.scanlines);\n/* =====================================================================\n   BOOT", 1)
+          <label class="flex items-center gap-2 text-sm" for="sScanlines"><input type="checkbox" id="sScanlines" class="accent-emerald-400 w-4 h-4"> Scanlines over the screen (the old CRT look)</label>
+          <label class="flex items-center gap-2 text-sm" for="sCyberGrid"><input type="checkbox" id="sCyberGrid" class="accent-emerald-400 w-4 h-4"> Cyber grid (the floor under her and the page background)</label>
+        </div>
+        <p class="hint leading-relaxed">Pandora is a fantasy companion: these bring back the cyberpunk touches she came with. Saved when you press Save.</p>
+      </section>
+""" + _text_layout + """      <section data-tab="app" class="flex flex-col gap-3">
+        <div class="pane-h">Pandora companion</div>
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <label class="flex items-center gap-2 text-sm" for="sJadeShow">""")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

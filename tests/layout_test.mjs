@@ -116,4 +116,18 @@ await E(() => setTab('chat')); lk = await look(); g = await gaze();
 ok(lk.follow && lk.scan && lk.cls && /repeating-linear-gradient/.test(lk.overlay) && g.left < -0.5 && g.right > 0.5, 'switched on in Config: the scanlines come back and her eyes follow the pointer: ' + JSON.stringify({ ...lk, overlay: lk.overlay.slice(0, 26), g }));
 await page.reload(); await reloaded();
 ok(await E(() => S.jadeFollow && S.scanlines && document.body.classList.contains('scanlines')), 'both switches survive a reload');
+ok(await E(() => !S.cyberGrid && !document.body.classList.contains('cybergrid') && getComputedStyle(document.querySelector('.jade-stage'), '::before').transform === 'none'), 'by default no cyber grid: she stands in a pool of light, not on a grid floor');
+
+// ---------- the Appearance tab ----------
+await E(() => { setTab('chat'); document.querySelector('#btnTheme').click(); }); await page.waitForTimeout(300);
+const tabs = await E(() => ({ badge: document.querySelector('#btnTheme').textContent, on: document.querySelector('#setTabs [aria-selected=true]')?.dataset.tab, look: [...document.querySelectorAll('#settings section[data-tab=look]')].map(s => s.querySelector('.pane-h').textContent.trim()), cards: document.querySelectorAll('#jadeAppearancePicker [data-appearance-card]').length }));
+ok(tabs.badge === 'Pandora' && tabs.on === 'look' && tabs.look.join('|') === "Pandora's colors|Atmosphere|Text & layout" && tabs.cards === 5, 'the badge says Pandora and opens Config → Appearance (colors, atmosphere, text & layout): ' + JSON.stringify(tabs));
+
+// ---------- layer colours reach the screen ----------
+const tex = () => E(() => { const bt = Jade.state.appearanceTexture.baseTexture, gl = Object.values(bt._glTextures || {})[0]; return { dirty: bt.dirtyId, gl: gl?.dirtyId }; });
+const t0 = await tex();
+await E(() => { const m = document.querySelector('#jadeAppearanceHairMode'); m.value = 'spectrum'; m.dispatchEvent(new Event('change')); const c = document.querySelector('#jadeAppearanceHairColor'); c.value = '#ff2020'; c.dispatchEvent(new Event('change')); });
+await page.waitForTimeout(400);
+const t1 = await tex();
+ok(t1.dirty > t0.dirty && t1.gl === t1.dirty && await E(() => S.jadeHairMode === 'spectrum' && S.jadeHairColor === '#ff2020'), 'a hair colour is uploaded to the texture she is drawn with (it used to stay on the canvas): ' + JSON.stringify({ t0, t1 }));
 await done();

@@ -68,9 +68,9 @@ bash android/build-apk.sh
 | `android/proj/assets/index.html` | Generated inlined page loaded by the Android WebView |
 | `android/.tools/` | Downloaded packaging tools and local debug keystore |
 | `android/build/` | Temporary classes, dex, APK assembly/signing output |
-| `dist/jade-vault-<version>.apk` | Final signed APK |
+| `dist/pandora-dee-<version>.apk` | Final signed APK |
 
-The APK filename/version comes from `VERSION` (**2.9.0**). The Android version code comes from `android/VERSION_CODE` (**23**). The expected final artifact is `dist/jade-vault-2.9.0.apk`. The script patches the copied manifest/apktool metadata during assembly; it does not require manually patching those templates for each local build.
+The APK filename/version comes from `VERSION` (**2.9.9.2**). The Android version code comes from `android/VERSION_CODE` (**25**). The expected final artifact is `dist/pandora-dee-2.9.9.2.apk`. The script patches the copied manifest/apktool metadata during assembly; it does not require manually patching those templates for each local build.
 
 Without release-signing variables, the script creates/reuses `android/.tools/debug.jks` and signs with a local **debug key**. That file's continued existence matters: a new debug key cannot update an app installed with an older one. Debug APKs are for development, not production distribution.
 

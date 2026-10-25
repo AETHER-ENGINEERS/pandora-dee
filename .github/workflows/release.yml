@@ -71,9 +71,12 @@ jobs:
           tar -C kit -czf dist/pandora-vector-$V.tar.gz pandora-vector
           mkdir -p kit/pandora-discord && cp pandora-discord/*.py pandora-discord/*.sh pandora-discord/*.txt pandora-discord/Dockerfile pandora-discord/docker-compose.yml pandora-discord/.dockerignore pandora-discord/README.md kit/pandora-discord/
           tar -C kit -czf dist/pandora-discord-$V.tar.gz pandora-discord
-          cd dist && sha256sum $(ls *.apk 2>/dev/null) pandora-dee.html jade-link.xdc pandora-vector-$V.tar.gz pandora-discord-$V.tar.gz > SHA256SUMS
+          # every file carries the version, so a download says which release it came from
+          cp dist/pandora-dee.html "dist/pandora-dee-$V.html"; cp dist/jade-link.xdc "dist/jade-link-$V.xdc"
+          cd dist && sha256sum $(ls *.apk 2>/dev/null) pandora-dee-$V.html jade-link-$V.xdc pandora-vector-$V.tar.gz pandora-discord-$V.tar.gz > SHA256SUMS
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "$TAG" --clobber $(ls dist/*.apk 2>/dev/null) dist/pandora-dee.html dist/jade-link.xdc dist/pandora-vector-*.tar.gz dist/pandora-discord-*.tar.gz dist/SHA256SUMS
+          V=$(cat VERSION)
+          gh release upload "$TAG" --clobber $(ls dist/*.apk 2>/dev/null) "dist/pandora-dee-$V.html" "dist/jade-link-$V.xdc" "dist/pandora-vector-$V.tar.gz" "dist/pandora-discord-$V.tar.gz" dist/SHA256SUMS

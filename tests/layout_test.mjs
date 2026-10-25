@@ -101,4 +101,19 @@ await E(() => { S.uiScale = 1; layoutApply(); saveSettings(); });
 await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
 await leaves(); await page.waitForTimeout(300);
 ok(!(await E(() => document.body.classList.contains('wide'))) && (await E(() => document.querySelector('[data-panel="files"]').hidden)) && near((await box('#app')).w, 390) && !(await overflowX()), 'shrinking the window back to a phone returns to one column, one screen at a time');
+
+// ---------- a fantasy companion: no pointer-following, no scanlines, unless switched on ----------
+await E(() => setTab('chat')); await page.waitForTimeout(300);
+const gaze = async () => { const g = {}; for (const [k, x] of [['left', 5], ['right', 385]]) { await page.mouse.move(x, 420, { steps: 3 }); await page.waitForTimeout(500); g[k] = await E(() => Jade.state.model?.internalModel.focusController.targetX ?? null); } return g; };
+const look = () => E(() => ({ follow: S.jadeFollow, scan: S.scanlines, cls: document.body.classList.contains('scanlines'), overlay: getComputedStyle(document.body, '::after').backgroundImage }));
+let lk = await look(), g = await gaze();
+ok(lk.follow === false && lk.scan === false && !lk.cls && lk.overlay === 'none', 'by default: no scanlines over the screen: ' + JSON.stringify(lk));
+ok(g.left !== null && Math.abs(g.left) <= 0.4 && Math.abs(g.right) <= 0.4, 'by default: her eyes do not follow the pointer: ' + JSON.stringify(g));
+await E(() => openSettings()); await page.waitForTimeout(200);
+ok(await E(() => !$('#sJadeFollow').checked && !$('#sScanlines').checked), 'Config shows both switches off');
+await E(() => { $('#sJadeFollow').checked = true; $('#sScanlines').checked = true; $('#btnSave').click(); }); await page.waitForTimeout(600);
+await E(() => setTab('chat')); lk = await look(); g = await gaze();
+ok(lk.follow && lk.scan && lk.cls && /repeating-linear-gradient/.test(lk.overlay) && g.left < -0.5 && g.right > 0.5, 'switched on in Config: the scanlines come back and her eyes follow the pointer: ' + JSON.stringify({ ...lk, overlay: lk.overlay.slice(0, 26), g }));
+await page.reload(); await reloaded();
+ok(await E(() => S.jadeFollow && S.scanlines && document.body.classList.contains('scanlines')), 'both switches survive a reload');
 await done();

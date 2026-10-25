@@ -122,6 +122,7 @@ ok(await E(() => !S.cyberGrid && !document.body.classList.contains('cybergrid') 
 await E(() => { setTab('chat'); document.querySelector('#btnTheme').click(); }); await page.waitForTimeout(300);
 const tabs = await E(() => ({ badge: document.querySelector('#btnTheme').textContent, on: document.querySelector('#setTabs [aria-selected=true]')?.dataset.tab, look: [...document.querySelectorAll('#settings section[data-tab=look]')].map(s => s.querySelector('.pane-h').textContent.trim()), cards: document.querySelectorAll('#jadeAppearancePicker [data-appearance-card]').length }));
 ok(tabs.badge === 'Pandora' && tabs.on === 'look' && tabs.look.join('|') === "Pandora's colors|Atmosphere|Text & layout" && tabs.cards === 5, 'the badge says Pandora and opens Config → Appearance (colors, atmosphere, text & layout): ' + JSON.stringify(tabs));
+await E(() => document.querySelector('#btnCloseSettings').click()); await page.waitForTimeout(200);
 
 // ---------- layer colours reach the screen ----------
 const tex = () => E(() => { const bt = Jade.state.appearanceTexture.baseTexture, gl = Object.values(bt._glTextures || {})[0]; return { dirty: bt.dirtyId, gl: gl?.dirtyId }; });
@@ -130,4 +131,33 @@ await E(() => { const m = document.querySelector('#jadeAppearanceHairMode'); m.v
 await page.waitForTimeout(400);
 const t1 = await tex();
 ok(t1.dirty > t0.dirty && t1.gl === t1.dirty && await E(() => S.jadeHairMode === 'spectrum' && S.jadeHairColor === '#ff2020'), 'a hair colour is uploaded to the texture she is drawn with (it used to stay on the canvas): ' + JSON.stringify({ t0, t1 }));
+
+// ---------- strips of buttons drag to scroll ----------
+await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(200);
+await E(() => { let hub = '# Hub\n\n'; for (let i = 0; i < 1200; i++) { vfs.write(`/Many/Leaf ${i}.md`, `# Leaf ${i}\n\nsee [[Hub]]\n`, { mkdirs: true }); if (i < 950) hub += `[[Leaf ${i}]] `; } vfs.write('/Hub.md', hub); vfs.changed?.(); });
+await E(() => { setTab('files'); openFile('/Hub.md', { mode: 'read' }); }); await page.waitForTimeout(800);
+const foot = () => E(() => { const f = document.querySelector('#noteFoot'); return { sl: Math.round(f.scrollLeft), max: f.scrollWidth - f.clientWidth, cls: f.className, threads: document.querySelector('#btnLinks').textContent.trim() }; });
+let f0 = await foot();
+ok(f0.max > 0 && /can-drag/.test(f0.cls) && /more-r/.test(f0.cls), "a leaf with many threads: its footer runs past the edge and says so with a fade: " + JSON.stringify(f0));
+let fb = await box('#noteFoot');
+await E(() => { window.__del = 0; const d = document.querySelector('#btnFileDel'); d.__h = () => window.__del++; d.addEventListener('click', d.__h, true); });
+const dragFrom = async (x, y, dx) => { await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y, { steps: 4 }); await page.mouse.move(x + dx, y, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150); };
+await dragFrom(fb.x + fb.w - 30, fb.y + fb.h / 2, -200);
+let f1 = await foot();
+ok(f1.sl >= Math.min(100, f0.max) - 1 && /more-l/.test(f1.cls), 'a mouse drags the footer sideways: ' + JSON.stringify({ from: f0.sl, to: f1.sl }));
+const del = await box('#btnFileDel');
+// out and back, so the drag ends on Delete itself: the click that follows must not press it
+await page.mouse.move(del.x + del.w / 2, del.y + del.h / 2); await page.mouse.down(); await page.mouse.move(del.x + del.w / 2 + 40, del.y + del.h / 2, { steps: 4 }); await page.mouse.move(del.x + del.w / 2, del.y + del.h / 2, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(150);
+ok(await E(() => window.__del === 0 && vfs.isFile('/Hub.md')), 'a drag that starts on Delete moves the strip and does not delete');
+await E(() => { document.querySelector('#noteFoot').scrollLeft = 0; }); await page.waitForTimeout(100);
+await page.mouse.move(fb.x + 60, fb.y + fb.h / 2); await page.mouse.wheel(0, 150); await page.waitForTimeout(200);
+ok((await foot()).sl > 50, 'the mouse wheel scrolls the strip sideways');
+await E(() => document.querySelector('#btnLinks').click()); await page.waitForTimeout(200);
+ok(await E(() => !document.querySelector('#linksPanel').hidden && document.querySelectorAll('#linksPanel .link-item').length > 900), 'a plain click still presses its button (Threads opens the list of threads)');
+await E(() => { document.querySelector('#linksPanel').hidden = true; setNoteMode('split'); }); await page.waitForTimeout(200);
+const tb = await box('#mdTools'), tbs0 = await E(() => document.querySelector('#mdTools').scrollLeft);
+await E(() => { document.querySelector('#mdTools').style.maxWidth = '200px'; }); await page.waitForTimeout(100);
+await dragFrom(tb.x + 150, tb.y + tb.h / 2, -120);
+ok(await E(() => document.querySelector('#mdTools').scrollLeft) > tbs0 + 60, 'the formatting bar drags too');
+await E(() => { document.querySelector('#mdTools').style.maxWidth = ''; document.querySelector('#btnFileDel').removeEventListener('click', document.querySelector('#btnFileDel').__h, true); });
 await done();

@@ -1927,6 +1927,22 @@ rep("""
         <div class="pane-h">Pandora companion</div>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
           <label class="flex items-center gap-2 text-sm" for="sJadeShow">""")
+# ---------- v29: strips of buttons drag to scroll (dragscroll.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('dragscroll.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("  layoutInit(); applyLook();\n", "  layoutInit(); applyLook(); dragScrollInit();\n")
+rep("""<div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
+        <button class="btn btn-ghost" id="btnLinks" hidden>Threads</button>""", """<div class="m-sub" id="noteFoot" style="border-top:1px solid var(--line);border-bottom:0">
+        <button class="btn btn-ghost" id="btnLinks" hidden>Threads</button>""")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- drag to scroll (dragscroll.js) ---- */
+#noteFoot{overflow-x:auto;scrollbar-width:none}
+#noteFoot::-webkit-scrollbar{display:none}
+#noteFoot>.btn{flex:none}
+.can-drag{cursor:grab}
+.can-drag.dragging,.can-drag.dragging *{cursor:grabbing;-webkit-user-select:none;user-select:none}
+.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
+.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+""")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

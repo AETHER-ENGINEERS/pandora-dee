@@ -1966,6 +1966,41 @@ rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' +
 #leavesFoot::-webkit-scrollbar{display:none}
 #leavesFoot>.btn{flex:none}
 """)
+# ---------- v31: find & replace in the leaf editor (findbar.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('findbar.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""      <div class="note-body" id="noteBody" data-mode="read">""", """      <div class="find-bar" id="findBar" role="search" aria-label="Find in this leaf" hidden>
+        <div class="find-row">
+          <button type="button" class="find-btn" id="findToggle" title="Show or hide replace" aria-label="Show or hide replace">⇅</button>
+          <input id="findQ" class="field" placeholder="Find in this leaf" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Find">
+          <span class="find-count mono" id="findCount" aria-live="polite"></span>
+          <button type="button" class="find-btn" id="findCase" aria-pressed="false" title="Match case" aria-label="Match case">Aa</button>
+          <button type="button" class="find-btn" id="findRe" aria-pressed="false" title="Regular expression" aria-label="Regular expression">.*</button>
+          <button type="button" class="find-btn" id="findPrev" title="Previous (Shift+Enter)" aria-label="Previous match">↑</button>
+          <button type="button" class="find-btn" id="findNext" title="Next (Enter)" aria-label="Next match">↓</button>
+          <button type="button" class="find-btn" id="findClose" title="Close (Esc)" aria-label="Close find">✕</button>
+        </div>
+        <div class="find-row find-rep">
+          <input id="findR" class="field" placeholder="Replace with" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Replace with">
+          <button type="button" class="btn btn-ghost" id="findOne" title="Replace this match (Enter)">Replace</button>
+          <button type="button" class="btn btn-ghost" id="findAll" title="Replace every match (Ctrl/Cmd+Enter)">All</button>
+        </div>
+      </div>
+      <div class="note-body" id="noteBody" data-mode="read">""")
+rep("  layoutInit(); applyLook(); dragScrollInit();\n", "  layoutInit(); applyLook(); dragScrollInit(); findInit();\n")
+rep("Object.assign(window, { renderTree,", "Object.assign(window, { openFind, closeFind, findGo, findReplace, findReplaceAll, Find, renderTree,")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- find & replace (findbar.js) ---- */
+.find-bar{flex:none;display:flex;flex-direction:column;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel)}
+.find-row{display:flex;align-items:center;gap:4px;min-width:0}
+.find-row .field{flex:1 1 auto;min-width:0;padding:6px 8px}
+.find-rep{display:none}
+.find-bar.with-replace .find-rep{display:flex}
+.find-btn{flex:none;min-width:32px;height:32px;padding:0 6px;border:1px solid var(--line);background:transparent;color:var(--dim);font-family:var(--f-mono);font-size:12px;cursor:pointer}
+.find-btn:hover{color:var(--fg)}
+.find-btn[aria-pressed=true]{color:var(--yl);border-color:var(--yl)}
+.find-bar.with-replace #findToggle{color:var(--yl)}
+.find-count{flex:none;font-size:11px;color:var(--dim);min-width:4.5em;text-align:right;white-space:nowrap}
+#findQ.bad{border-color:var(--rd)}
+""")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

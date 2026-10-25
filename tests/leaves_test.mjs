@@ -56,4 +56,44 @@ const left = await E(() => ({ two: vfs.exists('/Empty Two'), deeper: vfs.exists(
 ok(/Remove 2 empty workshops: \/Empty Two/.test(msg) && !left.two && !left.deeper && left.spare && left.meadow && left.notes, 'Tidy removes every empty workshop (nested ones too) and keeps those with leaves and Pandora\'s own: ' + JSON.stringify({ msg: msg.slice(0, 90), left }));
 await page.click('#btnTidy'); await page.waitForTimeout(200);
 ok(/No empty workshops/.test(await toasts()), 'with nothing to tidy it says so');
+
+// ---------- find & replace in the editor ----------
+await E(() => { vfs.write('/Find.md', 'The cat sat. The Cat ran. the end\n'); openFile('/Find.md', { mode: 'read' }); }); await page.waitForTimeout(300);
+const ed = () => E(() => { const t = document.querySelector('#fileEd'); return { v: t.value, s: t.selectionStart, e: t.selectionEnd, count: document.querySelector('#findCount').textContent, mode: document.querySelector('#noteBody').dataset.mode, open: !document.querySelector('#findBar').hidden }; });
+await page.keyboard.press('Control+f'); await page.waitForTimeout(150);
+await page.keyboard.type('cat'); await page.waitForTimeout(100);
+let f = await ed();
+ok(f.open && f.mode === 'split' && f.count === '2 matches', 'Ctrl+F opens the find bar (Read mode switches to Split so the text shows) and counts as you type: ' + JSON.stringify(f));
+await page.keyboard.press('Enter'); f = await ed();
+ok(f.s === 4 && f.e === 7 && f.count === '1 of 2', 'Enter selects the first match: ' + JSON.stringify(f));
+await page.keyboard.press('Enter'); f = await ed(); const second = f.s;
+await page.keyboard.press('Shift+Enter'); f = await ed();
+ok(second === 17 && f.s === 4 && f.count === '1 of 2', 'Enter goes on, Shift+Enter goes back');
+await page.click('#findCase'); f = await ed();
+ok(f.count === '1 match', 'Match case counts only "cat": ' + f.count);
+await page.click('#findCase');
+// replace, one at a time and all at once
+await page.keyboard.press('Control+h'); await page.waitForTimeout(100);
+await E(() => document.querySelector('#fileEd').setSelectionRange(0, 0)); await page.fill('#findQ', 'the'); await page.fill('#findR', 'a');
+await page.focus('#findR'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); f = await ed();
+ok(f.v.startsWith('a cat sat. The Cat ran.') && f.count === '1 of 2', 'from the caret, Replace selects the first match, then replaces it and moves to the next ("The" found case-insensitively): ' + JSON.stringify(f));
+await page.click('#findAll'); f = await ed();
+ok(f.v === 'a cat sat. a Cat ran. a end\n' && f.count === 'no match', 'Replace all changes every match: ' + JSON.stringify(f.v));
+await page.focus('#fileEd'); await page.keyboard.press('Control+z'); f = await ed();
+ok(f.v === 'a cat sat. The Cat ran. the end\n', 'one Ctrl+Z undoes Replace all (the single Replace before it stays): ' + JSON.stringify(f.v));
+// regular expressions with groups
+await page.click('#findRe'); await page.fill('#findQ', '(\\w+) (sat|ran)'); await page.fill('#findR', '$2 the $1');
+await page.click('#findAll'); f = await ed();
+ok(f.v === 'a sat the cat. The ran the Cat. the end\n', 'a regular expression replaces with its groups: ' + JSON.stringify(f.v));
+await page.fill('#findQ', '(unclosed'); f = await ed();
+ok(f.count === 'bad pattern', 'a broken pattern says so: ' + f.count);
+await page.click('#findRe');
+await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+ok(!(await ed()).open && (await read('/Find.md')) === 'a sat the cat. The ran the Cat. the end\n', 'Esc closes the bar, and the leaf was saved');
+// a long leaf: the editor scrolls to the match
+await E(() => { vfs.write('/Long.md', Array.from({ length: 400 }, (_, i) => i === 380 ? 'here is the needle' : `line ${i} with some words to wrap around a little`).join('\n')); openFile('/Long.md', { mode: 'edit' }); }); await page.waitForTimeout(250);
+await page.click('#mdTools [data-find]'); await page.fill('#findQ', 'needle'); await page.keyboard.press('Enter');
+const sc = await E(() => { const t = document.querySelector('#fileEd'); return { top: t.scrollTop, h: t.clientHeight, sel: t.value.slice(t.selectionStart, t.selectionEnd) }; });
+ok(sc.sel === 'needle' && sc.top > 3000, 'in a long leaf the editor scrolls to the match (the 🔍 button opens the bar too): ' + JSON.stringify(sc));
+await page.keyboard.press('Escape');
 await done();

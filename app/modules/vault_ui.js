@@ -75,7 +75,7 @@ function openFile(p, opts = {}) {
   $('#filePath').textContent = isNote(p) ? noteName(p) : vfs.base(p); $('#filePath').title = p; $('#fileDir').textContent = vfs.parent(p);
   delArmed = false; $('#btnFileDel').textContent = 'Delete'; $('#btnFileDel').style.color = '';
   $('#linksPanel').hidden = true; $('#linkSuggest').hidden = true;
-  setSaveState('');
+  setSaveState(''); findRefresh();
   setNoteMode(isNote(p) ? (opts.mode || noteMode) : 'edit', true);
   renderNoteLinks();
   if (!opts.stay) setTab('file');

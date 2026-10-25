@@ -1943,6 +1943,29 @@ rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' +
 .more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
 .more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
 """)
+# ---------- v30: rename leaves and workshops, delete empty workshops, tidy (tidy.js) ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('tidy.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("""        <button class="btn btn-ghost" id="btnFileCopy">Copy</button>""", """        <button class="btn btn-ghost" id="btnFileRename">Rename</button>
+        <button class="btn btn-ghost" id="btnFileCopy">Copy</button>""")
+rep("""<div class="m-sub" style="border-top:1px solid var(--line);border-bottom:0">
+        <div class="hud flex-1 min-w-0 truncate" id="fsStats">—</div>
+        <button class="btn btn-ghost" id="btnNewDir" title="New workshop">+ Workshop</button>""", """<div class="m-sub" id="leavesFoot" style="border-top:1px solid var(--line);border-bottom:0">
+        <div class="hud flex-1 min-w-0 truncate" id="fsStats">—</div>
+        <button class="btn btn-ghost" id="btnNewDir" title="New workshop">+ Workshop</button>
+        <button class="btn btn-ghost" id="btnTidy" title="Remove every empty workshop">Tidy</button>""")
+rep("const DRAG_STRIPS = '.qk, .tag-bar, #noteFoot, #setTabs';", "const DRAG_STRIPS = '.qk, .tag-bar, #noteFoot, #leavesFoot, #setTabs';")
+rep("Object.assign(window, { layoutApply,", "Object.assign(window, { renderTree, openDirs, noteBack, treeMenu, renameLeaf, renameWorkshop, deleteWorkshop, tidyWorkshops, layoutApply,")
+rep("  layoutInit(); applyLook(); dragScrollInit();\n", "  layoutInit(); applyLook(); dragScrollInit();\n  $('#btnFileRename').onclick = () => editing && renameLeaf(editing); $('#btnTidy').onclick = () => tidyWorkshops();\n")
+rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- rename & tidy (tidy.js) ---- */
+.tree-more{flex:none;margin-left:2px;width:30px;height:26px;line-height:1;border:0;background:none;color:var(--dim);font-size:16px;opacity:.35;cursor:pointer}
+.tree-row:hover .tree-more,.tree-row:focus-within .tree-more,.tree-more:focus-visible{opacity:1}
+.tree-more:hover{color:var(--yl)}
+@media (pointer:coarse){.tree-more{opacity:.7;width:36px;height:32px}}
+.tree-row .truncate{min-width:0}
+#leavesFoot{overflow-x:auto;scrollbar-width:none}
+#leavesFoot::-webkit-scrollbar{display:none}
+#leavesFoot>.btn{flex:none}
+""")
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

@@ -18,7 +18,7 @@ function renderTree() {
       let right = '';
       if (note) { const b = idx.back.get(q)?.size || 0, o = idx.out.get(q)?.size || 0; right = `<span class="ml-auto flex gap-1 flex-none">${b ? `<span class="lk-badge" title="${b} backlinks">↙${b}</span>` : ''}${o ? `<span class="lk-badge out" title="${o} outgoing threads">↗${o}</span>` : ''}</span>`; }
       else if (!dir) right = `<span class="ml-auto text-[10px] text-dim">${fmtSize(vfs.stat(q).size)}</span>`;
-      rows.push(`<div class="tree-row ${selPath === q ? 'sel' : ''}" tabindex="0" role="button" data-p="${esc(q)}" style="padding-left:${10 + depth * 14}px"><span class="ic">${dir ? (open ? '▾' : '▸') : note ? '◆' : '·'}</span><span class="${dir ? 'text-yl' : note ? '' : 'text-dim'} truncate">${esc(note ? noteName(q) : n)}${dir ? '/' : ''}</span>${right}</div>`);
+      rows.push(`<div class="tree-row ${selPath === q ? 'sel' : ''}" tabindex="0" role="button" data-p="${esc(q)}" style="padding-left:${10 + depth * 14}px"><span class="ic">${dir ? (open ? '▾' : '▸') : note ? '◆' : '·'}</span><span class="${dir ? 'text-yl' : note ? '' : 'text-dim'} truncate">${esc(note ? noteName(q) : n)}${dir ? '/' : ''}</span>${right}<button type="button" class="tree-more" data-more="${esc(q)}" aria-label="More for ${esc(note ? noteName(q) : n)}" title="Rename, delete">⋯</button></div>`);
       if (dir && open) rec(q, depth + 1);
     }
   };
@@ -29,7 +29,7 @@ function renderTree() {
   renderTagBar();
 }
 let treeT; const renderTreeSoon = () => { clearTimeout(treeT); treeT = setTimeout(() => { renderTree(); if ($('#noteSearch').value.trim()) runVaultSearch(); }, 120); };
-$('#tree').addEventListener('click', e => { const r = e.target.closest('.tree-row'); if (!r) return; const p = r.dataset.p; if (vfs.isDir(p)) { openDirs.has(p) ? openDirs.delete(p) : openDirs.add(p); ls.set('openDirs', [...openDirs]); renderTree(); } else openFile(p); });
+$('#tree').addEventListener('click', e => { const more = e.target.closest('.tree-more'); if (more) { e.stopPropagation(); return treeMenu(more.dataset.more); } const r = e.target.closest('.tree-row'); if (!r) return; const p = r.dataset.p; if (vfs.isDir(p)) { openDirs.has(p) ? openDirs.delete(p) : openDirs.add(p); ls.set('openDirs', [...openDirs]); renderTree(); } else openFile(p); });
 $('#tree').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.closest('.tree-row')?.click(); });
 
 /* ---------- tags + search ---------- */

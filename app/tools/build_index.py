@@ -4,10 +4,10 @@ KaTeX (with its fonts) inlined, so the phone needs no CDN for the basics. Writes
 import re, sys, os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NM = os.environ.get('JV_NODE_MODULES', os.path.join(ROOT, 'node_modules')) + '/'
-s = open(os.path.join(ROOT, 'dist', 'pandora-dee.html')).read()
-css = open(os.path.join(ROOT, 'dist', 'tw.css')).read()
-marked = open(NM + 'marked/lib/marked.umd.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
-purify = open(NM + 'dompurify/dist/purify.min.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+s = open(os.path.join(ROOT, 'dist', 'pandora-dee.html'), encoding='utf-8').read()
+css = open(os.path.join(ROOT, 'dist', 'tw.css'), encoding='utf-8').read()
+marked = open(NM + 'marked/lib/marked.umd.js', encoding='utf-8').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+purify = open(NM + 'dompurify/dist/purify.min.js', encoding='utf-8').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
 for js in (marked, purify): assert '</script' not in js.lower()
 a = s.index('<script src="https://cdn.tailwindcss.com/3.4.17"></script>'); b = s.index('</script>', s.index('<script>', a)) + len('</script>')
 s = s[:a] + '<style id="tw-compiled">\n' + css + '\n</style>' + s[b:]
@@ -23,9 +23,9 @@ m = re.search(r'<link rel="stylesheet" href="https://fonts.googleapis.com[^"]*">
 
 import base64, os, re as _re
 K = NM + 'katex/dist/'
-kjs = open(K + 'katex.min.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+kjs = open(K + 'katex.min.js', encoding='utf-8').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
 assert '</script' not in kjs.lower()
-kcss = open(K + 'katex.min.css').read()
+kcss = open(K + 'katex.min.css', encoding='utf-8').read()
 def _font(m):
     f = m.group(1); b = base64.b64encode(open(K + 'fonts/' + f, 'rb').read()).decode()
     return f'src:url(data:font/woff2;base64,{b}) format("woff2")'
@@ -38,4 +38,4 @@ s = s.replace(TK2, '<script id="katex-js">' + kjs + '</script>')
 
 s = '<!doctype html>\n<html lang="en">\n' + s + '\n</html>\n'
 os.makedirs(os.path.join(ROOT, 'android', 'proj', 'assets'), exist_ok=True)
-open(os.path.join(ROOT, 'android', 'proj', 'assets', 'index.html'), 'w').write(s); print('index.html', len(s))
+open(os.path.join(ROOT, 'android', 'proj', 'assets', 'index.html'), 'w', encoding='utf-8').write(s); print('index.html', len(s))

@@ -12,8 +12,8 @@
     "test:quick": "node tests/run.mjs sq_glue_test sq_bridge_test vault_test vector_test"
   },
   "devDependencies": {
-    "dompurify": "3.4.14",
-    "katex": "0.16.47",
+    "dompurify": "3.4.17",
+    "katex": "0.19.0",
     "marked": "18.0.10",
     "pdfjs-dist": "6.2.108",
     "playwright": "1.56.0",

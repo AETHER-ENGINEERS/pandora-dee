@@ -10,7 +10,7 @@ D = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(D)
 NM = os.environ.get('JV_NODE_MODULES', os.path.join(ROOT, 'node_modules')) + '/'
 DIST = os.path.join(ROOT, 'dist'); os.makedirs(DIST, exist_ok=True)
-src = open(os.path.join(D, 'base', 'pi-netrunner-mobile.html')).read()
+src = open(os.path.join(D, 'base', 'pi-netrunner-mobile.html'), encoding='utf-8').read()
 s = src
 def rep(old, new, count=1):
     global s
@@ -23,7 +23,7 @@ def rep_between(start, end, new, keep_end=True):
     i = s.find(start); j = s.find(end, i + 1)
     if i < 0 or j < 0: sys.exit(f'RANGE MISSING: {start[:60]!r} .. {end[:60]!r}')
     s = s[:i] + new + (s[j:] if keep_end else s[j + len(end):])
-def rd(n): return open(os.path.join(D, 'modules', n)).read()
+def rd(n): return open(os.path.join(D, 'modules', n), encoding='utf-8').read()
 
 # ---------- branding + storage ----------
 rep('<title>Pi Netrunner Mobile</title>', '<title>Pandora Dee</title>')
@@ -792,7 +792,7 @@ rep("""      <section class="flex flex-col gap-3">
 rep("  $('#sMemoryOn').checked = !!S.memoryOn;", "  renderSkillsSettings();\n  $('#sMemoryOn').checked = !!S.memoryOn;")
 rep("  if (!(await vfs.load())) seedFs();\n  ensureMemory();", "  if (!(await vfs.load())) seedFs();\n  ensureMemory(); ensureSteering();")
 # the stock persona a fresh install starts with: app/Pandora/SOUL.md
-PANDORA_SOUL = open(os.path.join(D, 'Pandora', 'SOUL.md')).read()
+PANDORA_SOUL = open(os.path.join(D, 'Pandora', 'SOUL.md'), encoding='utf-8').read()
 s = s.replace('/* =====================================================================\n   BOOT', 'const PANDORA_SOUL_SEED = ' + _json.dumps(PANDORA_SOUL) + ';\n' + rd('steer.js') + '\n/* =====================================================================\n   BOOT', 1)
 rep("  if (scr === 'file') {", "  if (!$('#slashSuggest').hidden) { $('#slashSuggest').hidden = true; return true; }\n  if (scr === 'file') {")
 CSS3 = r"""
@@ -814,7 +814,7 @@ rep("Object.assign(window, { vfs, openFile,", "Object.assign(window, { listSkill
 # v3b: the artifact viewer blocks third-party stylesheets, so inline KaTeX's CSS with its woff2 fonts
 import base64 as _b64, re as _re2
 _K = NM + 'katex/dist/'
-_kcss = open(_K + 'katex.min.css').read()
+_kcss = open(_K + 'katex.min.css', encoding='utf-8').read()
 _kcss = _re2.sub(r'src:url\(fonts/([^)]+\.woff2)\) format\("woff2"\)[^;}]*', lambda m: 'src:url(data:font/woff2;base64,' + _b64.b64encode(open(_K + 'fonts/' + m.group(1), 'rb').read()).decode() + ') format("woff2")', _kcss)
 assert 'url(fonts/' not in _kcss
 rep('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" id="katex-css">', '<style id="katex-css">' + _kcss + '</style>')
@@ -1856,5 +1856,5 @@ body.kb .note-body .ui-ed{display:none}
 """)
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
-open(os.path.join(DIST, 'pandora-dee.html'), 'w').write(s)
+open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)
 print('ok', len(src), '->', len(s))

@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 // Compile the Tailwind classes the page uses into plain CSS (the APK has no CDN for it).
-const root = path.join(process.env.JV_NODE_MODULES || new URL('../../node_modules', import.meta.url).pathname, 'tailwindcss');
-const tw = await import(path.join(root, 'dist', 'lib.mjs'));
+const nm = process.env.JV_NODE_MODULES || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'node_modules');
+const root = path.join(nm, 'tailwindcss');
+const tw = await import(pathToFileURL(path.join(root, 'dist', 'lib.mjs')).href);
 const html = fs.readFileSync(process.argv[2], 'utf8');
 const input = `@import "tailwindcss";
 @theme { --color-void:#040807; --color-panel:#09100e; --color-panel2:#0f1a17; --color-cy:#ffb8c6; --color-yl:#1fe5a5; --color-rd:#ff3d4f; --color-ok:#b8ffdf; --color-dim:#83998f; --color-line:#1a2d27;

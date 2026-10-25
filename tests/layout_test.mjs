@@ -121,7 +121,7 @@ ok(await E(() => !S.cyberGrid && !document.body.classList.contains('cybergrid') 
 // ---------- the Appearance tab ----------
 await E(() => { setTab('chat'); document.querySelector('#btnTheme').click(); }); await page.waitForTimeout(300);
 const tabs = await E(() => ({ badge: document.querySelector('#btnTheme').textContent, on: document.querySelector('#setTabs [aria-selected=true]')?.dataset.tab, look: [...document.querySelectorAll('#settings section[data-tab=look]')].map(s => s.querySelector('.pane-h').textContent.trim()), cards: document.querySelectorAll('#jadeAppearancePicker [data-appearance-card]').length }));
-ok(tabs.badge === 'Pandora' && tabs.on === 'look' && tabs.look.join('|') === "Pandora's colors|Atmosphere|Text & layout" && tabs.cards === 5, 'the badge says Pandora and opens Config → Appearance (colors, atmosphere, text & layout): ' + JSON.stringify(tabs));
+ok(tabs.badge === 'Jade' && tabs.on === 'look' && tabs.look.join('|') === "Pandora's colors|Atmosphere|Text & layout" && tabs.cards === 5, 'the gem badge (Jade, the theme in use) opens Config → Appearance (colors, atmosphere, text & layout): ' + JSON.stringify(tabs));
 await E(() => document.querySelector('#btnCloseSettings').click()); await page.waitForTimeout(200);
 
 // ---------- layer colours reach the screen ----------

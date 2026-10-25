@@ -51,7 +51,7 @@ JADE_THEMES_JS = r'''const JADE_THEMES = Object.freeze({
   obsidian:  { name: 'Obsidian',  accent: '#aebbd0', rgb: [174, 187, 208], highlight: '#d6dfec', highlightRgb: [214, 223, 236], line: '#515e72', ink: '#111722' },
   quartz:    { name: 'Quartz',    accent: '#e3b5ed', rgb: [227, 181, 237], highlight: '#f5dcfb', highlightRgb: [245, 220, 251], line: '#705478', ink: '#211224' },
   spectrum:  { name: 'Spectrum', accent: '#bd72f3', rgb: [189, 114, 243], highlight: '#e1c0fa', highlightRgb: [225, 192, 250], line: '#57366f', ink: '#160d1c' },
-  'custom-gradient': { name: 'Custom Gradient', accent: '#f34b68', rgb: [243, 75, 104], highlight: '#62a4ff', highlightRgb: [98, 164, 255], line: '#792a3d', ink: '#160a1d' },
+  'custom-gradient': { name: 'Gradient', accent: '#f34b68', rgb: [243, 75, 104], highlight: '#62a4ff', highlightRgb: [98, 164, 255], line: '#792a3d', ink: '#160a1d' },
 });'''
 JADE_THEME_UTILS_JS = r'''const JADE_APPEARANCE_PARTS = Object.freeze([
   { id: 'hair', label: 'Hair' }, { id: 'clothes', label: 'Clothes' }, { id: 'stockings', label: 'Stockings' }, { id: 'boots', label: 'Boots' }, { id: 'skin', label: 'Skin' },
@@ -1875,8 +1875,6 @@ rep("Object.assign(S, { memoryOn: $('#sMemoryOn').checked,", "Object.assign(S, {
 rep("applyJadeVisibility(); updateShellChip(); closeSettings();", "applyJadeVisibility(); applyLook(); updateShellChip(); closeSettings();")
 rep("  layoutInit();\n", "  layoutInit(); applyLook();\n")
 s = s.replace('/* =====================================================================\n   BOOT', "const applyLook = () => { document.body.classList.toggle('scanlines', !!S.scanlines); document.body.classList.toggle('cybergrid', !!S.cyberGrid); };\n/* =====================================================================\n   BOOT", 1)
-rep("  const label = $('#btnTheme'); if (label) label.textContent = theme.name;", "  const label = $('#btnTheme'); if (label) { label.textContent = 'Pandora'; label.title = `Gemstone: ${theme.name}. Choose Pandora's colors`; }")
-rep('title="Choose Pandora\'s gemstone colors">Jade</button>', 'title="Choose Pandora\'s gemstone colors">Pandora</button>')
 rep('[hidden]{display:none!important}\n', '[hidden]{display:none!important}\n' + """/* ---- the fantasy look (v26): no grid unless body.cybergrid ---- */
 body:not(.cybergrid)::before{background:radial-gradient(1200px 600px at 85% -10%,rgba(var(--theme-rgb),.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(var(--theme-highlight-rgb),.06),transparent 60%)}
 body:not(.cybergrid) .jade-stage::before{left:0;right:0;height:46%;transform:none;-webkit-mask-image:none;mask-image:none;

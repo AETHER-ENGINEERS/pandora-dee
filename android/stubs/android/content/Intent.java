@@ -18,4 +18,5 @@ public class Intent {
   public Intent putExtra(String name, String value) { throw new RuntimeException(); }
   public String getStringExtra(String name) { throw new RuntimeException(); }
   public android.net.Uri getData() { throw new RuntimeException(); }
+  public ClipData getClipData() { throw new RuntimeException(); }
 }

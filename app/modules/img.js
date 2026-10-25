@@ -120,9 +120,12 @@ function insertAtCursor(text) {
   const before = ta.value.slice(0, s); const pre = before && !before.endsWith('\n') ? '\n' : '';
   ta.setRangeText(pre + text + '\n', s, e, 'end'); ta.dispatchEvent(new Event('input', { bubbles: true }));
 }
+// some pickers (Android galleries, Files apps) hand over a photo with no type: go by its name then
+const isImageFile = f => /^image\//.test(f.type) || (!f.type && isImagePath(f.name));
 async function addImagesToNote(files) {
   if (!editing || !isNote(editing)) return toast('Open a leaf first.', 'err');
-  const imgs = [...files].filter(f => /^image\//.test(f.type)); if (!imgs.length) return;
+  const all = [...(files || [])], imgs = all.filter(isImageFile);
+  if (!imgs.length) return toast(all.length ? `${esc(all[0].name || 'That file')} is not an image this page can add.` : 'No image came back from the picker. Try again, or drop the image onto the leaf.', 'err');
   if ($('#noteBody').dataset.mode === 'read') setNoteMode('split');
   for (const f of imgs) { const p = await saveImageFile(f); insertAtCursor(`![[${embedRef(p)}]]`); }
   renderNotePreview(); toast(`Added ${imgs.length} image${imgs.length > 1 ? 's' : ''} to /attachments/images`, 'ok');
@@ -134,6 +137,6 @@ async function addImagesToNote(files) {
   b.addEventListener('click', e => { e.stopPropagation(); pick.value = ''; pick.click(); });
   pick.onchange = () => addImagesToNote(pick.files);
   const ta = $('#fileEd');
-  ta.addEventListener('paste', e => { const fs_ = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type)); if (fs_.length) { e.preventDefault(); addImagesToNote(fs_); } });
-  ta.addEventListener('drop', e => { const fs_ = [...(e.dataTransfer?.files || [])].filter(f => /^image\//.test(f.type)); if (fs_.length) { e.preventDefault(); addImagesToNote(fs_); } });
+  ta.addEventListener('paste', e => { const fs_ = [...(e.clipboardData?.files || [])].filter(isImageFile); if (fs_.length) { e.preventDefault(); addImagesToNote(fs_); } });
+  ta.addEventListener('drop', e => { const fs_ = [...(e.dataTransfer?.files || [])].filter(isImageFile); if (fs_.length) { e.preventDefault(); addImagesToNote(fs_); } });
 })();

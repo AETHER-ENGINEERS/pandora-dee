@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -133,11 +134,24 @@ public class MainActivity extends Activity implements ApiServer.Host {
             return;
         }
         if (requestCode == REQ_FILE) {
-            if (fileCallback != null) fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            if (fileCallback != null) fileCallback.onReceiveValue(pickedFiles(resultCode, data));
             fileCallback = null;
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    /** The files a picker returned. With EXTRA_ALLOW_MULTIPLE, galleries (Google Photos, Samsung Gallery) put even a
+     *  single pick in ClipData and leave getData() empty, which parseResult alone reads as "nothing picked". */
+    static Uri[] pickedFiles(int resultCode, Intent data) {
+        if (resultCode != RESULT_OK || data == null) return null;
+        ClipData clip = data.getClipData();
+        if (clip != null && clip.getItemCount() > 0) {
+            Uri[] out = new Uri[clip.getItemCount()];
+            for (int i = 0; i < out.length; i++) out[i] = clip.getItemAt(i).getUri();
+            return out;
+        }
+        return WebChromeClient.FileChooserParams.parseResult(resultCode, data);
     }
 
     @Override

@@ -2,13 +2,13 @@
    SENTRY — an event-driven "nervous system". Sources of events (sensors, the camera and microphone, calls, texts,
    notifications, the wake word, volume buttons, the app in front, Wi-Fi, battery, location…) are SYSTEMS that can be
    added or removed one by one; a system only runs when it is switched on AND a rule uses it, so an unused one costs no
-   battery. Rules live in /Jade/Config/Sentry.json; the phone's SentryService watches and decides (SentryEngine.java),
-   and when a rule fires it can buzz or notify at once and run one of Jade's flows.
+   battery. Rules live in /Pandora/Config/Sentry.json; the phone's SentryService watches and decides (SentryEngine.java),
+   and when a rule fires it can buzz or notify at once and run one of Pandora's flows.
    Safety: off by default; camera, microphone, location, calls, texts and notifications need the user's yes AND
-   Android's permission; Sentry-run flows can text or call only numbers the user listed in Settings (a list Jade cannot
+   Android's permission; Sentry-run flows can text or call only numbers the user listed in Settings (a list Pandora cannot
    edit); text from notifications and messages is data, never instructions; a notice shows what is in use.
    ===================================================================== */
-const SY_PATH = '/Jade/Config/Sentry.json';
+const SY_PATH = '/Pandora/Config/Sentry.json';
 const SY_CAT = [   // keep in step with SentrySystems.java (a test compares the ids)
   { id: 'battery', label: 'Battery and charger', cost: 'none', sensitive: false, gist: 'state battery.level, battery.charging, battery.temp_c; event charger {plugged}' },
   { id: 'network', label: 'Network and Wi-Fi', cost: 'none', sensitive: false, gist: 'state net.type (wifi/cell/none), wifi.connected, wifi.ssid; event network {type, connected, ssid}' },
@@ -107,7 +107,7 @@ function sentryPatch(fn) {
   sentryWrite(n.cfg); const r = sentryApply(n.cfg); sentryUiRender();
   return { cfg: n.cfg, errors: [...n.errors, ...r.errors], warnings: n.warnings, native: r };
 }
-/** The file was edited by hand or by Jade's file tools: pick it up, no restart. */
+/** The file was edited by hand or by Pandora's file tools: pick it up, no restart. */
 function sentryWatch() {
   if (typeof vfs === 'undefined' || !syHas() || !vfs.nodes) return;
   const m = vfs.nodes.get(SY_PATH)?.mtime || 0;
@@ -204,14 +204,14 @@ async function sentryTool(a) {
     return JSON.stringify({ ok: true, state: 'var.' + name, value: a.value, problems: r.errors });
   }
   if (act === 'on') {
-    if (!(await phoneApprove('Jade wants to turn Sentry on', 'Sentry runs a background service that watches the sensors and events your rules use, and shows a notice while it does.'))) return JSON.stringify({ error: 'The user said no.' });
+    if (!(await phoneApprove('Pandora wants to turn Sentry on', 'Sentry runs a background service that watches the sensors and events your rules use, and shows a notice while it does.'))) return JSON.stringify({ error: 'The user said no.' });
     const r = sentryPatch(c => { c.enabled = true; }); return JSON.stringify({ ok: true, problems: r.errors, notes: r.warnings });
   }
   if (act === 'off') { const r = sentryPatch(c => { c.enabled = false; }); return JSON.stringify({ ok: true, sentry: 'off', problems: r.errors }); }
   if (act === 'add_system' || act === 'remove_system') {
     const c = syCat(String(a.system || a.id || '')); if (!c) throw new Error('system is one of ' + SY_CAT.map(x => x.id).join(', '));
     if (act === 'remove_system') { sentryPatch(cfg => { cfg.systems[c.id] = false; }); return JSON.stringify({ ok: true, removed: c.id, note: 'it stops using any battery' }); }
-    if (c.sensitive && !(await phoneApprove(`Jade wants Sentry to use: ${c.label}`, `${c.gist}\n\n${syCost(c)}. You can switch it off any time in Settings.`))) return JSON.stringify({ error: 'The user said no.' });
+    if (c.sensitive && !(await phoneApprove(`Pandora wants Sentry to use: ${c.label}`, `${c.gist}\n\n${syCost(c)}. You can switch it off any time in Settings.`))) return JSON.stringify({ error: 'The user said no.' });
     if (SY_PERMS[c.id] && !(await phoneEnsure(SY_PERMS[c.id]))) return JSON.stringify({ error: `Android did not give ${c.label} permission.` });
     const r = sentryPatch(cfg => { cfg.systems[c.id] = true; });
     return JSON.stringify({ ok: true, added: c.id, battery: c.cost, note: 'it only runs while a rule uses it', problems: r.errors });

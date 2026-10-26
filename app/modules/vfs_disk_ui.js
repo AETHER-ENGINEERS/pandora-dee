@@ -17,7 +17,7 @@ $('#btnDiskShared')?.addEventListener('click', () => {
   else if (r === 'ok') { vfs.flush(true); toast('Vault moved to JadeVault. Reloading…', 'ok'); setTimeout(() => location.reload(), 600); }
   else toast('Could not move the vault: ' + esc(r.replace(/^ERR:/, '')), 'err');
 });
-$('#btnDiskRescan')?.addEventListener('click', () => { const c = vfs.rescan(true); toast(c ? `Picked up ${c} change${c > 1 ? 's' : ''} from the folder.` : 'The folder matches what Jade has.', 'ok'); diskSync(); });
+$('#btnDiskRescan')?.addEventListener('click', () => { const c = vfs.rescan(true); toast(c ? `Picked up ${c} change${c > 1 ? 's' : ''} from the folder.` : 'The folder matches what Pandora has.', 'ok'); diskSync(); });
 window.__diskSync = diskSync;
 if (vfs.diskOn) {
   if (vfs.info?.mode === 'app' && !ls.get('diskHint')) { ls.set('diskHint', 1); setTimeout(() => toast('Your vault is saved as real files in the app folder. To put it in a JadeVault folder that other apps can open: Config → App → Vault storage.', 'info'), 5000); }

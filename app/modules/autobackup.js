@@ -95,7 +95,7 @@ function abTick() {
 setInterval(abTick, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(abTick, 4000); });
 
-/* ---------- Jade's side: she can check and start a backup, never restore ---------- */
+/* ---------- Pandora's side: she can check and start a backup, never restore ---------- */
 async function backupTool(args) {
   const a = String(args.action || 'status').toLowerCase(), c = abCfg();
   if (a === 'status') { const s = ls.get('abStatus', null), last = ls.get('abLast', 0); return `Scheduled backup: ${c.on ? 'on' : 'off'}, every ${c.hours} h, ${c.kind}${c.encrypt ? ', encrypted' : ''}${c.keys ? ', with keys' : ''} to ${c.url || '(no server set)'}. Last success: ${last ? new Date(last).toLocaleString() : 'never'}. Last attempt: ${s ? `${s.ok === false ? 'FAILED: ' : ''}${s.msg}` : 'none'}.`; }

@@ -1,18 +1,18 @@
 /* =====================================================================
    VECTOR MEMORY — embeddings from Ollama, stored with sqlite-vec, searched together with SQLite FTS5.
-   - Jade's embedded SQLite (see sqlite_glue.js) has sqlite-vec 0.1.9 linked in: vec0 tables, vec_distance_*, vec_f32 …
+   - Pandora's embedded SQLite (see sqlite_glue.js) has sqlite-vec 0.1.9 linked in: vec0 tables, vec_distance_*, vec_f32 …
      (also available in the sqlite3 shell, Python and node scripts).
-   - /Jade/.index/vectors.db is an ordinary SQLite file: chunks (text + source), an FTS5 index and a vec0 table.
+   - /Pandora/.index/vectors.db is an ordinary SQLite file: chunks (text + source), an FTS5 index and a vec0 table.
      It is a cache: delete it and it is rebuilt from the notes.
-   - Collections: "memory" (the bullets of /Jade/Memory.md) and "journal" (one entry per chat) stay in sync by themselves,
+   - Collections: "memory" (the bullets of /Pandora/Memory.md) and "journal" (one entry per chat) stay in sync by themselves,
      "notes" is the vault (Config → Embeddings → index my notes, or the embeddings tool's index action), and any other
-     name is a collection Jade fills herself with the embeddings tool.
+     name is a collection Pandora fills herself with the embeddings tool.
    - Hybrid search = reciprocal rank fusion (k = 60) of the FTS5 keyword ranking and the vec0 nearest neighbours.
      Without embeddings (no model, Ollama off) it quietly falls back to keyword-only, then to the old BM25.
    - SQLite lives in a Web Worker (the browser will not instantiate a 900 KB WebAssembly module on the main thread).
    ===================================================================== */
-const VMEM_DB = '/Jade/.index/vectors.db';
-const VMEM_AUTO = ['memory', 'journal'];                 // collections rebuilt from the notes (everything else is Jade's own)
+const VMEM_DB = '/Pandora/.index/vectors.db';
+const VMEM_AUTO = ['memory', 'journal'];                 // collections rebuilt from the notes (everything else is Pandora's own)
 const VMEM_RRF = 60;
 const vmemWorkerSrc = () => `
 let S = null, db = null;
@@ -134,7 +134,7 @@ function vmemNoteChunks(prefix) {
   for (const p of [...vfs.nodes.keys()].sort()) {
     if (!isNote(p) || !vfs.isFile(p)) continue;
     if (prefix && !(p === prefix || p.startsWith(prefix.replace(/\/+$/, '') + '/'))) continue;
-    if (p.startsWith(JOURNAL_DIR + '/') || p === MEM_PATH || p.startsWith('/Jade/Flows/') || p.startsWith('/Jade/.index/')) continue;
+    if (p.startsWith(JOURNAL_DIR + '/') || p === MEM_PATH || p.startsWith('/Pandora/Rituals/') || p.startsWith('/Pandora/.index/')) continue;
     const text = vfs.read(p); if (text.length > 300000) continue;
     const name = noteName(p); let head = '';
     for (const part of text.split(/^(?=#{1,3}\s)/m)) {
@@ -260,7 +260,7 @@ async function vmemRemove({ id, coll, src }) {
 // throw the whole index away and build it again (after changing the embedding model)
 async function vmemRebuild(progress) {
   await vmemOpen();
-  // memory, journal and notes are rebuilt from the files; Jade's own collections keep their text and are embedded again
+  // memory, journal and notes are rebuilt from the files; Pandora's own collections keep their text and are embedded again
   await vmemCall('tx', { stmts: [
     ["DELETE FROM fts WHERE rowid IN (SELECT id FROM chunks WHERE coll IN ('memory','journal','notes'))"],
     ["DELETE FROM chunks WHERE coll IN ('memory','journal','notes')"], ['UPDATE chunks SET emb = 0'], ['DROP TABLE IF EXISTS vec'], ["DELETE FROM meta WHERE k IN ('dim','model')"]] });

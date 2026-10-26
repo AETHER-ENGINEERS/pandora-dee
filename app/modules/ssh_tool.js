@@ -1,10 +1,10 @@
 /* =====================================================================
-   SSH — Jade keeps real, interactive SSH sessions open to machines the user has saved, so she can run a build,
+   SSH — Pandora keeps real, interactive SSH sessions open to machines the user has saved, so she can run a build,
    watch it scroll, answer a prompt and keep going. The Android half is SshHost / SshClient (a from-scratch
    SSH-2 client: ecdh-sha2-nistp256, aes-ctr, hmac-sha2-256, password / keyboard-interactive / publickey).
 
    Credentials: hosts live in the user's settings (sshHosts), the same place as her API keys, and they travel in
-   a backup that was exported "with keys". Jade asks for a host BY NAME and the page passes the secret straight
+   a backup that was exported "with keys". Pandora asks for a host BY NAME and the page passes the secret straight
    to the Android side — a password or private key is never returned in a tool result, never echoed into the
    transcript and never shown to the model, so nothing in remote output can talk her into reading one back.
 
@@ -202,7 +202,7 @@ function sshUiRender() {
   box.innerHTML = hs.map((h, i) => `
     <div class="flex flex-col gap-1 p-2 rounded" style="border:1px solid var(--bd,#2f6);opacity:.95" data-sshi="${i}">
       <div class="flex gap-2 flex-wrap items-end">
-        <div style="flex:1 1 8rem"><label class="lbl">Name Jade uses</label><input class="field mt-1" data-sshk="name" value="${esc(h.name || '')}" placeholder="buildbox" autocomplete="off" spellcheck="false"></div>
+        <div style="flex:1 1 8rem"><label class="lbl">Name Pandora uses</label><input class="field mt-1" data-sshk="name" value="${esc(h.name || '')}" placeholder="buildbox" autocomplete="off" spellcheck="false"></div>
         <div style="flex:2 1 10rem"><label class="lbl">Address</label><input class="field mt-1" data-sshk="host" value="${esc(h.host || '')}" placeholder="192.168.1.20 or box.example.com" autocomplete="off" spellcheck="false"></div>
         <div style="flex:0 0 5rem"><label class="lbl">Port</label><input class="field mt-1" type="number" min="1" max="65535" data-sshk="port" value="${Number(h.port) || 22}"></div>
         <div style="flex:1 1 7rem"><label class="lbl">User</label><input class="field mt-1" data-sshk="user" value="${esc(h.user || '')}" placeholder="pi" autocomplete="off" spellcheck="false"></div>

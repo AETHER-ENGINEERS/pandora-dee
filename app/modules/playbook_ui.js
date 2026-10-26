@@ -1,17 +1,17 @@
 /* =====================================================================
-   PLAYBOOKS TAB: list, read, edit (JSON), run, delete. The files are plain JSON in /Jade/Playbooks.
+   PLAYBOOKS TAB: list, read, edit (JSON), run, delete. The files are plain JSON in /Pandora/Playbooks.
    ===================================================================== */
 const PUI = { view: 'list', name: '', text: '', errs: [], runId: null, info: '', isNew: false };
 const PB_EXAMPLES = [
   { name: 'Morning check', description: 'Count the notes tagged #todo and write a line to a log', playbook: { description: 'Count the notes tagged #todo and write a line to a log', vars: { tag: 'todo' }, tasks: [
     { name: 'Search notes', do: 'notes_search', query: '#{{ tag }}', limit: 30, register: 'found' },
     { name: 'Must find something', do: 'assert', that: ["len(found) > 0"], msg: 'no notes with that tag' },
-    { name: 'Log it', do: 'save', path: '/Jade/Playbooks/out/morning.log', value: '{{ today() }}: {{ len(split(found, "\\n")) }} lines', append: true }] } },
+    { name: 'Log it', do: 'save', path: '/Pandora/Playbooks/out/morning.log', value: '{{ today() }}: {{ len(split(found, "\\n")) }} lines', append: true }] } },
   { name: 'Page price', description: 'Read a price from a web page and stop if it is too high', playbook: { description: 'Read a price from a web page and stop if it is too high', allow_hosts: ['shop.example'], vars: { max: 50 }, tasks: [
     { do: 'browser.goto', url: 'https://shop.example/lamp' },
     { do: 'browser.extract', css: '.price', register: 'price' },
     { do: 'assert', that: ['price | float <= max'], msg: 'too expensive: {{ price }}' },
-    { do: 'save', path: '/Jade/Playbooks/out/price.txt', value: '{{ price }}' }] } },
+    { do: 'save', path: '/Pandora/Playbooks/out/price.txt', value: '{{ price }}' }] } },
   { name: 'Retry until ready', description: 'Poll a tool until the answer contains "ready", with a rescue path', playbook: { description: 'Poll until ready', tasks: [
     { block: [{ name: 'Poll', do: 'web_fetch', url: 'https://example.com/status', register: 'status', until: "'ready' in result", retries: 5, delay: 10 }], rescue: [{ do: 'debug', msg: 'gave up: {{ error }}' }], always: [{ do: 'debug', msg: 'done' }] }] } },
 ];
@@ -25,8 +25,8 @@ function pbRender() {
 }
 function pbListHtml() {
   const rows = pbList(), recent = PB_RUNS.recent.slice(0, 8), active = [...PB_RUNS.active.values()];
-  return `<div class="flex items-center justify-between gap-2"><div class="pane-h">Playbooks</div><div class="flex gap-1"><button class="btn btn-ghost" data-pa="ask">Ask Jade</button><button class="btn btn-solid cut cut-sm" data-pa="new">+ New</button></div></div>
-  <p class="hint leading-relaxed">Saved lists of tasks, like Ansible in JSON: any of Jade's tools and the browser, with variables, when, loop, retries and rescue. They run without the model, here, from a schedule or a flow, or when Jade runs them. Plain JSON files in <span class="mono text-cy">/Jade/Playbooks</span>; changed ones ask you to approve before they run on their own.</p>
+  return `<div class="flex items-center justify-between gap-2"><div class="pane-h">Playbooks</div><div class="flex gap-1"><button class="btn btn-ghost" data-pa="ask">Ask Pandora</button><button class="btn btn-solid cut cut-sm" data-pa="new">+ New</button></div></div>
+  <p class="hint leading-relaxed">Saved lists of tasks, like Ansible in JSON: any of Pandora's tools and the browser, with variables, when, loop, retries and rescue. They run without the model, here, from a schedule or a flow, or when Pandora runs them. Plain JSON files in <span class="mono text-cy">/Pandora/Playbooks</span>; changed ones ask you to approve before they run on their own.</p>
   ${PUI.info ? `<div class="fl-err">${esc(PUI.info)}</div>` : ''}
   <div class="fl-new" id="pbNew" hidden><div class="lbl">Start from</div>${PB_EXAMPLES.map((x, i) => `<button type="button" class="fl-ex" data-pa="example" data-i="${i}"><b>${esc(x.name)}</b><span>${esc(x.description)}</span></button>`).join('')}<button type="button" class="fl-ex" data-pa="example" data-i="-1"><b>Empty</b><span>one task to start from</span></button></div>
   ${active.length ? `<div class="fl-active">${active.map(r => `<button type="button" class="fl-runrow" data-pa="openrun" data-id="${r.id}">${pbSt('running')} <b>${esc(r.playbook)}</b> <span class="hint">${r.log.length} tasks so far</span></button>`).join('')}</div>` : ''}
@@ -35,7 +35,7 @@ function pbListHtml() {
     return `<div class="sched-card fl-card" data-name="${esc(r.name)}"><div class="flex items-center gap-2"><span class="sched-name flex-1 min-w-0 truncate">${esc(r.name)}</span><span class="hud ${r.approved ? '' : 'text-yl'}">${r.approved ? 'approved' : 'NOT approved'}</span></div>
       ${r.bad ? `<div class="mono text-[11.5px] text-rd">${esc(r.bad)}</div>` : ''}${r.description ? `<div class="sched-prompt">${esc(r.description)}</div>` : ''}
       <div class="hud">${r.tasks} task${r.tasks === 1 ? '' : 's'} · ${last ? `last ${pbSt(last.status)} ${esc(relTime(last.started))}` : 'never run here'}</div>
-      <div class="flex gap-1 flex-wrap"><button class="btn btn-ghost" data-pa="run">Run</button><button class="btn btn-ghost" data-pa="edit">Open</button><button class="btn btn-ghost" data-pa="dup">Duplicate</button><button class="btn btn-ghost" data-pa="del">Delete</button></div></div>`; }).join('') : `<div class="text-sm text-dim leading-relaxed border border-dashed border-line p-4">No playbooks yet. Press <b class="text-yl">+ New</b> to start from an example, or ask Jade: <span class="mono text-cy">make a playbook that checks the lamp price every morning</span>.</div>`}</div>
+      <div class="flex gap-1 flex-wrap"><button class="btn btn-ghost" data-pa="run">Run</button><button class="btn btn-ghost" data-pa="edit">Open</button><button class="btn btn-ghost" data-pa="dup">Duplicate</button><button class="btn btn-ghost" data-pa="del">Delete</button></div></div>`; }).join('') : `<div class="text-sm text-dim leading-relaxed border border-dashed border-line p-4">No playbooks yet. Press <b class="text-yl">+ New</b> to start from an example, or ask Pandora: <span class="mono text-cy">make a playbook that checks the lamp price every morning</span>.</div>`}</div>
   ${recent.length ? `<div class="pane-h mt-2">Recent runs</div><div class="flex flex-col">${recent.map(r => `<button type="button" class="fl-runrow" data-pa="openrun" data-id="${r.id}">${pbSt(r.status)} <b>${esc(r.playbook)}</b> <span class="hint">${esc(relTime(r.started))} · ${((r.ended - r.started) / 1000).toFixed(1)} s · ${esc(r.via)}</span></button>`).join('')}</div>` : ''}`;
 }
 function pbEditHtml() {

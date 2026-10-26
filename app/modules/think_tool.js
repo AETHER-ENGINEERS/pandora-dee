@@ -1,5 +1,5 @@
 /* =====================================================================
-   THINK — a tree of thoughts with verification. Jade (or the harness, in auto mode) branches several lines of
+   THINK — a tree of thoughts with verification. Pandora (or the harness, in auto mode) branches several lines of
    reasoning, each line is checked by something that can say no (run the code, look for the file, a rubric, an
    independent judge), and the best VERIFIED line is the answer. The tree, the search maths, the budgets and the
    scoring live here and are deterministic; the model only supplies thoughts.
@@ -13,7 +13,7 @@
    - Everything a verifier prints, and every thought, is untrusted DATA: it never changes the engine's behaviour.
    - Budgets (nodes, seconds, tokens) are hard. The search ends with the best so far and says which limit hit.
    ===================================================================== */
-const TH = { trees: new Map(), last: null, dir: '/Jade/Tot', controllers: {}, typeList: ['code', 'vault lookup', 'math', 'planning', 'writing', 'device action', 'research', 'other'] };
+const TH = { trees: new Map(), last: null, dir: '/Pandora/Tot', controllers: {}, typeList: ['code', 'vault lookup', 'math', 'planning', 'writing', 'device action', 'research', 'other'] };
 /*ENGINE:BEGIN*/
 const TH_TIER_W = { 1: 1, 2: 0.8, 3: 0.5, 4: 0.25 };
 const TH_KIND_TIER = { code: 1, shell: 1, file: 1, rubric: 2, decide: 3, critique: 4 };
@@ -356,7 +356,7 @@ async function thTypeOf(goal) {
 }
 
 /* ---------------------------------------------------------------------
-   Auto mode: the harness proposes, verifies and decides; only the result goes back into Jade's context.
+   Auto mode: the harness proposes, verifies and decides; only the result goes back into Pandora's context.
    --------------------------------------------------------------------- */
 async function thPropose(tree, node, n) {
   const path = thPath(tree, node.id).slice(1);
@@ -464,7 +464,7 @@ async function thinkTool(a) {
     // the (state, action, reward) tuples later phases learn from: step penalty throughout, the episode reward at the end
     thAppendMany(`${TH.dir}/steps.jsonl`, tree.steps.map((s, i) => JSON.stringify({ tree: tree.id, type: tree.type, i, s: s.s, a: s.a, r: i === tree.steps.length - 1 ? R.total : -tree.cfg.step_cost, done: i === tree.steps.length - 1 })), 20000);
     try { vfs.rm(`${TH.dir}/trees/${tree.id}.json`); } catch {}
-    return J({ closed: tree.closed.outcome, reward: R, pivotal_thought: adv.pivotal, note: 'recorded in /Jade/Tot/episodes.jsonl' });
+    return J({ closed: tree.closed.outcome, reward: R, pivotal_thought: adv.pivotal, note: 'recorded in /Pandora/Tot/episodes.jsonl' });
   }
   throw new Error(`unknown action ${act}`);
 }

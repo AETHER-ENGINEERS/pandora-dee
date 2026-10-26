@@ -2,7 +2,7 @@
    SKILL ROUTER: with many skills, only the ones that fit the message go in the prompt
    ===================================================================== */
 // Up to SKILL_ALL_MAX skills are listed in full as before. Past that, each turn lists only the best matches (found by
-// keywords + meaning with the vector index, collection "skills") and Jade gets a find_skill tool for the rest.
+// keywords + meaning with the vector index, collection "skills") and Pandora gets a find_skill tool for the rest.
 const SKILL_ALL_MAX = 15, SKILL_TOP = 6;
 let skillCtx = { q: '', names: null };            // set before each turn (the prompt builder is synchronous)
 const skillActive = () => (typeof listSkills === 'function' ? listSkills().filter(s => !s.off) : []);

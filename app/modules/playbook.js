@@ -1,14 +1,14 @@
 /* =====================================================================
-   PLAYBOOKS: deterministic automation for everything Jade can do, in the shape of Ansible. No model in the loop.
+   PLAYBOOKS: deterministic automation for everything Pandora can do, in the shape of Ansible. No model in the loop.
    ===================================================================== */
 // A playbook is a JSON list of tasks. Each task names one action ("do") and its arguments. Any of her tools is an action
 // ({"do":"notes_search","query":"inbox"}); the page-driving steps of the old browser scripts live on as "browser.click" and
 // friends; a few control actions (set, assert, fail, wait, save, debug, playbook) are built in. Around every task sit the
 // usual Ansible keywords: when, loop, register, retries/until/delay, ignore_errors, failed_when, timeout, block/rescue/always,
 // tags. Strings may contain {{ expressions }} over the variables and secrets. The same playbook always does the same thing.
-// Playbooks are JSON in /Jade/Playbooks/<name>.json. The user approves a playbook when it is saved (and again if it changes),
+// Playbooks are JSON in /Pandora/Playbooks/<name>.json. The user approves a playbook when it is saved (and again if it changes),
 // so schedules and flows can run it unattended afterwards.
-const PB_DIR = '/Jade/Playbooks', PB_OUT = '/Jade/Playbooks/out', PB_LEGACY = '/Jade/Browser/Scripts';
+const PB_DIR = '/Pandora/Playbooks', PB_OUT = '/Pandora/Playbooks/out', PB_LEGACY = '/Pandora/Browser/Scripts';
 const PB_CONTROL = new Set(['set', 'debug', 'fail', 'assert', 'wait', 'save', 'playbook', 'tool']);
 const PB_BROWSER = new Set(['goto', 'back', 'reload', 'click', 'type', 'select', 'check', 'press', 'scroll', 'wait_for', 'extract', 'assert', 'eval', 'screenshot', 'exists', 'url', 'title']);
 const PB_NEEDS_TARGET = new Set(['click', 'type', 'select', 'check', 'wait_for', 'extract', 'exists']);
@@ -561,7 +561,7 @@ async function pbRun(pb, opts = {}) {
   return out;
 }
 function pbOutPath(p) {
-  p = vfs.norm(String(p), '/'); if (/^\/Jade\//i.test(p) && !p.startsWith(PB_OUT + '/') && !p.startsWith('/Jade/Browser/')) throw new Error(`playbooks can only write under ${PB_OUT}/ inside /Jade (not ${p}); use the write tool for other places`);
+  p = vfs.norm(String(p), '/'); if (/^\/Pandora\//i.test(p) && !p.startsWith(PB_OUT + '/') && !p.startsWith('/Pandora/Browser/')) throw new Error(`playbooks can only write under ${PB_OUT}/ inside /Pandora (not ${p}); use the write tool for other places`);
   return p;
 }
 
@@ -634,7 +634,7 @@ async function playbookTool(a) {
     const errs = pbValidate(pb, toolNames()); if (errs.length) throw new Error('the playbook has problems:\n- ' + errs.join('\n- '));
     if (act === 'validate') return `valid: ${pbSummary(pb).tasks} tasks`;
     pb.name = pbName(a.name || pb.name); const p = pbPath(pb.name);
-    if (!(await pbApprove(pb, 'Jade wants to save a playbook'))) throw new Error('the user did not approve this playbook, so it was not saved');
+    if (!(await pbApprove(pb, 'Pandora wants to save a playbook'))) throw new Error('the user did not approve this playbook, so it was not saved');
     vfs.write(p, JSON.stringify(pb, null, 1), { mkdirs: true }); return `saved ${p} (${pbSummary(pb).tasks} tasks, approved). Run it with action run.`;
   }
   if (act === 'plan') { const pb = a.name ? pbLoad(a.name) : parse(); if (!pb) throw new Error('give a name or a playbook'); const errs = pbValidate(pb, toolNames()); return (errs.length ? 'PROBLEMS:\n- ' + errs.join('\n- ') + '\n\n' : '') + pbPlan(pb) + migNote; }
@@ -649,9 +649,9 @@ async function playbookTool(a) {
   }
   throw new Error('unknown action ' + act + '. Use help, modules, save, run, plan, list, show, validate, convert or delete.');
 }
-const PB_HELP = `Playbooks: deterministic automation for anything you can do, in the shape of Ansible. No model involved. Save once (the user approves it), run any time, also from schedules and flows: jade.tool('playbook', {action:'run', name:'x'}). They are plain JSON in /Jade/Playbooks/<name>.json that the user can read and edit in the Playbooks tab.
+const PB_HELP = `Playbooks: deterministic automation for anything you can do, in the shape of Ansible. No model involved. Save once (the user approves it), run any time, also from schedules and flows: jade.tool('playbook', {action:'run', name:'x'}). They are plain JSON in /Pandora/Playbooks/<name>.json that the user can read and edit in the Playbooks tab.
 A playbook is {description, vars:{name:value}, allow_hosts:["example.com"], seconds, tasks:[…]}. A task is {"name":"…","do":"<action>", …arguments, …keywords}.
-ACTIONS ("do"): any of your tools by name, with the tool's arguments next to it: {"do":"notes_search","query":"inbox"} · for tools with an action: {"do":"phone.alarm_set",…} or just put "action":"…" in the task · {"do":"tool","tool":"browser","args":{…}} if a name is ambiguous. Built in: set{vars:{x:1}} · debug{msg|var} · fail{msg} · assert{that:["expr",…],msg?} · wait{seconds|ms} · save{path,value,append?} (under ${PB_OUT}/ or /Jade/Browser/) · playbook{playbook:"name",vars?} (run another). Browser steps (the page, by CSS selector or visible text): browser.goto{url} · click · type{text,submit?,append?} · select{value|label} · check{on?} · press{key} · scroll{to|dy} · wait_for{absent?} · exists{absent?} (true/false) · url · title · extract{attr?,all?} · assert{equals|contains|matches|count|absent | url_contains | title_contains} · eval{code} · screenshot{path?}; targets: css:"#q" | text:"Sign in" | xpath:"//…", nth, unique, hidden. Task keywords win over tool arguments of the same name (name, timeout, tags, json, block…): put such tool arguments inside "args":{…} (a tool that takes timeout also receives the task's timeout). Not allowed: delegate, think, curiosity, find_skill (they use a model). Action modules lists what is available now.
+ACTIONS ("do"): any of your tools by name, with the tool's arguments next to it: {"do":"notes_search","query":"inbox"} · for tools with an action: {"do":"phone.alarm_set",…} or just put "action":"…" in the task · {"do":"tool","tool":"browser","args":{…}} if a name is ambiguous. Built in: set{vars:{x:1}} · debug{msg|var} · fail{msg} · assert{that:["expr",…],msg?} · wait{seconds|ms} · save{path,value,append?} (under ${PB_OUT}/ or /Pandora/Browser/) · playbook{playbook:"name",vars?} (run another). Browser steps (the page, by CSS selector or visible text): browser.goto{url} · click · type{text,submit?,append?} · select{value|label} · check{on?} · press{key} · scroll{to|dy} · wait_for{absent?} · exists{absent?} (true/false) · url · title · extract{attr?,all?} · assert{equals|contains|matches|count|absent | url_contains | title_contains} · eval{code} · screenshot{path?}; targets: css:"#q" | text:"Sign in" | xpath:"//…", nth, unique, hidden. Task keywords win over tool arguments of the same name (name, timeout, tags, json, block…): put such tool arguments inside "args":{…} (a tool that takes timeout also receives the task's timeout). Not allowed: delegate, think, curiosity, find_skill (they use a model). Action modules lists what is available now.
 KEYWORDS on any task: name · when:"expr" (or a list: all must hold) · loop:"items"|[…]|range(5) with loop_var (default item) and index · register:"var" (the task's result: a tool's text, or the extracted value; json:true parses a tool's JSON) · retries:n delay:s · until:"expr" (retry until true; result is the task's result) · failed_when:"expr" · ignore_errors:true (register is null and <var>_error says why) · timeout:s · tags:[…] · no_log:true. Group tasks: {"block":[…],"rescue":[…],"always":[…]} (with when/loop too); in rescue, error and failed_task are set.
 EXPRESSIONS and TEMPLATES: "{{ expr }}" inside any string (a lone {{ }} keeps its type). Variables, secrets (Config → Secrets, never logged), dotted paths and [index]; == != < <= > >= and or not in, "is defined", + - * / %; filters and functions: len lower upper trim str int float join split first last keys values replace startswith endswith contains matches regex_find json from_json sort unique reverse abs round min max range now today random_int default. Example: {{ price | float * 2 }}, when: "'sale' in title and count > 0".
 Example: {"description":"Price of the lamp","allow_hosts":["shop.example"],"tasks":[{"do":"browser.goto","url":"https://shop.example/"},{"do":"browser.type","css":"#q","text":"lamp","submit":true},{"do":"browser.extract","css":".price","register":"price"},{"do":"assert","that":["price | float < 50"],"msg":"too expensive"},{"do":"save","path":"${PB_OUT}/lamp.txt","value":"{{ price }}"}]}

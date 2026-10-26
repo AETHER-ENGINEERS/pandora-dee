@@ -1,4 +1,4 @@
-/* ---------- the page agent: injected into the pages Jade browses, so she can read and operate them ----------
+/* ---------- the page agent: injected into the pages Pandora browses, so she can read and operate them ----------
    Self-contained on purpose: it is sent to the browser WebView as text (browserAgentFactory.toString()). */
 function browserAgentFactory() {
   const ids = new WeakMap(); let next = 1;

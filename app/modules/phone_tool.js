@@ -51,7 +51,7 @@ function phoneApprove(title, detail) {
     const done = v => { clearTimeout(t); bg.remove(); res(v); };
     const t = setTimeout(() => done(false), 10 * 60 * 1000);
     box.querySelector('[data-yes]').onclick = () => done(true); box.querySelector('[data-no]').onclick = () => done(false);
-    try { if (document.hidden && naHas('notify')) NA().notify('Jade is asking', title); } catch {}
+    try { if (document.hidden && naHas('notify')) NA().notify('Pandora is asking', title); } catch {}
   });
 }
 const wAudioMime = p => ({ mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac', webm: 'audio/webm' })[(p.split('.').pop() || '').toLowerCase()] || 'audio/mpeg';
@@ -95,8 +95,8 @@ async function phoneTool(a) {
   const need = phoneNeeds(act); if (need && !(await phoneEnsure(need))) throw new Error('Android permission was not given: ' + need.map(p => p.split('.').pop()).join(', '));
   const args = { ...a }; delete args.action;
   if (act === 'alarm_set') args.days = phoneDays(a.days);
-  if (act === 'call') { if (!(typeof sentryAllows === 'function' && sentryAllows('call', a.number)) && !(await phoneApprove('Jade wants to call', `${a.name ? a.name + '\n' : ''}${a.number}`))) return JSON.stringify({ error: 'The user said no.' }); }
-  if (act === 'sms_send') { if (!(typeof sentryAllows === 'function' && sentryAllows('sms_send', a.to)) && !(await phoneApprove('Jade wants to send a text', `To: ${a.name ? a.name + ' ' : ''}${a.to}\n\n${a.text}`))) return JSON.stringify({ error: 'The user said no.' }); }
+  if (act === 'call') { if (!(typeof sentryAllows === 'function' && sentryAllows('call', a.number)) && !(await phoneApprove('Pandora wants to call', `${a.name ? a.name + '\n' : ''}${a.number}`))) return JSON.stringify({ error: 'The user said no.' }); }
+  if (act === 'sms_send') { if (!(typeof sentryAllows === 'function' && sentryAllows('sms_send', a.to)) && !(await phoneApprove('Pandora wants to send a text', `To: ${a.name ? a.name + ' ' : ''}${a.to}\n\n${a.text}`))) return JSON.stringify({ error: 'The user said no.' }); }
   const r = PH_ASYNC.test(act) ? await phoneAsync(act, args, act === 'bt_scan' ? 60000 : 60000) : NA().phone(act, JSON.stringify(args));
   try { const j = JSON.parse(r); if (j && j.error) throw new Error(j.error); return JSON.stringify(j, null, 1); } catch (e) { if (e instanceof SyntaxError) return r; throw e; }
 }

@@ -16,7 +16,7 @@ function chResolve(ref) {
 }
 const chCap = (t, n) => { t = String(t ?? ''); return t.length > n ? t.slice(0, n) + `…(${t.length - n} more characters)` : t; };
 function chEntry(m, i) {
-  const e = { i, ts: m.ts ? new Date(m.ts).toISOString() : null, sender: m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Jade' : m.role, role: m.role, text: chCap(m.role === 'user' && m.display ? m.display : m.content, CH_TEXT_CAP) };
+  const e = { i, ts: m.ts ? new Date(m.ts).toISOString() : null, sender: m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Pandora' : m.role, role: m.role, text: chCap(m.role === 'user' && m.display ? m.display : m.content, CH_TEXT_CAP) };
   if (m.tool_calls?.length) e.tool_calls = m.tool_calls.map(t => ({ name: t.function?.name, arguments: t.function?.arguments }));
   if (m.tool_name) e.tool_name = m.tool_name;
   if (m._error) e.error = String(m._error);
@@ -37,7 +37,7 @@ function chChunks(sess) {
     if (m.role === 'compaction') return;
     if (m.role === 'user') { flush(); start = i; buf = ['User: ' + String(m.display || m.content || '')]; return; }
     if (start < 0) start = i;
-    if (m.role === 'assistant') { if (m.content) buf.push('Jade: ' + m.content); for (const t of m.tool_calls || []) buf.push(`→ ${t.function?.name}(${chCap(JSON.stringify(t.function?.arguments || {}), 300)})`); }
+    if (m.role === 'assistant') { if (m.content) buf.push('Pandora: ' + m.content); for (const t of m.tool_calls || []) buf.push(`→ ${t.function?.name}(${chCap(JSON.stringify(t.function?.arguments || {}), 300)})`); }
     else if (m.role === 'tool') buf.push(`← ${m.tool_name || 'tool'}: ${chCap(m.content, 500)}`);
   });
   flush();

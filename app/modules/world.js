@@ -1,5 +1,5 @@
 /* =====================================================================
-   WORLD — Jade's senses and media tools.
+   WORLD — Pandora's senses and media tools.
    senses  : camera (photo, clip, watch), microphone (record, level), location, every phone sensor
              (accelerometer, gyroscope, magnetometer/EMF, light, pressure, proximity, steps…), battery, Wi-Fi, device facts
    look    : she opens an image (or frames of a video) from the vault and sees it, without you sharing it each time
@@ -399,14 +399,14 @@ async function sensesTool(a) {
   }
 }
 const WORLD_TOOL_DEFS = [
-  { name: 'senses', description: "Jade's senses. list: the phone's sensors. read: sample one (sensor key from list, e.g. accelerometer, magnetic_field (µT), light, pressure, step_counter; seconds, hz, raw) for mean/min/max/std. battery, wifi, location (GPS), device. camera_snap: a photo you see (facing); camera_watch: frames over seconds (every, frames); camera_clip: video (audio). mic_record saves audio; mic_level: how loud. transcribe: a vault audio file to text. perms: ask Android for permissions. torch: flashlight (on, seconds = auto off, blink = flashes, ms = gap). vibrate (ms, or pattern [on, off, …] ms, max 30 s; stop). voice_mode: hands-free on/off. Captures are saved under /attachments.",
+  { name: 'senses', description: "Pandora's senses. list: the phone's sensors. read: sample one (sensor key from list, e.g. accelerometer, magnetic_field (µT), light, pressure, step_counter; seconds, hz, raw) for mean/min/max/std. battery, wifi, location (GPS), device. camera_snap: a photo you see (facing); camera_watch: frames over seconds (every, frames); camera_clip: video (audio). mic_record saves audio; mic_level: how loud. transcribe: a vault audio file to text. perms: ask Android for permissions. torch: flashlight (on, seconds = auto off, blink = flashes, ms = gap). vibrate (ms, or pattern [on, off, …] ms, max 30 s; stop). voice_mode: hands-free on/off. Captures are saved under /attachments.",
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['list', 'read', 'battery', 'wifi', 'location', 'device', 'torch', 'vibrate', 'camera_snap', 'camera_watch', 'camera_clip', 'mic_record', 'mic_level', 'transcribe', 'perms', 'voice_mode'] },
       path: { type: 'string' }, on: { type: 'boolean' }, ms: { type: 'number' }, pattern: { type: 'array', items: { type: 'number' } }, blink: { type: 'number' }, stop: { type: 'boolean' },
       sensor: { type: 'string' }, seconds: { type: 'number' }, hz: { type: 'number' }, raw: { type: 'boolean' },
       facing: { type: 'string', enum: ['back', 'front'] }, every: { type: 'number' }, frames: { type: 'number' }, audio: { type: 'boolean' }, look: { type: 'boolean', description: 'show the picture to you (default true)' } }, required: ['action'] } },
   { name: 'look', description: 'Open an image from the vault and see it (png, jpg, webp, gif, svg…), or frames of a video. No need for the user to share it again. path or paths: a vault file; a folder lists the images and videos in it; for a video, at is a list of seconds to grab (default three spread across it). The picture arrives in the next message.',
     parameters: { type: 'object', properties: { path: { type: 'string' }, paths: { type: 'array', items: { type: 'string' } }, at: { type: 'array', items: { type: 'number' }, description: 'video: seconds to grab frames at' }, label: { type: 'string' } } } },
-  { name: 'litert', description: 'LiteRT.js: run any .tflite model on this device. load: model is a vault path or an https URL (downloaded to /models); returns an id and the input/output shapes; accelerator wasm (default) or webgpu. run: id and inputs (one {data, shape?, dtype?} per model input; data = numbers, nested arrays, or a vault path to a .json or raw .f32 file); returns summaries, top-5 indices and saves big outputs to /models/out. info, status, unload. Pictures: an input can be {image: vault path, size?:[h,w], fit?: crop|stretch|letterbox, norm?: minus1_1|zero_1|imagenet|none, layout?: nhwc|nchw}: Jade resizes and converts it for the model (uint8 models get raw 0-255 pixels automatically; float models get -1..1 unless norm says otherwise), so a camera_snap photo can go straight in. Quantized (int8 and uint8) models work: outputs are converted back to real numbers using the scale and zero point stored in the model (raw_output:true keeps the integers), and for inputs {data, real:true} quantizes real numbers the same way (otherwise numbers are taken as the raw integers). Pass labels (a vault text file, one label per line, label_offset 1 if the model has a background class first) to name the top 5.',
+  { name: 'litert', description: 'LiteRT.js: run any .tflite model on this device. load: model is a vault path or an https URL (downloaded to /models); returns an id and the input/output shapes; accelerator wasm (default) or webgpu. run: id and inputs (one {data, shape?, dtype?} per model input; data = numbers, nested arrays, or a vault path to a .json or raw .f32 file); returns summaries, top-5 indices and saves big outputs to /models/out. info, status, unload. Pictures: an input can be {image: vault path, size?:[h,w], fit?: crop|stretch|letterbox, norm?: minus1_1|zero_1|imagenet|none, layout?: nhwc|nchw}: Pandora resizes and converts it for the model (uint8 models get raw 0-255 pixels automatically; float models get -1..1 unless norm says otherwise), so a camera_snap photo can go straight in. Quantized (int8 and uint8) models work: outputs are converted back to real numbers using the scale and zero point stored in the model (raw_output:true keeps the integers), and for inputs {data, real:true} quantizes real numbers the same way (otherwise numbers are taken as the raw integers). Pass labels (a vault text file, one label per line, label_offset 1 if the model has a background class first) to name the top 5.',
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['load', 'run', 'info', 'status', 'unload'] }, model: { type: 'string' }, id: { type: 'string' }, accelerator: { type: 'string', enum: ['wasm', 'webgpu'] }, inputs: { type: 'array', items: { type: 'object' } }, raw_output: { type: 'boolean' }, labels: { type: 'string' }, label_offset: { type: 'number' }, save: { type: 'boolean' } }, required: ['action'] } },
 ];
 async function worldTool(name, a) {
@@ -513,7 +513,7 @@ const hfLabel = { idle: 'Talk', listening: '● Listening', thinking: '… Think
 function hfSet(st) {
   HF.state = st; const b = document.getElementById('btnTalk'); if (!b) return;
   b.textContent = HF.on ? hfLabel[st] || 'Talk' : 'Talk'; b.setAttribute('aria-pressed', String(HF.on));
-  b.title = HF.on ? 'Hands-free is on: tap to stop' : 'Talk to Jade hands-free';
+  b.title = HF.on ? 'Hands-free is on: tap to stop' : 'Talk to Pandora hands-free';
   const inp = document.getElementById('input'); if (inp && HF.on && st === 'listening' && !inp.value) { const wk = String(S.wakeWords || '').split(/[,;\n]/)[0].trim(); inp.placeholder = wk && !(HF.awakeUntil > Date.now() || Date.now() - HF.lastBusy < 15000) ? `Say “${wk}”…` : 'Listening…'; }
 }
 const hfAvailable = () => sttServer() ? !!navigator.mediaDevices?.getUserMedia : (naHas('sttStart') ? !!NA().sttAvailable() : !!(window.SpeechRecognition || window.webkitSpeechRecognition));
@@ -620,7 +620,7 @@ async function hfStart() {
   HF.on = true; HF.errs = 0; HF.quiet = 0; HF.pending = 0; if (!S.jadeVoice) setVoice(true);
   hfSoloEnter();
   try { HF.lock = await navigator.wakeLock?.request('screen'); } catch {}
-  hfSet('idle'); hfLoop(); toast('Hands-free is on. Just talk; Jade answers out loud.', 'ok');
+  hfSet('idle'); hfLoop(); toast('Hands-free is on. Just talk; Pandora answers out loud.', 'ok');
 }
 function hfStop() {
   HF.on = false; hfSoloExit(); clearTimeout(HF.timer); try { HF.rec?.stop(); } catch {} HF.rec = null; try { HF.lock?.release(); } catch {} HF.lock = null;
@@ -662,7 +662,7 @@ function hfListen() {
 }
 (() => {
   const v = document.getElementById('btnVoice'); if (!v || document.getElementById('btnTalk')) return;
-  const b = document.createElement('button'); b.className = v.className; b.id = 'btnTalk'; b.type = 'button'; b.textContent = 'Talk'; b.setAttribute('aria-pressed', 'false'); b.title = 'Talk to Jade hands-free';
+  const b = document.createElement('button'); b.className = v.className; b.id = 'btnTalk'; b.type = 'button'; b.textContent = 'Talk'; b.setAttribute('aria-pressed', 'false'); b.title = 'Talk to Pandora hands-free';
   b.onclick = () => (HF.on ? hfStop() : hfStart().catch(e => toast(String(e.message || e), 'err')));
   v.insertAdjacentElement('afterend', b);
 })();

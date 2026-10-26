@@ -1,5 +1,5 @@
 /* =====================================================================
-   SCREEN — Jade drives other apps on the phone the way a screen reader does: she reads the labelled things on
+   SCREEN — Pandora drives other apps on the phone the way a screen reader does: she reads the labelled things on
    the screen and taps, types and scrolls among them. The Android half is the JadeAccess accessibility service.
    It does nothing until the user turns "Jade" on in Android's Accessibility settings (she can open that screen
    with screen_enable, but only the user can flip the switch), and a notice shows while she is driving.
@@ -32,7 +32,7 @@ async function screenTool(a) {
   const r = await screenCall(op, arg, act === 'screenshot' ? 20000 : 30000);
   let j; try { j = JSON.parse(r); } catch { return r; }
   if (j && j.error) throw new Error(j.error);
-  // a screenshot is handed to Jade as a picture in the next message
+  // a screenshot is handed to Pandora as a picture in the next message
   if (act === 'screenshot' && (j.jpeg_base64 || j.png_base64)) { window.__viewQ.push({ b64: j.jpeg_base64 || j.png_base64, label: 'screen' + (a.label ? ' (' + a.label + ')' : '') }); return JSON.stringify({ ok: true, note: 'the screen picture arrives in the next message' }); }
   // reads carry the untrusted-data warning
   if ((act === 'read' || act === 'snapshot' || act === 'find' || act === 'wait') && (j.elements || j.matches)) return SC_WARN + '\n' + JSON.stringify(j, null, 1);

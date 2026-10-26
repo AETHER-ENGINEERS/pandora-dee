@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jade Docs</title>
+<link rel="stylesheet" href="style.css">
+<script src="webxdc.js"></script>
+<script src="docs-data.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="who"><span class="gem" aria-hidden="true">◆</span><div><b>JADE DOCS</b><span id="status" class="status"><i class="dot"></i><span id="statusText">ready</span></span></div></div>
+  <div class="lv" id="levels" role="group" aria-label="Detail level"></div>
+</header>
+<div class="searchbar">
+  <input id="q" type="search" placeholder="Search the docs (ranked, BM25)…" autocomplete="off" aria-label="Search">
+  <button id="clearq" class="x" hidden aria-label="Clear">✕</button>
+</div>
+<nav class="seg" id="tabs" role="tablist">
+  <button role="tab" data-view="browse" aria-selected="true">Browse</button>
+  <button role="tab" data-view="search" aria-selected="false">Search</button>
+  <button role="tab" data-view="ask" aria-selected="false">Ask Jade <span id="askCount" class="count"></span></button>
+  <button role="tab" data-view="notes" aria-selected="false">Notes <span id="noteCount" class="count"></span></button>
+</nav>
+<main>
+  <section id="browse" class="view">
+    <aside id="tree" class="tree"></aside>
+    <article id="page" class="page"></article>
+  </section>
+  <section id="search" class="view" hidden><div id="results" class="results"></div></section>
+  <section id="ask" class="view" hidden>
+    <div id="thread" class="thread" aria-live="polite"></div>
+    <form id="askform" class="askform">
+      <div id="askctx" class="askctx"></div>
+      <textarea id="asktext" rows="2" placeholder="Ask Jade about the docs…"></textarea>
+      <button type="submit" id="asksend">Ask</button>
+    </form>
+  </section>
+  <section id="notes" class="view" hidden><div id="notelist" class="results"></div></section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

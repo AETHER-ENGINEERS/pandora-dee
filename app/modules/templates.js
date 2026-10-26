@@ -43,7 +43,7 @@ function tplPages() {
     const tasks = []; let line = 0, fence = false;
     for (const l of text.split('\n')) { line++; if (/^\s*(```|~~~)/.test(l)) fence = !fence; if (fence) continue; const m = /^\s*[-*+] \[( |x|X)\] (.+)$/.exec(l); if (m) tasks.push({ text: m[2], completed: m[1] !== ' ', line, path: p }); }
     const day = /(\d{4}-\d{2}-\d{2})/.exec(noteName(p))?.[1] || null;
-    return { ...meta, file: { name: noteName(p), path: p, folder: vfs.parent(p), link: `[[${link(p)}]]`, linkName: link(p), ext: (p.split('.').pop() || '').toLowerCase(), size: n?.data?.length || 0, mtime: n?.mtime || 0, ctime: n?.ctime || n?.mtime || 0, tags: tags.map(t => '#' + t), outlinks: [...(idx.out.get(p) || [])], inlinks: [...(idx.back.get(p) || [])], tasks, day, frontmatter: meta } };
+    return { ...meta, file: { name: noteName(p), path: p, folder: vfs.parent(p), link: `[[${link(p)}]]`, linkName: link(p), ext: (p.split('.').pop() || '').toLowerCase(), size: n ? fsize(n) : 0, mtime: n?.mtime || 0, ctime: n?.ctime || n?.mtime || 0, tags: tags.map(t => '#' + t), outlinks: [...(idx.out.get(p) || [])], inlinks: [...(idx.back.get(p) || [])], tasks, day, frontmatter: meta } };
   });
   TplState.pages = pages; TplState.pagesStamp = TplState.stamp; return pages;
 }

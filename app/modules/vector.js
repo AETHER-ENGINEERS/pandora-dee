@@ -331,7 +331,19 @@ async function vectorTool(a) {
       const r = vjson(await vcall('xdc_join', { message_id: String(a.message_id) }, { timeoutMs: 120000 }));
       if (!r?.topic) throw new Error('could not join'); if (sc === 'public' && r.chat_id !== here) { await vcall('xdc_leave', { topic: r.topic }).catch(() => {}); throw new Error('that app is in another chat'); }
       VEC.xdc[r.topic] = { chat_id: r.chat_id, role: cur?.vecScope || (r.chat_id === S.vecOwner ? 'owner' : 'public') };
-      return `Joined the Mini App session (topic ${r.topic}). Your selfAddr is ${r.self_addr}. New frames will wake you; read with xdc_read, answer with xdc_send.`;
+      // the app's own README is its protocol: fetch the .xdc from the message and hand it over, so Jade knows the frame format
+      let proto = '';
+      try {
+        for (let i = 0; i < 3 && !proto; i++) {
+          const d = vjson(await vcall('download_attachment', { message_id: String(a.message_id), index: i, max_mb: 8 }, { timeoutMs: 120000 }).catch(() => '{}'), {});
+          if (!d?.base64) continue;
+          const files = await unzip(Uint8Array.from(atob(d.base64), c => c.charCodeAt(0))).catch(() => null); if (!files) continue;
+          const dec2 = new TextDecoder(); const get = n => { const k = Object.keys(files).find(x => x.toLowerCase() === n); return k ? dec2.decode(files[k]).slice(0, 4000) : ''; };
+          const readme = get('readme.md') || get('readme.txt') || get('readme'), man = get('manifest.toml');
+          proto = `\n\nThe app's own description (its frame format):\n${[man && '--- manifest.toml ---\n' + man, readme && '--- README ---\n' + readme].filter(Boolean).join('\n') || '(the app ships no README: read its frames with xdc_read and mirror their format)'}`;
+        }
+      } catch {}
+      return `Joined the Mini App session (topic ${r.topic}). Your selfAddr is ${r.self_addr}. New frames will wake you; read with xdc_read, answer with xdc_send frame=<text in the app's format>.${proto}`;
     }
     case 'xdc_read': { const t = String(a.topic); return (await vcall('xdc_read', { topic: t, wait_ms: Math.min(+a.wait_ms || 0, 20000) }, { timeoutMs: 60000 })) || '[]'; }
     case 'xdc_send': { const t = String(a.topic); if (sc === 'public' && VEC.xdc[t]?.chat_id !== here) throw new Error('not a session in this chat'); return await vcall('xdc_send', { topic: t, text: typeof a.frame === 'object' ? JSON.stringify(a.frame) : String(a.frame ?? a.text ?? '') }); }

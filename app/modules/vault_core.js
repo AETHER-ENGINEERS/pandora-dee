@@ -17,6 +17,21 @@ const TAG_RE = /(^|[\s(\[,;])#([A-Za-z][\w\/-]*)/g;
 const stripCode = (md) => String(md).replace(/^(```|~~~)[\s\S]*?^\1/gm, ' ').replace(/`[^`\n]*`/g, ' ').replace(/\$\$[\s\S]*?\$\$/g, ' ').replace(/\$(?!\s)[^$\n]+?\$/g, ' ');
 const KNOWN_EXT = /\.(md|markdown|txt|js|mjs|cjs|ts|json|csv|tsv|html?|css|sh|py|ya?ml|xml|svg|log|ini|toml|png|jpe?g|gif|webp|pdf)$/i;
 const nameKey = s => noteName(s).toLowerCase().replace(/[\s_\-]+/g, ' ').trim();
+// O(1) basename / normalised-name lookups for link resolution, built once per notes array (a rebuild makes a new array)
+const _lookupCache = new WeakMap();
+function noteLookup(notes) {
+  let L = _lookupCache.get(notes);
+  if (!L) {
+    L = { byBase: new Map(), byKey: new Map() };
+    for (const p of notes) {
+      const b = vfs.base(p).toLowerCase(), k = nameKey(p);
+      (L.byBase.get(b) || L.byBase.set(b, []).get(b)).push(p);
+      if (k) (L.byKey.get(k) || L.byKey.set(k, []).get(k)).push(p);
+    }
+    _lookupCache.set(notes, L);
+  }
+  return L;
+}
 function resolveNote(target, fromPath) {
   let t = String(target ?? '').trim().replace(/\\/g, '/');
   if (!t) return null;
@@ -25,9 +40,11 @@ function resolveNote(target, fromPath) {
   const dir = fromPath ? vfs.parent(fromPath) : '/';
   for (const cand of [vfs.norm(t, dir), vfs.norm(t, '/')]) if (vfs.isFile(cand)) return cand;
   const lc = t.toLowerCase(), base = lc.split('/').pop();
-  let hits = lc.includes('/') ? notes.filter(p => p.toLowerCase().endsWith('/' + lc.replace(/^\/+/, ''))) : [];
-  if (!hits.length) hits = notes.filter(p => vfs.base(p).toLowerCase() === base);
-  if (!hits.length) { const k = nameKey(base); if (k) hits = notes.filter(p => nameKey(p) === k); }
+  const L = noteLookup(notes);
+  let hits = lc.includes('/') ? (L.byBase.get(base) || []).filter(p => p.toLowerCase().endsWith('/' + lc.replace(/^\/+/, ''))) : [];
+  if (!hits.length) hits = L.byBase.get(base) || [];
+  if (!hits.length) { const k = nameKey(base); if (k) hits = L.byKey.get(k) || []; }
+  hits = hits.slice();
   if (!hits.length) return null;
   hits.sort((a, b) => (vfs.parent(b) === dir) - (vfs.parent(a) === dir) || a.length - b.length || a.localeCompare(b));
   return hits[0];

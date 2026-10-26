@@ -56,7 +56,7 @@ async function dbRestore(obj, wipe) {
   return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); const st = t.objectStore('kv'); if (wipe) st.clear(); for (const [k, v] of Object.entries(obj)) st.put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); });
 }
 const isText = u8 => { if (u8.length > 4e6) return false; try { new TextDecoder('utf-8', { fatal: true }).decode(u8); return !/[\x00-\x08\x0e-\x1f]/.test(dec.decode(u8.subarray(0, 4000))); } catch { return false; } };
-const isConfigPath = p => /^\/(pandora|jade)\/(soul|system|agents|memory|heartbeat)\.md$/i.test(p) || /^\/(pandora|jade)\/mcp\.json$/i.test(p) || /^\/(pandora|jade)\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
+const isConfigPath = p => /^\/(pandora|jade)\/(soul|system|agents|memory|heartbeat|curiosity)\.md$/i.test(p) || /^\/(pandora|jade)\/mcp\.json$/i.test(p) || /^\/(pandora|jade)\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
 async function buildBackup(kind, withKeys) {
   const settings = JSON.parse(JSON.stringify(S)); if (!withKeys) for (const k of SECRET_KEYS) delete settings[k];
   const storage = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith('jvault:') && k !== 'jvault:settings') { try { storage[k.slice(7)] = JSON.parse(localStorage.getItem(k)); } catch {} } }
@@ -96,7 +96,7 @@ async function exportBackup(kind) {
   await saveTextFile(name, lastBackupText);
 }
 async function importBackup(file) {
-  let data; try { data = JSON.parse(await file.text()); } catch { toast('That file is not valid JSON.', 'err'); return; }
+  let data; try { data = typeof abReadBackup === 'function' ? await abReadBackup(file) : JSON.parse(await file.text()); } catch (e) { toast(e && e.message && !/JSON/.test(e.message) ? esc(e.message) : 'That file is not valid JSON.', 'err'); return; }
   if (data?.app !== 'jade-vault' || !data.vault) { toast('That is not a Pandora Dee or Jade Vault backup.', 'err'); return; }
   const full = data.kind === 'full';
   const msg = full ? `Replace EVERYTHING here (notes, chats, schedules, settings) with the backup from ${String(data.exportedAt || '').slice(0, 10)}?` : `Merge config from ${String(data.exportedAt || '').slice(0, 10)} (settings, SOUL/AGENTS/SYSTEM, memory, skills)? Your other notes and chats stay.`;

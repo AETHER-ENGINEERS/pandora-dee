@@ -1,24 +1,25 @@
 /* =====================================================================
-   SCHEDULES THAT RUN SHELL COMMANDS OR FLOWS (+ crontab)
+   SCHEDULES THAT RUN SHELL COMMANDS, FLOWS OR PLAYBOOKS (+ crontab)
    A schedule runs one of: a prompt (Jade does it in a chat, as before), a shell command, or a flow.
    Command and flow schedules run on their own, without the model and without waiting for the chat.
    Their output goes to /Pandora/Logs/cron.log; a failure sends a notification.
    ===================================================================== */
 const CRON_LOG = '/Pandora/Logs/cron.log';
 const SchedBusy = new Set();
-const schedIsJob = s => s && (s.kind === 'shell' || s.kind === 'flow');
+const schedIsJob = s => s && (s.kind === 'shell' || s.kind === 'flow' || s.kind === 'playbook');
 const CRON_MACROS = { '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *', '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *', '@hourly': '0 * * * *' };
 const cronMacro = w => CRON_MACROS[String(w || '').trim().toLowerCase()] || w;
-function schedLabel(o) { return o.kind === 'shell' ? `$ ${o.command}` : `flow ${o.flow}${o.input != null && o.input !== '' ? ' ' + (typeof o.input === 'string' ? o.input : JSON.stringify(o.input)) : ''}`; }
+function schedLabel(o) { const inp = o.input != null && o.input !== '' ? ' ' + (typeof o.input === 'string' ? o.input : JSON.stringify(o.input)) : ''; if (o.kind === 'playbook') return `playbook ${o.playbook}${inp}`; return o.kind === 'shell' ? `$ ${o.command}` : `flow ${o.flow}${o.input != null && o.input !== '' ? ' ' + (typeof o.input === 'string' ? o.input : JSON.stringify(o.input)) : ''}`; }
 
 // create a command or flow schedule (used by the Schedule tab, the schedule tool and crontab)
-function addScheduleKind({ name, when, kind, command, flow, input = null, catchUp = false, enabled = true, src = '' }) {
+function addScheduleKind({ name, when, kind, command, flow, playbook, input = null, catchUp = false, enabled = true, src = '' }) {
   kind = kind || (command ? 'shell' : 'flow');
   if (kind === 'shell' && !String(command || '').trim()) throw new Error('the command is empty');
   if (kind === 'flow') { const f = flowFind(flow); if (!f) throw new Error(`no ritual named "${flow}". ritual list shows them`); flow = f.name; }
-  const o = { kind, command: kind === 'shell' ? String(command).trim() : undefined, flow: kind === 'flow' ? flow : undefined, input };
+  if (kind === 'playbook') { const pb = pbLoad(String(playbook || '').trim()); playbook = pb.name; if (typeof input === 'string' && input.trim()) { try { input = JSON.parse(input); } catch { throw new Error('the playbook vars must be a JSON object'); } } }
+  const o = { kind, command: kind === 'shell' ? String(command).trim() : undefined, flow: kind === 'flow' ? flow : undefined, playbook: kind === 'playbook' ? playbook : undefined, input };
   const s = addSchedule({ name: String(name || '').trim() || schedLabel(o).slice(0, 60), when: cronMacro(when), prompt: schedLabel(o), chat: 'new', catchUp, enabled });
-  Object.assign(s, o, { src }); if (kind !== 'shell') delete s.command; if (kind !== 'flow') { delete s.flow; delete s.input; }
+  Object.assign(s, o, { src }); if (kind !== 'shell') delete s.command; if (kind !== 'flow') delete s.flow; if (kind !== 'playbook') delete s.playbook; if (kind !== 'flow' && kind !== 'playbook') delete s.input;
   saveSchedules(); renderSchedules(); return s;
 }
 function cronLog(s, why, text) {
@@ -38,6 +39,11 @@ async function runScheduleKind(s, why = 'scheduled') {
       s.lastStatus = r.code === 0 ? 'ok' : `error: exit ${r.code}`;
       cronLog(s, why, `$ ${s.command}\n${r.out}${r.err ? (r.out ? '\n' : '') + r.err : ''}\nexit ${r.code}`);
       if (r.code !== 0) schedNotify(`${s.name}: failed (exit ${r.code})`, redactSecrets((r.err || r.out).trim()).slice(-180));
+    } else if (s.kind === 'playbook') {
+      const r = await pbRunUnattended(s.playbook, s.input ?? {}, 'schedule');
+      s.lastStatus = r.ok ? 'ok' : `error: ${r.failed?.error || 'failed'}`.slice(0, 160);
+      cronLog(s, why, `playbook ${s.playbook}: ${r.ok ? 'ok' : 'FAILED at ' + (r.failed?.name || 'task ' + r.failed?.task) + ': ' + r.failed?.error} · ${JSON.stringify(r.recap)} · ${r.seconds}s`.slice(0, 4000));
+      if (!r.ok) schedNotify(`${s.name}: playbook failed`, String(r.failed?.error || '').slice(0, 180));
     } else {
       let input = s.input; if (typeof input === 'string' && /^\s*[\[{]/.test(input)) { try { input = JSON.parse(input); } catch {} }
       const run = await flowRunByName(s.flow, input ?? { trigger: 'schedule', schedule: s.name }, { via: 'schedule' });
@@ -52,12 +58,16 @@ async function runScheduleKind(s, why = 'scheduled') {
 /* ---------- Schedule tab: "Run: a prompt / a shell command / a flow" ---------- */
 function schedKindSync() {
   const k = $('#schedKind').value;
-  $('#schedPromptWrap').hidden = k !== 'prompt'; $('#schedCmdWrap').hidden = k !== 'shell'; $('#schedFlowWrap').hidden = k !== 'flow'; $('#schedInputWrap').hidden = k !== 'flow';
+  $('#schedPromptWrap').hidden = k !== 'prompt'; $('#schedCmdWrap').hidden = k !== 'shell'; $('#schedFlowWrap').hidden = k !== 'flow'; $('#schedPbWrap').hidden = k !== 'playbook'; $('#schedInputWrap').hidden = k !== 'flow' && k !== 'playbook';
+  const il = $('#schedInputLbl'); if (il) il.textContent = k === 'playbook' ? 'Playbook vars (JSON, optional; only ones it declares)' : 'Flow input (JSON, optional)';
   const chat = $('#schedChat')?.closest('div'); if (chat) chat.hidden = k !== 'prompt';
 }
 function schedKindFill(s) {
   const fl = flowList().filter(f => !f._bad);
   $('#schedFlow').innerHTML = fl.length ? fl.map(f => `<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('') : '<option value="">(no flows yet: make one in the Flows tab)</option>';
+  let pbs = []; try { pbs = pbList().filter(x => !x.bad); } catch {}
+  $('#schedPb').innerHTML = pbs.length ? pbs.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.approved ? '' : ' (not approved yet)'}</option>`).join('') : '<option value="">(no playbooks yet: make one in the Playbooks tab)</option>';
+  if (s?.playbook) $('#schedPb').value = s.playbook;
   $('#schedKind').value = s?.kind || 'prompt';
   $('#schedCmd').value = s?.command || '';
   if (s?.flow) $('#schedFlow').value = s.flow;
@@ -67,14 +77,15 @@ function schedKindFill(s) {
 // returns true when it handled the form (a command or flow schedule)
 function schedKindSubmit(vals) {
   const kind = $('#schedKind').value; const ed = Sched.editing;
-  if (kind === 'prompt') { if (ed && schedIsJob(ed)) { delete ed.kind; delete ed.command; delete ed.flow; delete ed.input; } return false; }
-  const o = { kind, command: $('#schedCmd').value.trim(), flow: $('#schedFlow').value, input: $('#schedInput').value.trim() || null };
+  if (kind === 'prompt') { if (ed && schedIsJob(ed)) { delete ed.kind; delete ed.command; delete ed.flow; delete ed.playbook; delete ed.input; } return false; }
+  const o = { kind, command: $('#schedCmd').value.trim(), flow: $('#schedFlow').value, playbook: $('#schedPb').value, input: $('#schedInput').value.trim() || null };
+  if (kind === 'playbook') { if (!o.playbook) throw new Error('pick a playbook'); pbLoad(o.playbook); }
   if (kind === 'shell' && !o.command) throw new Error('the command is empty');
   if (kind === 'flow' && !flowFind(o.flow)) throw new Error('pick a ritual');
-  if (o.input) { try { JSON.parse(o.input); } catch { throw new Error('the flow input must be JSON (or leave it empty)'); } }
+  if (o.input) { try { JSON.parse(o.input); } catch { throw new Error(kind === 'playbook' ? 'the playbook vars must be JSON (or leave it empty)' : 'the flow input must be JSON (or leave it empty)'); } if (kind === 'playbook') o.input = JSON.parse(o.input); }
   if (ed) {
     Object.assign(ed, specFields(cronMacro(vals.when)), { name: (vals.name || schedLabel(o)).trim().slice(0, 60), prompt: schedLabel(o), catchUp: vals.catchUp, enabled: true }, o);
-    if (kind !== 'shell') delete ed.command; if (kind !== 'flow') { delete ed.flow; delete ed.input; }
+    if (kind !== 'shell') delete ed.command; if (kind !== 'flow') delete ed.flow; if (kind !== 'playbook') delete ed.playbook; if (kind !== 'flow' && kind !== 'playbook') delete ed.input;
     delete ed.sessionId; scheduleNext(ed); saveSchedules(); renderSchedules(); toast('Schedule saved', 'ok');
   } else { addScheduleKind({ ...o, name: vals.name, when: vals.when, catchUp: vals.catchUp }); toast('Schedule created', 'ok'); }
   return true;
@@ -86,6 +97,7 @@ const CRONTAB_HELP = `crontab — run shell commands (or rituals) on a schedule,
   crontab -l                           list schedules (id, when, what)
   crontab add '<when>' '<command>'     e.g. crontab add '*/15 * * * *' 'node /scripts/sync.js'
                                        or   crontab add 'every weekday at 9am' 'ritual run Digest'
+                                       or   crontab add '@hourly' 'playbook run check-prices'
   crontab -r <id> | -r all             remove one, or every command schedule made by crontab
   crontab <file>                       install a crontab file (replaces the ones it installed before)
   crontab -e                           how to edit the file
@@ -94,7 +106,7 @@ File lines: "m h dom mon dow command", "@daily command" (@hourly @weekly @monthl
 Output: ${CRON_LOG}. A failing command sends a notification. Times are local (${typeof TZ !== 'undefined' ? TZ : 'local time'}).
 `;
 const shq = a => /^[\w@%+=:,./-]+$/.test(a) ? a : !a.includes("'") ? `'${a}'` : `"${a.replace(/(["\\$`])/g, '\\$1')}"`;
-function crontabLine(s) { const when = s.once ? 'once ' + clock(s.runAt) : s.cron; const what = s.kind === 'shell' ? s.command : s.kind === 'flow' ? `ritual run ${shq(s.flow)}${s.input ? ' ' + shq(typeof s.input === 'string' ? s.input : JSON.stringify(s.input)) : ''}` : `[prompt] ${s.prompt.replace(/\s+/g, ' ').slice(0, 80)}`; return `${s.id}  ${when.padEnd(16)} ${what}${s.enabled ? '' : '   # paused'}`; }
+function crontabLine(s) { const when = s.once ? 'once ' + clock(s.runAt) : s.cron; const what = s.kind === 'shell' ? s.command : s.kind === 'playbook' ? `playbook run ${shq(s.playbook)}${s.input ? ' ' + shq(typeof s.input === 'string' ? s.input : JSON.stringify(s.input)) : ''}` : s.kind === 'flow' ? `ritual run ${shq(s.flow)}${s.input ? ' ' + shq(typeof s.input === 'string' ? s.input : JSON.stringify(s.input)) : ''}` : `[prompt] ${s.prompt.replace(/\s+/g, ' ').slice(0, 80)}`; return `${s.id}  ${when.padEnd(16)} ${what}${s.enabled ? '' : '   # paused'}`; }
 function parseCrontab(text) {
   const out = [], bad = [];
   String(text).split(/\r?\n/).forEach((line, i) => {
@@ -110,6 +122,8 @@ function parseCrontab(text) {
 function crontabAdd(when, command, src = 'crontab') {
   const fm = /^(?:ritual|flow)\s+run\s+(?:'([^']+)'|"([^"]+)"|(\S+))(?:\s+([\s\S]+))?$/.exec(command.trim());
   if (fm && flowFind(fm[1] || fm[2] || fm[3])) { let input = fm[4] ? fm[4].trim().replace(/^'([\s\S]*)'$/, '$1') : null; return addScheduleKind({ kind: 'flow', flow: fm[1] || fm[2] || fm[3], input, when, src }); }
+  const pm = /^playbook\s+run\s+(?:'([^']+)'|"([^"]+)"|(\S+))(?:\s+([\s\S]+))?$/.exec(command.trim());
+  if (pm) { const vars = pm[4] ? pm[4].trim().replace(/^'([\s\S]*)'$/, '$1') : null; return addScheduleKind({ kind: 'playbook', playbook: pm[1] || pm[2] || pm[3], input: vars, when, src }); }
   return addScheduleKind({ kind: 'shell', command, when, src });
 }
 async function crontabShell(c) {
@@ -143,3 +157,4 @@ async function crontabShell(c) {
     throw new Error('unknown option. crontab -h for help');
   } catch (e) { c.e(`crontab: ${e.message}\n`); return 1; }
 }
+Object.assign(window, { CRON_LOG, crontabLine });

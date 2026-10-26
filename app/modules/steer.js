@@ -164,6 +164,7 @@ function skillTool(args) {
   const s = findSkill(args.name || args.skill);
   if (!s) { const all = listSkills().filter(x => !x.off); throw new Error(`No skill named "${args.name}". Available: ${all.map(x => x.name).join(', ') || 'none'}`); }
   if (s.off) throw new Error(`The skill "${s.name}" is turned off in Config.`);
+  try { if (typeof skillStat === 'function') skillStat(s.name, 'used'); } catch {}
   const { body } = parseFront(vfs.read(s.path));
   const extra = [...vfs.walk(s.dir)].filter(p => p !== s.path && vfs.isFile(p));
   return `Skill "${s.name}" loaded from ${s.path}. Follow these instructions now.${extra.length ? `\nOther files in this skill (read them when the steps refer to them): ${extra.join(', ')}` : ''}${args.input ? `\nInput: ${args.input}` : ''}\n\n${stripComments(body)}`;

@@ -61,6 +61,12 @@ function routeTools(list) {
     const top = ranked[0]?.s || 0;
     for (const x of ranked.filter(x => x.s >= Math.max(0.5 * top, 1.2)).slice(0, TR_MAX)) keep.add(x.d.name);
   }
+  // Sticky: once a tool has been offered in this chat it stays offered. The tool list is the start of the prompt, so a list that
+  // changes from turn to turn invalidates the model's prompt cache and the whole conversation is re-read (slow on a phone).
+  // The set only grows, and the order is always the order of the full list.
+  const optNames = new Set(opt.map(t => t.function.name));
+  cur.toolsLoaded = [...new Set([...(cur.toolsLoaded || []), ...[...keep].filter(n => optNames.has(n))])];
+  for (const n of cur.toolsLoaded) keep.add(n);
   const chosen = list.filter(t => !isOpt(t) || keep.has(t.function.name));
   const hidden = opt.filter(t => !keep.has(t.function.name)).map(t => t.function.name);
   cur.toolsHidden = hidden;

@@ -514,7 +514,7 @@ rep('@media (prefers-reduced-motion:reduce){ .drawer,.drawer-bg,.jade-stage{tran
     '@media (prefers-reduced-motion:reduce){ .drawer,.drawer-bg,.jade-stage{transition:none} }' + CSS)
 
 # ---------- seed + vault core ----------
-rep_between('const SEED = {', '\n/* =====', rd('seed.js') + '\n' + rd('vault_core.js'))
+rep_between('const SEED = {', '\n/* =====', rd('seed.js') + '\n' + rd('rust_core.js').replace('/*JADE_CORE_GLUE*/', open(os.path.join(D, 'vendor', 'jade_core.js')).read()) + '\n' + rd('vault_core.js'))
 
 # ---------- shell builtins ----------
 OLD_PREV = s[s.index("  preview(c) { const p = c.P(c.argv[0] || 'index.html');"):s.index("  get open() { return this.preview; },") + len("  get open() { return this.preview; },")]
@@ -1139,6 +1139,9 @@ _sq = open(os.path.join(D, 'vendor', 'sqlite3.min.wasm'), 'rb').read()
 _sqb = _b64.b64encode(_gz.compress(_sq, 9, mtime=0)).decode()
 _i = s.index('<script type="application/octet-stream" id="bb-glue">'); _j = s.index('</script>', _i) + len('</script>')
 s = s[:_j] + '\n<script type="application/octet-stream" id="sqlite-wasm">' + _sqb + '</script>' + s[_j:]
+# the Rust core for the browser (rust/build-wasm.sh → app/vendor/jade_core.wasm), unpacked after load by RustCore.init
+_jc = _b64.b64encode(_gz.compress(open(os.path.join(D, 'vendor', 'jade_core.wasm'), 'rb').read(), 9, mtime=0)).decode()
+s = s.replace('<script type="application/octet-stream" id="sqlite-wasm">', '<script type="application/octet-stream" id="jade-core-wasm">' + _jc + '</script>\n<script type="application/octet-stream" id="sqlite-wasm">', 1)
 rep("  async python(c) { return runPython(c); },", """  async sqlite3(c) { return runSqliteCli(c); },
   get sqlite() { return this.sqlite3; },
   async python(c) { return runPython(c); },""")
@@ -1298,7 +1301,6 @@ rep("  for (const [k, v] of r.out) k === 'o' ? c.o(v) : c.e(v);\n  const W = Obj
 rep("runs JavaScript in a sandboxed worker with require('fs') (readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, unlinkSync) and require('path').", "runs JavaScript in a sandboxed worker with require('fs') (readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, unlinkSync), require('path'), global fetch, require('https'/'http') and Buffer; secrets are in process.env.")
 # images
 rep("  for (const el of div.querySelectorAll('.math-tex')) renderTex(el);\n", "  for (const el of div.querySelectorAll('.math-tex')) renderTex(el);\n  try { hydrateMedia(div); } catch (e) { console.warn(e); }\n")
-rep("    for (const m of body.matchAll(WIKI_RE)) {\n", "    for (const m of body.matchAll(WIKI_RE)) {\n      if (body[m.index - 1] === '!' && /\\.\\w{2,5}$/.test(m[1].trim()) && !/\\.(md|markdown)$/i.test(m[1].trim())) continue;   // ![[image.png]] is an embed, not a note link\n")
 rep("  setNoteMode(isNote(p) ? (opts.mode || noteMode) : 'edit', true);\n", "  setNoteMode(isNote(p) ? (opts.mode || noteMode) : 'edit', true);\n  if (isImagePath(p)) showImageFile(p);\n")
 rep("      const p = readPath(args.path); const text = vfs.read(p); const L = text.split", "      const p = readPath(args.path); if (isImagePath(p) || /\\.(xdc|zip|db|sqlite|pdf|mp3|mp4|wav)$/i.test(p)) { const n = vfs.nodes.get(p); if (n && !n.dir && !isText(n.data.subarray(0, 4096))) return `[binary file ${p}, ${fmtKB(n.data.length)}]${isImagePath(p) ? ` Show it with ![[${vfs.base(p)}]] in a note or your reply.` : ''}`; }\n      const text = vfs.read(p); const L = text.split")
 rep("- Math renders with KaTeX:", "- Images: ![[photo.png]] or ![[photo.png|300]] (width in px) shows a vault image; ![alt](https://…) works for web images; ![[Other Note]] embeds a note. Images the user adds go to /attachments/images/. Download pictures with http_request (binary responses are saved to the vault) and embed them.\\n- Math renders with KaTeX:")
@@ -1883,12 +1885,12 @@ rep_between("class VFS {", "const vfs = new VFS();", rd('vfs_disk.js').split('cl
 s = s.replace('/* =====================================================================\n   BOOT', rd('vfs_disk_ui.js') + '\n/* =====================================================================\n   BOOT', 1)
 rep("window.__trajSync?.(); window.__vecSync?.(); window.__dcSync?.();", "window.__trajSync?.(); window.__vecSync?.(); window.__dcSync?.(); window.__diskSync?.();")
 # sizes without reading the file
-rep("const entriesForBb = () => vfs.entries().map(([p, n]) => [p, n.dir ? { dir: true } : { data: n.data }]);", "const BB_MAX = 16e6;   // bigger files stay on disk and are not copied into the shell\nconst entriesForBb = () => vfs.entries().filter(([p, n]) => n.dir || !vfs.diskOn || fsize(n) <= BB_MAX).map(([p, n]) => [p, n.dir ? { dir: true } : { data: n.data }]);")
+rep("const entriesForBb = () => vfs.entries().map(([p, n]) => [p, n.dir ? { dir: true } : { data: n.data }]);", "const BB_MAX = 16e6;   // bigger files stay on disk and are not copied into the shell\n// A file the vault lists but storage cannot read (removed or renamed by another app, a case-only rename) is left out\n// of the run and marked, so the run cannot delete it and the command still works; a rescan then drops it if it is gone.\nconst entriesForBb = () => {\n  const out = []; let bad = 0;\n  for (const [p, n] of vfs.entries()) {\n    if (n.dir) { out.push([p, { dir: true }]); continue; }\n    if (vfs.diskOn && fsize(n) > BB_MAX) continue;\n    let d; try { d = n.data; if (n._unread) n._unread = false; } catch (e) { n._unread = true; bad++; console.warn('shell: skipped unreadable file', p, e.message); continue; }\n    out.push([p, { data: d }]);\n  }\n  if (bad) setTimeout(() => { try { vfs.rescan?.(true); } catch {} }, 0);\n  return out;\n};")
 rep("      else { const s = old && !old.dir && same(old.data, n.data); if (!s) changed = true; next.set(p, s ? old : { data: n.data, mtime: Date.now() }); }\n    }\n    if (changed || next.size !== vfs.nodes.size) vfs.replace([...next.entries()]);",
-    "      else { const s = old && !old.dir && fsize(old) === n.data.length && same(old.data, n.data); if (!s) changed = true; next.set(p, s ? old : { data: n.data, mtime: Date.now() }); }\n    }\n    for (const [p, o] of vfs.nodes) if (!o.dir && vfs.diskOn && fsize(o) > BB_MAX && !next.has(p)) next.set(p, o);\n    if (changed || next.size !== vfs.nodes.size) vfs.replace([...next.entries()]);")
+    "      else { const s = old && !old.dir && fsize(old) === n.data.length && same(old.data, n.data); if (!s) changed = true; next.set(p, s ? old : { data: n.data, mtime: Date.now() }); }\n    }\n    for (const [p, o] of vfs.nodes) if (!o.dir && (o._unread || (vfs.diskOn && fsize(o) > BB_MAX)) && !next.has(p)) next.set(p, o);\n    if (changed || next.size !== vfs.nodes.size) vfs.replace([...next.entries()]);")
 rep("    if (n.dir) { if (!cur) { vfs.nodes.set(p, { dir: true, mtime: Date.now() }); changed = true; } continue; }\n    if (b && !b.dir && same(b.data, n.data)) continue;               // the command did not touch it: keep what is there now\n    if (cur && !cur.dir && same(cur.data, n.data)) continue;\n    vfs.nodes.set(p, { data: n.data, mtime: Date.now() }); changed = true;",
     "    if (n.dir) { if (!cur) { vfs.mkdirp(p); changed = true; } continue; }\n    if (b && !b.dir && fsize(b) === n.data.length && same(b.data, n.data)) continue;               // the command did not touch it: keep what is there now\n    if (cur && !cur.dir && fsize(cur) === n.data.length && same(cur.data, n.data)) continue;\n    vfs.write(p, n.data, { mkdirs: true }); changed = true;")
-rep("for (const [p, b] of base) if (p !== '/' && !seen.has(p) && vfs.nodes.get(p) === b) { vfs.nodes.delete(p); changed = true; }", "for (const [p, b] of base) if (p !== '/' && !seen.has(p) && vfs.nodes.get(p) === b && !(vfs.diskOn && !b.dir && fsize(b) > BB_MAX)) { if (vfs.exists(p)) vfs.rm(p, true); changed = true; }")
+rep("for (const [p, b] of base) if (p !== '/' && !seen.has(p) && vfs.nodes.get(p) === b) { vfs.nodes.delete(p); changed = true; }", "for (const [p, b] of base) if (p !== '/' && !seen.has(p) && vfs.nodes.get(p) === b && !b._unread && !(vfs.diskOn && !b.dir && fsize(b) > BB_MAX)) { if (vfs.exists(p)) vfs.rm(p, true); changed = true; }")
 rep("if (vfs.isFile(p)) vfs.nodes.get(p).mtime = Date.now(), vfs.changed(); else vfs.write(p, '');", "if (vfs.isFile(p)) vfs.touch(p); else vfs.write(p, '');")
 # do not read every file just to learn how big it is
 # (Pandora Dee also hands a script a big file it names, up to 64 MB: those sizes come from fsize too)
@@ -1898,6 +1900,14 @@ rep("[...vfs.nodes].some(([p, n]) => !n.dir && /\\.[cm]?js$/.test(p) && n.data.l
 rep("    if (isSqliteBytes(n.data)) files[p] = n.data; else if (n.data.length < 2e6) files[p] = dec.decode(n.data); else big[p] = n.data.length;", "    if (fsize(n) >= 2e6 && !(fsize(n) < 4e7 && /\\.(db|sqlite3?)$/i.test(p))) { big[p] = fsize(n); continue; }\n    if (isSqliteBytes(n.data)) files[p] = n.data; else if (fsize(n) < 2e6) files[p] = dec.decode(n.data); else big[p] = fsize(n);")
 rep("else if (n.data.length < 4e6) files[p] = n.data; else if (n.data.length <= room && (named(p) || named(vfs.base(p)))) { files[p] = n.data; room -= n.data.length; bigBytes += n.data.length; } }", "else if (fsize(n) < 4e6) files[p] = n.data; else if (fsize(n) <= room && (named(p) || named(vfs.base(p)))) { files[p] = n.data; room -= fsize(n); bigBytes += fsize(n); } }")
 rep("!n.dir && p.endsWith('.py') && n.data.length < 2e6 &&", "!n.dir && p.endsWith('.py') && fsize(n) < 2e6 &&")
+# a file the vault lists but storage cannot read must not break node, python or a backup: skip it
+rep("function vfsChangesSince(before) {", "function nodeBytes(n) { try { return n.data; } catch (e) { console.warn('vault: unreadable file', n && n.p, e.message); return null; } }\nfunction vfsChangesSince(before) {")
+# (Pandora Dee's python and node also take a big file the script names: that one is read the same careful way)
+rep("else if (fsize(n) < 4e6) files[p] = n.data; else if (fsize(n) <= room && (named(p) || named(vfs.base(p)))) { files[p] = n.data; room -= fsize(n); bigBytes += fsize(n); } }", "else if (fsize(n) < 4e6) { const d = nodeBytes(n); if (d) files[p] = d; } else if (fsize(n) <= room && (named(p) || named(vfs.base(p)))) { const d = nodeBytes(n); if (d) { files[p] = d; room -= fsize(n); bigBytes += fsize(n); } } }")
+rep("[...vfs.nodes].some(([p, n]) => !n.dir && p.endsWith('.py') && fsize(n) < 2e6 && /sqlite/i.test(dec.decode(n.data)))", "[...vfs.nodes].some(([p, n]) => !n.dir && p.endsWith('.py') && fsize(n) < 2e6 && /sqlite/i.test(dec.decode(nodeBytes(n) || new Uint8Array())))")
+rep("[...vfs.nodes].some(([p, n]) => !n.dir && /\\.[cm]?js$/.test(p) && fsize(n) < 2e6 && /sqlite/i.test(dec.decode(n.data)))", "[...vfs.nodes].some(([p, n]) => !n.dir && /\\.[cm]?js$/.test(p) && fsize(n) < 2e6 && /sqlite/i.test(dec.decode(nodeBytes(n) || new Uint8Array())))")
+rep("else if (isSqliteBytes(n.data)) { bins[p] = n.data; files[p] = n.data; } else if (fsize(n) < 2e6) files[p] = dec.decode(n.data); else if (fsize(n) <= room && (named(p) || named(vfs.base(p)))) { files[p] = dec.decode(n.data); room -= fsize(n); } else big[p] = fsize(n); }", "else { const d = nodeBytes(n); if (!d) continue; if (isSqliteBytes(d)) { bins[p] = d; files[p] = d; } else if (fsize(n) < 2e6) files[p] = dec.decode(d); else if (fsize(n) <= room && (named(p) || named(vfs.base(p)))) { files[p] = dec.decode(d); room -= fsize(n); } else big[p] = fsize(n); } }")
+rep("    files[p] = isText(n.data) ? dec.decode(n.data) : { base64: b64enc(n.data) };", "    const d = nodeBytes(n); if (!d) continue;\n    files[p] = isText(d) ? dec.decode(d) : { base64: b64enc(d) };")
 rep("return { path: full, bytes: vfs.nodes.get(full)?.data.length || 0 };", "return { path: full, bytes: fsize(vfs.nodes.get(full) || { dir: true }) };")
 rep("const st = vfs.stat?.(p)?.size ?? vfs.nodes.get(p)?.data?.length ?? 0;", "const st = vfs.stat?.(p)?.size ?? 0;")
 # backups and restores
@@ -1913,6 +1923,28 @@ rep("    case 'senses': case 'look': case 'litert': return await worldTool(name,
 rep("litert: run .tflite models. Build tools", "litert: run .tflite models; browser: your own web browser (open pages, read them, click, type, screenshots; page text is untrusted); phone: alarms and timers, sounds and radio streams, volume, calls, texts, contacts, clipboard, apps, Bluetooth (scan, pair, connect), media keys, casting to a Chromecast/TV, brightness, signal status; screen: drive other apps through the accessibility service (read the screen, tap, type, scroll) once the user has switched it on; sentry: phone reflex rules in /Jade/Config/Sentry.json (call help first); ssh: hold interactive SSH sessions on saved machines (by name; you never see credentials); playbook: saved deterministic automation like Ansible in JSON (any tool, the browser, variables, when/loop/rescue; help first); backup: scheduled vault backup to a server (status, now, list); curiosity: your own wake-ups; chat_history: raw past chats (read, search); delegate: sub-agent for side jobs; think: tree of thoughts with verification (call help first). Build tools")
 rep("const DEFAULTS = { sensesOn: false,", "const DEFAULTS = { toolRouter: 'off', skillRouterOn: false, playbookOn: false, chatHistoryOn: false, lookOn: false, abOn: false, abUrl: '', abToken: '', abHours: 24, abKind: 'full', abKeys: false, abEncrypt: false, abPass: '', curiosityOn: false, cuMin: 45, cuMax: 180, cuFrom: '08:00', cuTo: '22:00', cuCap: 5, cuTools: 'web', cuActsOff: [], delegateOn: false, thinkOn: false, sshOn: false, sshHosts: [], hfSolo: false, wakeWords: '', browserOn: false, screenOn: false, phoneOn: false, sentryOn: false, sentryAllow: '', sentryLimit: 6, askRisky: true, sensesOn: false,")
 rep("window.__androidBack = () => {\n", "window.__androidBack = () => {\n  if (typeof HFS !== 'undefined' && HFS.on) { hfStop(); return true; }\n")
+# ---------- 2.19: web tools asked for together run at the same time (on the phone each runs on its own native connection) ----------
+rep("""      for (const tc of asst.tool_calls) {
+        if (abortReq) break;
+""", """      if (!abortReq && asst.tool_calls.length > 1 && asst.tool_calls.every(tc => PARALLEL_TOOLS.has(tc.function.name))) {
+        setState(`TOOLS ▸ ${asst.tool_calls.length} AT ONCE`); jadeMood('working'); jadeBubble(toolCaption(asst.tool_calls[0].function.name, asst.tool_calls[0].function.arguments || {}));
+        const cards = asst.tool_calls.map(tc => { const c = toolCard(tc.function.name, tc.function.arguments || {}); body.appendChild(c.el); return c; }); scrollDown();
+        const res = await Promise.all(asst.tool_calls.map(async (tc, i) => { const name = tc.function.name; try { vecGuard(name); dcGuard(name); return [await runTool(name, tc.function.arguments || {}, cards[i]), false]; } catch (e) { return ['Error: ' + (e.message || e), true]; } }));
+        asst.tool_calls.forEach((tc, i) => {
+          const [result, isErr] = res[i]; if (isErr || cards[i].el.classList.contains('err')) jadeMood('error', 1800, 'working');
+          cards[i].done(result, isErr);
+          cur.messages.push({ role: 'tool', tool_name: tc.function.name, content: String(result), _for: tc._id, _err: isErr || undefined, ts: Date.now() }); TR.tool(tc.function.name, result, isErr);
+        });
+        saveSession(); scrollDown();
+        const lv = worldFlushViews(); if (lv) { cur.messages.push(lv); chatEl.appendChild(userBlock(lv.display, cur.messages.length - 1)); scrollDown(); saveSession(); }
+        continue;
+      }
+      for (const tc of asst.tool_calls) {
+        if (abortReq) break;
+""")
+rep("async function agentLoop() {", "const PARALLEL_TOOLS = new Set(['web_search', 'web_fetch']);   // read-only network tools: safe to run together\nasync function agentLoop() {")
+# on the phone the app reaches Ollama natively (no CORS), so OLLAMA_ORIGINS is not the fix there
+rep("""hint = activeProv === 'local' ? `Could not reach Ollama at ${S.host}. Make sure it is running with OLLAMA_ORIGINS="*" so this page is allowed to call it${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.` :""", """hint = activeProv === 'local' ? (RustCore.net ? `Could not reach Ollama at ${S.host}. Make sure it is running and reachable from the phone (on a computer, start it with OLLAMA_HOST=0.0.0.0 and use the computer's address)${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.` : `Could not reach Ollama at ${S.host}. Make sure it is running with OLLAMA_ORIGINS="*" so this page is allowed to call it${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.`) :""")
 # ---------- v22: Pandora Dee's moving day: /Jade → /Pandora, flows → rituals; old paths still resolve ----------
 rep("    return '/' + out.join('/');\n  }\n  parent(p)", "    return pandoraPath('/' + out.join('/'));\n  }\n  parent(p)")
 s = s.replace('/* =====================================================================\n   BOOT', rd('migrate.js') + '\n/* =====================================================================\n   BOOT', 1)

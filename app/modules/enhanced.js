@@ -1,12 +1,12 @@
 /* =====================================================================
-   ENHANCED — the switches for what this build adds from Jade Vault 2.18.2. Every one starts off; nothing new
+   ENHANCED — the switches for what this build adds from Jade Vault (2.18.2 onward, now 2.22.1). Every one starts off; nothing new
    runs, shows a tab or reaches the model until it is turned on in Config. Each tool has its own switch here
    (in Jade Vault the senses switch also took the phone, SSH, think … tools with it).
    ===================================================================== */
 function enhToolOn(n) {
   switch (n) {
     case 'senses': return !!S.sensesOn;
-    case 'look': case 'litert': return !!S.lookOn;
+    case 'look': case 'litert': case 'onnx': return !!S.lookOn;
     case 'browser': return !!S.browserOn;
     case 'screen': return !!S.screenOn;
     case 'phone': return !!S.phoneOn;
@@ -30,12 +30,12 @@ function enhApply() {
   if (!S.playbookOn && document.body.dataset.screen === 'playbooks' && typeof setTab === 'function') setTab('chat');
 }
 function enhFillSettings() {
-  for (const [id, k] of [['sLookOn', 'lookOn'], ['sPlaybookOn', 'playbookOn'], ['sChatHistoryOn', 'chatHistoryOn'], ['sSkillRouterOn', 'skillRouterOn']]) { const e = document.getElementById(id); if (e) e.checked = !!S[k]; }
+  for (const [id, k] of [['sLookOn', 'lookOn'], ['sUsbOn', 'usbOn'], ['sPlaybookOn', 'playbookOn'], ['sChatHistoryOn', 'chatHistoryOn'], ['sSkillRouterOn', 'skillRouterOn']]) { const e = document.getElementById(id); if (e) e.checked = !!S[k]; }
   const tr = document.getElementById('sToolRouter'); if (tr) tr.value = ['auto', 'on'].includes(S.toolRouter) ? S.toolRouter : 'off';
 }
 function enhReadSettings() {
   const ck = id => !!document.getElementById(id)?.checked, tr = document.getElementById('sToolRouter')?.value;
-  return { lookOn: ck('sLookOn'), playbookOn: ck('sPlaybookOn'), chatHistoryOn: ck('sChatHistoryOn'), skillRouterOn: ck('sSkillRouterOn'), toolRouter: ['auto', 'on'].includes(tr) ? tr : 'off' };
+  return { lookOn: ck('sLookOn'), usbOn: ck('sUsbOn'), playbookOn: ck('sPlaybookOn'), chatHistoryOn: ck('sChatHistoryOn'), skillRouterOn: ck('sSkillRouterOn'), toolRouter: ['auto', 'on'].includes(tr) ? tr : 'off' };
 }
 enhApply();
 Object.assign(window, { enhToolOn, enhApply, enhFillSettings, enhReadSettings });

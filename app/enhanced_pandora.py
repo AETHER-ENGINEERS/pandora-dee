@@ -41,9 +41,12 @@ for old, new, *n in [
 rep_between("WORLD_TOOL_DEFS.filter(t => (S.sensesOn !== false", ".map(f => ({ type: 'function', function: f })), ...mcpToolDefs()]));", "WORLD_TOOL_DEFS.filter(t => enhToolOn(t.name))")
 rep("const skillRouted = () => skillActive().length > SKILL_ALL_MAX;", "const skillRouted = () => !!S.skillRouterOn && skillActive().length > SKILL_ALL_MAX;")
 rep("  const mode = S.toolRouter || 'auto';", "  const mode = S.toolRouter || 'off';")
+# 2.22: USB devices (the usb tool) start off here, with their own switch (Jade Vault has them on, with no box)
+rep("...USB_TOOL_DEFS.filter(() => S.usbOn !== false)", "...USB_TOOL_DEFS.filter(() => !!S.usbOn)")
 
 # ---------- the switches Jade Vault has no box for ----------
-rep("""        <p class="hint leading-relaxed">Each switch above removes that whole set of tools from what Pandora is told""", """        <label class="flex items-center gap-2 text-sm" for="sLookOn"><input type="checkbox" id="sLookOn" class="accent-emerald-400 w-4 h-4"> Let Pandora look at images and videos in the Atelier (look) and run .tflite models (litert)</label>
+rep("""        <p class="hint leading-relaxed">Each switch above removes that whole set of tools from what Pandora is told""", """        <label class="flex items-center gap-2 text-sm" for="sLookOn"><input type="checkbox" id="sLookOn" class="accent-emerald-400 w-4 h-4"> Let Pandora look at images and videos in the Atelier (look) and run models on this device: .tflite (litert) and .onnx (onnx)</label>
+        <label class="flex items-center gap-2 text-sm" for="sUsbOn"><input type="checkbox" id="sUsbOn" class="accent-emerald-400 w-4 h-4"> Let Pandora use USB devices you plug in and allow, one at a time (usb)</label>
         <label class="flex items-center gap-2 text-sm" for="sChatHistoryOn"><input type="checkbox" id="sChatHistoryOn" class="accent-emerald-400 w-4 h-4"> Let Pandora search and read your past chats (chat_history; needs memory on)</label>
         <label class="flex items-center gap-2 text-sm" for="sPlaybookOn"><input type="checkbox" id="sPlaybookOn" class="accent-emerald-400 w-4 h-4"> Playbooks: saved automations you approve, run without the model (adds the Playbooks tab, the playbook tool and playbook schedules)</label>
         <label class="flex items-center gap-2 text-sm" for="sSkillRouterOn"><input type="checkbox" id="sSkillRouterOn" class="accent-emerald-400 w-4 h-4"> Skill router: with many skills, put only the ones that match the message in the prompt (find_skill for the rest)</label>

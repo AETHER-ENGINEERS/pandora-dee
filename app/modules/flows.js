@@ -26,6 +26,7 @@ const FLOW_TYPES = {
   each:   { label: 'For each', icon: '↻', help: 'Runs its steps once per item ($item, $index; $json starts as the item). Output: the list of results.', fields: [['items', 'List (JavaScript)', 'expr', '$json.split("\\n").filter(Boolean)', true]], branches: [['steps', 'Do']] },
   wait:   { label: 'Wait', icon: '⏸', help: 'Pause (up to 300 s). Output: unchanged.', fields: [['seconds', 'Seconds', 'num', '5', true]] },
   notify: { label: 'Notify me', icon: '🔔', help: 'A phone notification (and a toast in the app). Output: unchanged.', fields: [['title', 'Title', 'tpl', '{{ $flow.name }}'], ['body', 'Message', 'area', '{{ $json }}']] },
+  playbook: { label: 'Playbook', icon: '▶', help: 'Runs a saved playbook (approved in the Playbooks tab; no model). Output: its result {ok, recap, vars, log}. A failed playbook fails the step.', fields: [['playbook', 'Playbook', 'pbsel', '', true], ['vars', 'Variables (JSON; only ones the playbook declares)', 'json', '{"city": "{{ $json.city }}"}']] },
   flow:   { label: 'Run ritual', icon: '⇢', help: 'Runs another ritual with an input. Output: that ritual\'s output.', fields: [['flow', 'Ritual', 'flowsel', '', true], ['input', 'Input (JSON or {{ }}; default: $json)', 'json']] },
   stop:   { label: 'Stop', icon: '■', help: 'Ends the ritual (successfully). Output: the value, or $json.', fields: [['value', 'Result (optional; {{ }})', 'tpl']] },
 };
@@ -75,7 +76,7 @@ function flowSave(f, oldPath) {
   flowsChanged(); return { ...clean, _path: p };
 }
 function flowDelete(f) { if (vfs.isFile(f._path)) vfs.rm(f._path); flowsChanged(); }
-function flowToolNames() { return [...new Set([...TOOL_DEFS.map(t => t.name), ...(typeof VEC_TOOL_DEFS !== 'undefined' ? VEC_TOOL_DEFS.map(t => t.name) : []), ...(typeof DC_TOOL_DEFS !== 'undefined' ? DC_TOOL_DEFS.map(t => t.name) : []), ...mcpToolDefs().map(t => t.function.name)])].filter(n => n !== 'ritual' && n !== 'flow').sort(); }
+function flowToolNames() { return [...new Set([...TOOL_DEFS.map(t => t.name), ...(typeof VEC_TOOL_DEFS !== 'undefined' ? VEC_TOOL_DEFS.map(t => t.name) : []), ...(typeof DC_TOOL_DEFS !== 'undefined' ? DC_TOOL_DEFS.map(t => t.name) : []), ...(typeof WORLD_TOOL_DEFS !== 'undefined' ? WORLD_TOOL_DEFS.map(t => t.name) : []), ...(typeof activeTools === 'function' ? activeTools().map(t => t.function.name) : []), ...mcpToolDefs().map(t => t.function.name)])].filter(n => n !== 'ritual' && n !== 'flow').sort(); }
 
 /* ---------- validation ---------- */
 function flowValidate(f) {
@@ -187,7 +188,7 @@ async function flowResolve(st, ctx) {
   for (const [k, , kind] of T.fields) {
     const v = st[k]; if (v === undefined || v === null) continue;
     if (kind === 'expr') { const src = String(v).trim().replace(/^\{\{([\s\S]*)\}\}$/, '$1').trim(); if (src) add(src, 'expr', x => { out[k] = x; }); }
-    else if (kind === 'code' || kind === 'bool' || kind === 'num' || kind.startsWith('sel:') || kind === 'tool' || kind === 'flowsel') out[k] = v;
+    else if (kind === 'code' || kind === 'bool' || kind === 'num' || kind.startsWith('sel:') || kind === 'tool' || kind === 'flowsel' || kind === 'pbsel') out[k] = v;
     else walk(v, x => { out[k] = x; });
   }
   const vals = await flowEvalJobs(jobs, flowCtxView(ctx)); vals.forEach((x, i) => sets[i](x));
@@ -328,6 +329,11 @@ async function flowExec(step, ctx, st, rec) {
       const r = await flowRun(sub, p.input === undefined ? ctx.$json : p.input, { via: `flow:${st.flow.name}`, depth: st.depth + 1 });
       if (r.status !== 'ok') throw new Error(`ritual "${sub.name}" ${r.status}: ${r.error}`);
       return r.output;
+    }
+    case 'playbook': {
+      const r = await pbRunUnattended(p.playbook, p.vars ?? {}, `flow:${st.flow.name}`);
+      if (!r.ok) throw new Error(`playbook "${p.playbook}" failed at ${r.failed?.name || 'task ' + (r.failed?.task ?? '?')}: ${r.failed?.error || 'error'}`);
+      return r;
     }
     case 'stop': throw new FlowStop(p.value === undefined || p.value === '' ? ctx.$json : p.value);
   }
@@ -585,7 +591,7 @@ const flowAddSel = arr => `<select class="field fl-add" data-fa="add" data-arr="
 function flowStepsHtml(steps, arr) { return `<div class="fl-list" data-arr="${arr}">${steps.map((st, i) => flowStepHtml(st, `${arr}.${i}`, i, steps.length)).join('')}${flowAddSel(arr)}</div>`; }
 function flowSummary(st) {
   const s = v => String(v ?? '').replace(/\s+/g, ' ').slice(0, 60);
-  switch (st.type) { case 'tool': return st.tool || ''; case 'js': return s(String(st.code || '').split('\n').find(l => l.trim() && !l.trim().startsWith('//'))); case 'shell': return '$ ' + s(st.command); case 'decide': return s(st.question); case 'llm': case 'agent': return s(st.prompt); case 'note': return `${st.action || 'read'} ${s(st.path)}`; case 'if': return s(st.condition); case 'switch': return s(st.value); case 'each': return s(st.items); case 'wait': return `${st.seconds || 0} s`; case 'notify': return s(st.title || st.body); case 'flow': return s(st.flow); case 'set': return s(Object.keys(st.fields || {}).join(', ')); default: return ''; }
+  switch (st.type) { case 'tool': return st.tool || ''; case 'playbook': return '▶ ' + (st.playbook || ''); case 'js': return s(String(st.code || '').split('\n').find(l => l.trim() && !l.trim().startsWith('//'))); case 'shell': return '$ ' + s(st.command); case 'decide': return s(st.question); case 'llm': case 'agent': return s(st.prompt); case 'note': return `${st.action || 'read'} ${s(st.path)}`; case 'if': return s(st.condition); case 'switch': return s(st.value); case 'each': return s(st.items); case 'wait': return `${st.seconds || 0} s`; case 'notify': return s(st.title || st.body); case 'flow': return s(st.flow); case 'set': return s(Object.keys(st.fields || {}).join(', ')); default: return ''; }
 }
 function flowFieldHtml(st, sp, [k, label, kind, ph]) {
   const v = st[k]; const id = `fl_${sp.replace(/\./g, '_')}_${k}`; const tip = kind === 'tpl' || kind === 'area' || kind === 'json' ? ' fl-tpl' : '';
@@ -593,6 +599,7 @@ function flowFieldHtml(st, sp, [k, label, kind, ph]) {
   let input;
   if (kind.startsWith('sel:')) input = `<select id="${id}" class="field mt-1" data-f="${k}">${kind.slice(4).split('|').map(o => `<option ${String(v ?? kind.slice(4).split('|')[0]) === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
   else if (kind === 'tool') { const names = flowToolNames(); input = `<select id="${id}" class="field mt-1" data-f="${k}"><option value="">choose a tool…</option>${names.map(n => `<option ${v === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}${v && !names.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select><div class="hint mt-1 fl-tooldesc">${esc(flowToolDesc(v))}</div>`; }
+  else if (kind === 'pbsel') { let names = []; try { names = pbList().filter(x => !x.bad).map(x => x.name); } catch {} input = `<select id="${id}" class="field mt-1" data-f="${k}"><option value="">choose a playbook…</option>${names.map(n => `<option ${v === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}${v && !names.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`; }
   else if (kind === 'flowsel') { const names = flowList().filter(x => !x._bad && x.name !== FUI.flow?.name).map(x => x.name); input = `<select id="${id}" class="field mt-1" data-f="${k}"><option value="">choose a ritual…</option>${names.map(n => `<option ${v === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}${v && !names.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`; }
   else if (kind === 'json') { const raw = FUI.bad.get(sp + '.' + k) ?? (v == null ? '' : typeof v === 'string' ? v : JSON.stringify(v, null, 2)); input = `<textarea id="${id}" class="field mt-1 mono${FUI.bad.has(sp + '.' + k) ? ' bad' : ''}" rows="${Math.min(10, Math.max(2, raw.split('\n').length))}" data-f="${k}" data-k="json" spellcheck="false" autocapitalize="off" placeholder="${esc(ph || '')}">${esc(raw)}</textarea>`; }
   else if (kind === 'lines') input = `<textarea id="${id}" class="field mt-1" rows="3" data-f="${k}" data-k="lines" placeholder="${esc(ph || '')}">${esc(Array.isArray(v) ? v.join('\n') : v ?? '')}</textarea>`;
@@ -733,3 +740,4 @@ function flowsInitUi() {
   });
 }
 flowsInitUi();
+Object.assign(window, { FLOW_TYPES });

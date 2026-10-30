@@ -53,6 +53,7 @@ function memorySave(text, section) {
   while (j > i + 1 && !lines[j - 1].trim()) j--;   // insert after the section's last bullet
   lines.splice(j, 0, `- ${text} (${todayStr()})`);
   vfs.write(MEM_PATH, lines.join('\n').replace(/\n{3,}/g, '\n\n'));
+  vmemSyncSoon();
   return { added: true, msg: `Saved to memory under "${head}": ${text}` };
 }
 function memoryForget(text) {
@@ -62,6 +63,7 @@ function memoryForget(text) {
   if (hits.length > 3) throw new Error(`${hits.length} memories match "${text}"; be more specific:\n${hits.map(h => '- ' + h.text).join('\n')}`);
   const drop = new Set(hits.map(h => h.line));
   vfs.write(MEM_PATH, vfs.read(MEM_PATH).split('\n').filter(l => !drop.has(l)).join('\n'));
+  vmemSyncSoon();
   return `Forgot ${hits.length}: ${hits.map(h => '"' + h.text + '"').join(', ')}`;
 }
 function memorySearch(query, limit = 15) {
@@ -80,14 +82,20 @@ function memorySearch(query, limit = 15) {
   res.sort((a, b) => b.score - a.score);
   return res.slice(0, limit);
 }
+// search: keywords + meaning together (FTS5 and sqlite-vec, see embed.js) when embeddings work, the plain word match otherwise
+async function memorySearchTool(query) {
+  if (S.embedOn !== false) {
+    try { const r = await memorySearchHybrid(query, 12); if (r.text) return (r.note ? `[${r.note}]\n` : '') + r.text; }
+    catch (e) { console.warn('hybrid memory search failed, using the word match', e); }
+  }
+  const r = memorySearch(query, 15);
+  return r.length ? r.map(x => `${x.f === MEM_PATH ? 'memory' : noteName(x.f)}${x.head && x.f !== MEM_PATH ? ' · ' + x.head : ''}: ${x.line.slice(0, 300)}`).join('\n') : 'Nothing found in memory or the journal. Try notes_search for the rest of the vault.';
+}
 function memoryTool(args) {
   const a = String(args.action || '').toLowerCase();
   if (a === 'save' || a === 'remember' || a === 'add') return memorySave(args.text ?? args.fact ?? args.content, String(args.section || '').toLowerCase()).msg;
   if (a === 'forget' || a === 'remove' || a === 'delete') return memoryForget(args.text ?? args.query);
-  if (a === 'search' || a === 'recall') {
-    const r = memorySearch(args.text ?? args.query ?? '', 15);
-    return r.length ? r.map(x => `${x.f === MEM_PATH ? 'memory' : noteName(x.f)}${x.head && x.f !== MEM_PATH ? ' · ' + x.head : ''}: ${x.line.slice(0, 300)}`).join('\n') : 'Nothing found in memory or the journal. Try notes_search for the rest of the vault.';
-  }
+  if (a === 'search' || a === 'recall') return memorySearchTool(args.text ?? args.query ?? '');
   if (a === 'list' || !a) { ensureMemory(); return vfs.read(MEM_PATH); }
   throw new Error(`unknown action "${a}" (use save, search, forget or list)`);
 }
@@ -160,9 +168,11 @@ function memoryContext() {
   if (S.memoryRag) {
     const K = Math.max(1, Math.min(30, +S.memoryRagK || 8));
     const q = memoryQuery();
-    const { hits, total } = memoryRank(q, K);
+    // embeddings on: the lines ranked by keywords + meaning, worked out before this turn started (memoryPrefetch); otherwise BM25
+    const hy = S.embedOn !== false && vmemCtx.hits && vmemCtx.q === q && vmemCtx.hits.length ? vmemCtx : null;
+    const { hits, total } = hy ? { hits: hy.hits.map(h => ({ text: h.text, sec: h.head })), total: hy.total } : memoryRank(q, K);
     let lines, note;
-    if (hits.length) { lines = hits.map(h => `- ${h.text}${h.sec ? ` [${h.sec}]` : ''}`); note = `the ${hits.length} of ${total} memory lines that best match the user's message`; }
+    if (hits.length) { lines = hits.map(h => `- ${h.text}${h.sec ? ` [${h.sec}]` : ''}`); note = `the ${hits.length} of ${total} memory lines that best match the user's message${hy ? (hy.sem ? ' (keywords and meaning)' : ' (keywords)') : ''}`; }
     else { lines = mem.slice(-5).map(m => `- ${m.text}${m.sec ? ` [${m.sec}]` : ''}`); note = q.trim() ? `nothing matched this message, so the ${lines.length} newest of ${total} lines` : `the ${lines.length} newest of ${total} lines`; }
     return `\n\nLong-term memory (from the note [[Memory]], ${note}; use memory search for anything else, and keep it current with the memory tool):\n${lines.join('\n') || '(empty so far)'}${journal}`;
   }
@@ -213,7 +223,7 @@ async function journalSession(sess, { reason = 'leave', summary = null, upto = n
     const day = todayStr(), p = `${JOURNAL_DIR}/Journal ${day}.md`, t = new Date();
     const entry = `\n## ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')} · ${String(sess.title || 'Chat').replace(/\n/g, ' ').slice(0, 70)}\n${sum}\n`;
     if (!vfs.isFile(p)) vfs.write(p, `# Journal ${day}\n\n#journal · [[Journal]]\n`, { mkdirs: true });
-    vfs.append(p, entry);
+    vfs.append(p, entry); vmemSyncSoon();
     let learned = 0; for (const f of facts) if (memorySave(f, 'learned').added) learned++;
     const marks = jMarks(); marks[sess.id] = end; ls.set('journaled', marks);
     if (reason !== 'quiet') toast(`Pandora wrote today's quest log${learned ? ` and learned ${learned} new thing${learned > 1 ? 's' : ''}` : ''}`, 'ok');

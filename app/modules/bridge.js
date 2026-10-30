@@ -47,7 +47,7 @@ async function runNodeScript({ code, argv = ['[eval]'], cwd = '/', globals = nul
   let tfSrc = ''; if (useTf) { try { tfSrc = await tfjsSource(); } catch (e) { onErr?.(`node: could not load TensorFlow.js (${e.message})\n`); } }
   const names = globals ? Object.keys(globals).filter(k => /^[$A-Za-z_][\w$]*$/.test(k)) : [];
   const head = names.length ? `const { ${names.join(', ')} } = __globals;\n` : '';
-  const src = NODE_PRELUDE + `\nasync function __main() {\n${head}${code}\n}\n` + (sqMod ? '\n' + SQLITE_GLUE_SRC + '\n' : '') + (tfSrc ? `\n(function () { var exports, module, define;\n${tfSrc}\n}).call(self);\nself.__tfInit = ${tfInitWorker.toString()};\n` : '');
+  const src = NODE_PRELUDE + `\nasync function __main() {\n${head}${code}\n}\n` + (sqMod ? '\n' + SQLITE_GLUE_SRC + '\n' : '') + (tfSrc ? `\n(function () { var exports, module, define;\n${tfSrc}\n}).call(self);\nself.__tfPrefer = ${JSON.stringify(S.tfBackend || 'auto')};\nself.jvGpuShim = ${jvGpuShim.toString()};\nself.__tfInit = ${tfInitWorker.toString()};\n` : '');
   const off = NODE_PRELUDE.split('\n').length + 1 + (head ? 1 : 0) + lineShift;
   const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
   const ctx = { depth, via, ui, allow };
@@ -81,17 +81,49 @@ async function runNodeScript({ code, argv = ['[eval]'], cwd = '/', globals = nul
   r.out ||= []; return r;
 }
 const TF_USE = /\btf\s*\.\s*[A-Za-z_$]|@tensorflow\/tfjs/;
-// runs in the worker before the script: use the GPU (WebGL) when it really works there, else the CPU backend,
-// so a phone or browser without WebGL in workers still computes instead of failing
+// WebGPU on phones: Android's WebView gives a GPU adapter for "compatibility" requests where a plain request can come
+// back empty. Every requestAdapter() here (TensorFlow.js, ONNX Runtime, LiteRT, scripts) tries plain first, then
+// compatibility, and on an adapter that can do full WebGPU asks for it, so shaders written for full WebGPU still run.
+function jvGpuShim(g) {
+  if (!g || g.__jv || typeof g.requestAdapter !== 'function') return;
+  const req = g.requestAdapter.bind(g);
+  const lift = a => {
+    if (a && !a.__jv && a.features && a.features.has('core-features-and-limits')) {
+      const rd = a.requestDevice.bind(a);
+      a.requestDevice = (d = {}) => rd({ ...d, requiredFeatures: [...new Set([...(d.requiredFeatures || []), 'core-features-and-limits'])] });
+      a.__jv = true;
+    }
+    return a;
+  };
+  g.requestAdapter = async (o) => {
+    let a = null; try { a = await req(o); } catch (e) {}
+    if (!a && !(o && o.featureLevel)) { try { a = await req({ ...(o || {}), featureLevel: 'compatibility' }); } catch (e) {} }
+    return lift(a);
+  };
+  g.__jv = true;
+}
+window.jvGpuShim = jvGpuShim;
+try { jvGpuShim(navigator.gpu); } catch (e) {}   // the page too: LiteRT and ONNX Runtime ask for adapters here
+// runs in the worker before the script: the fastest backend that really works there, WebGPU, then WebGL, then the
+// CPU, so a phone or browser without a GPU in workers still computes instead of failing. tf.getBackend() says which.
 async function tfInitWorker() {
   const tf = self.tf; if (!tf) return;
   try { tf.env().set('IS_NODE', false); } catch (e) {}   // the sandbox has a `process` object, but this is a browser: no "install tfjs-node" banner
-  let gl = false;
-  try { if (typeof OffscreenCanvas !== 'undefined') { const c = new OffscreenCanvas(2, 2); gl = !!(c.getContext('webgl2') || c.getContext('webgl')); } } catch (e) { gl = false; }
-  const keep = { log: console.log, info: console.info, warn: console.warn, error: console.error }; console.log = console.info = console.warn = console.error = () => {};   // TensorFlow logs its WebGL probing
+  try { jvGpuShim(self.navigator && self.navigator.gpu); } catch (e) {}
+  const keep = { log: console.log, info: console.info, warn: console.warn, error: console.error }; console.log = console.info = console.warn = console.error = () => {};   // TensorFlow logs its probing
+  const works = async (name) => {
+    try { if (!tf.findBackendFactory(name)) return false; if (!(await tf.setBackend(name))) return false; await tf.ready(); const v = await tf.tensor([1, 2]).add(1).data(); return v[0] === 2 && v[1] === 3; }
+    catch (e) { return false; }
+  };
   try {
-    if (gl) { try { gl = await tf.setBackend('webgl'); if (gl) { await tf.ready(); tf.tensor([1]).add(1).dataSync(); } } catch (e) { gl = false; } }
-    if (!gl) { try { tf.removeBackend('webgl'); } catch (e) {} await tf.setBackend('cpu'); }
+    let ok = false;
+    if (self.navigator && self.navigator.gpu && self.__tfPrefer !== 'webgl' && self.__tfPrefer !== 'cpu') ok = await works('webgpu');
+    if (!ok && self.__tfPrefer !== 'cpu') {
+      let gl = false;
+      try { if (typeof OffscreenCanvas !== 'undefined') { const c = new OffscreenCanvas(2, 2); gl = !!(c.getContext('webgl2') || c.getContext('webgl')); } } catch (e) { gl = false; }
+      ok = gl && await works('webgl');
+    }
+    if (!ok) { for (const b of ['webgpu', 'webgl']) { try { tf.removeBackend(b); } catch (e) {} } await tf.setBackend('cpu'); }
     await tf.ready();
   } finally { Object.assign(console, keep); }
 }
@@ -161,8 +193,8 @@ async function jadeBridge(op, a, ctx = {}) {
 
 /* ---------- decisions (Ollaya) as data, not prose ---------- */
 async function decideData({ state, question, type = 'choice', options } = {}) {
-  if (!S.ollayaOn) throw new Error('Ollaya is turned off (Config → Model → Ollaya decisions).');
-  if (!S.ollayaModel) throw new Error('No Ollaya model is selected (Config → Model → Ollaya decisions → Scan).');
+  if (!S.ollayaOn) throw new Error('Decisions are turned off (Config → Model → Decision models).');
+  if (!S.ollayaModel) throw new Error('No decision model is selected (Config → Model → Decision models → Scan).');
   const t = type === 'yesno' ? 'noul' : type;
   const q = { type: t, instructions: String(question || '') };
   const opts = (Array.isArray(options) ? options : typeof options === 'string' ? options.split('\n') : []).map(String).map(x => x.trim()).filter(Boolean);
@@ -173,7 +205,7 @@ async function decideData({ state, question, type = 'choice', options } = {}) {
   const r = await ollayaFetch('/v1/systemone', { method: 'POST', body: JSON.stringify(body) });
   if (!r.ok) throw new Error(await ollayaErr(r));
   const j = await r.json(); const ans = j.answers?.q;
-  if (!ans) throw new Error('Ollaya returned no answer');
+  if (!ans) throw new Error(decName() + ' returned no answer');
   const probs = Array.isArray(ans.probabilities) ? Object.fromEntries(ans.probabilities.map((v, i) => [String(i), +v])) : Object.fromEntries(Object.entries(ans.probabilities || {}).map(([k, v]) => [k, +v]));
   const out = { type: type === 'yesno' ? 'yesno' : t, confidence: ans.confidence != null ? +ans.confidence : null, probabilities: probs, model: j.model || S.ollayaModel };
   if ('choice' in ans) { out.choice = ans.choice; out.result = ans.choice; }

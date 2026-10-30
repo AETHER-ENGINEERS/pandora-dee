@@ -181,7 +181,8 @@ a = await api('ritual', {}); ok(a.status === 400 && /say which ritual/.test(a.bo
 
 // ---------- Flows tab ----------
 const tabs = await E(() => [...document.querySelectorAll('.m-nav .tab')].map(t => t.dataset.tab).join());
-ok(tabs === 'chat,term,files,sched,flows,apps,tasks', 'the bottom bar has a Flows tab between Schedule and Apps: ' + tabs);
+// the Playbooks tab (2.10.0, from Jade Vault) sits after Rituals; it stays hidden until Playbooks is switched on
+ok(tabs === 'chat,term,files,sched,flows,playbooks,apps,tasks', 'the bottom bar has a Flows tab between Schedule and Apps: ' + tabs);
 await page.click('.m-nav .tab[data-tab="flows"]'); await page.waitForTimeout(300);
 ok(await E(() => document.querySelectorAll('#flCards .fl-card').length >= 6 && /Recent runs/.test(document.querySelector('#flowsPanel').textContent)), 'the list shows flow cards and recent runs');
 await page.screenshot({ path: 'flows_list.png' });

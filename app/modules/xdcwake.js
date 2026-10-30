@@ -48,7 +48,7 @@ async function xdcWakeJade(appId, batch) {
   try { await send(prompt); } finally { ATT.pending.push(...stash); }
   const fresh = cur.messages.slice(before);
   const err = fresh.find(m => m._error);
-  const sent = fresh.some(m => m.role === 'tool' && m.tool_name === 'apps' && /^Sent update/.test(String(m.content)));
+  const sent = fresh.some(m => m.role === 'tool' && ((m.tool_name === 'apps' && /^Sent update/.test(String(m.content))) || (m.tool_name === 'bash' && /(^|\n)Sent update #\d+ to .+ as jade@jade\.vault/.test(String(m.content)))));   // a script that calls the apps tool (docs_tool.js) counts too
   if (!sent && !err && app.manifest?.jade_reply === 'msg') {
     // the model answered in chat instead of the app: deliver that answer as a message so the user is not left waiting
     const last = [...fresh].reverse().find(m => m.role === 'assistant' && String(m.content || '').trim());

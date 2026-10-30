@@ -110,7 +110,8 @@ const tabs = await page.evaluate(() => [...document.querySelectorAll('#setTabs .
 ok(tabs.join() === 'model,memory,tools,connect,look,app', 'six settings tabs: ' + tabs);
 const vis = () => page.evaluate(() => [...document.querySelectorAll('#settings section[data-tab]')].filter(s => !s.classList.contains('tab-off') && !s.hidden && s.offsetParent !== null).map(s => s.querySelector('.pane-h').textContent.trim()));
 const allSections = await page.evaluate(() => document.querySelectorAll('#settings section[data-tab]').length);
-ok(allSections === 22, 'every settings section is on a tab: ' + allSections);
+// 2.10.0: Jade Vault's sections came with its features (each behind a switch)
+ok(allSections === 25, 'every settings section is on a tab: ' + allSections);
 await page.screenshot({ path: 'set_model.png' });
 let v = await vis();
 ok(v.includes('Model provider') && !v.includes('Long-term memory') && v.length <= 3, 'Model tab shows only its sections: ' + v);

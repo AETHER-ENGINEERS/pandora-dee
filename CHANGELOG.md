@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.10.0
+Everything Jade Vault adds, through Jade Vault 2.22.1, comes to Pandora in her own words (/Pandora paths, rituals,
+leaves). Every tool and feature that needs a switch has its own and starts **off**: with nothing switched on,
+Pandora behaves as 2.9.9.2.
+- **Simply in:** the Rust core (web pages to Markdown for web_fetch), web_search and web_fetch together, a steady tool
+  list with the tool router, a faster leaf index, one unreadable file no longer breaking every shell command,
+  TensorFlow.js on WebGPU (else WebGL, else the CPU), an offline terminal (xterm in the phone page).
+- **Memory:** embeddings (hybrid search with SQLite FTS5 + sqlite-vec) and ranked memories (keywords + meaning).
+- **App → Voice & senses**, each its own switch:
+  - senses and the Talk button (hands-free voice, wake phrases, vision and transcription models);
+  - look, and models on this device: .tflite (litert, WebGPU by default) and .onnx (onnx, ONNX Runtime);
+  - **usb**: USB devices you plug in and allow, one at a time;
+  - browser, phone and screen (Android app only); Sentry rules and SSH sessions (Android app only);
+  - think (tree of thoughts), delegate (a sub-agent), chat_history (search past chats);
+  - Playbooks (a tab, a tool, schedules and ritual steps), the skill router and tool router, curiosity wake-ups.
+- **App → Background:** scheduled backups to a server (encrypted on the device), and the backup tool.
+- **App:** the vault on real storage, and kiosk mode (Android app only).
+- "Ask me before Pandora places a call, sends a text…" stays on: it guards those tools, which are themselves off.
+
 ## 2.9.9.2
 - **A fantasy companion.** Pandora no longer follows the pointer, and the scanlines and cyber grid are off unless you
   switch them on; she stands in a soft pool of her gem's light. Custom Gradient is now Gradient.

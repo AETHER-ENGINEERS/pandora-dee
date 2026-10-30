@@ -51,7 +51,11 @@ function trajRecorder() {
   return {
     get id() { return rec?.id || saved.at(-1) || null; },
     call(msgs, tools, req) {
-      const same = rec && msgs.length === rec.messages.length && msgs[0]?.content === rec.messages[0]?.content;
+      // Is this the next step of the run already being recorded? The system prompt is not the thing to compare:
+      // when it has to be trimmed to fit the context window, the trim moves as the conversation grows, so the
+      // same run would look like a new one and be split in two. The first user turn is stable for the whole run.
+      const firstUser = ms => (ms.find(m => m.role === 'user') || {}).content;
+      const same = rec && msgs.length === rec.messages.length && firstUser(msgs) === firstUser(rec.messages);
       if (!same) { if (rec && rec.steps.length) flush('segment'); rec = fresh(msgs, tools, req); }   // a request that never got a reply (retried) is dropped
       rec._t0 = Date.now();
     },

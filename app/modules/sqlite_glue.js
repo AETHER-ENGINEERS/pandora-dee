@@ -5,6 +5,9 @@ function __jvSqlite(wasmModule) {
   let mem = null;
   const imports = { wasi_snapshot_preview1: {
     clock_time_get(id, prec, out) { new DataView(mem.buffer).setBigUint64(out, BigInt(Date.now()) * 1000000n, true); return 0; },
+    // sqlite-vec pulls in a little of wasi-libc's stdio: no files, no preopened folders, nothing to write to
+    fd_close() { return 8; }, fd_seek() { return 8; }, fd_write(fd, iov, n, out) { let t = 0; const d = new DataView(mem.buffer); for (let i = 0; i < n; i++) t += d.getUint32(iov + i * 8 + 4, true); d.setUint32(out, t, true); return 0; },
+    fd_prestat_get() { return 8; }, fd_prestat_dir_name() { return 8; }, proc_exit(c) { throw new Error('sqlite exited (' + c + ')'); },
     random_get(ptr, len) { const u = new Uint8Array(mem.buffer, ptr, len); for (let i = 0; i < len; i += 65536) crypto.getRandomValues(u.subarray(i, Math.min(len, i + 65536))); return 0; },
   } };
   const inst = new WebAssembly.Instance(wasmModule, imports); const X = inst.exports; mem = X.memory;

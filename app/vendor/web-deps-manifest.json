@@ -1,0 +1,153 @@
+{
+  "made": "2026-10-29 14:21:43",
+  "packages": [
+    {
+      "name": "@tensorflow/tfjs-backend-webgpu",
+      "version": "4.22.0",
+      "integrity": "sha512-lvIc7Af4Tl2BCdYp43iQmSCRq3asaKT0q2xaErphXiUZ+jqeB0bQa0ZvQys1Xatvto0U4/c90DVsHPfvkn5ftg==",
+      "files": [
+        {
+          "path": "tensorflow__tfjs-backend-webgpu/dist/tf-backend-webgpu.min.js",
+          "bytes": 325535,
+          "sha256": "c02ae6ef5e7fff6dc9cec8b14b45e36e8894614f3ef006973e98f7568b590f3f"
+        },
+        {
+          "path": "tensorflow__tfjs-backend-webgpu/package.json",
+          "bytes": 1727,
+          "sha256": "cd48bc505923ebb14ade8b7eaa550012a6dd2995a47c1c5dba228371ad84e1aa"
+        }
+      ]
+    },
+    {
+      "name": "onnxruntime-web",
+      "version": "1.31.1",
+      "integrity": "sha512-5GeH+bWQ+HxM10z7erGlsWqryrwMbSvm/1tkIsKTT48g0fI19VXVVC435t4t7VsPdSQeS7NmuZPXrQ73k82URw==",
+      "files": [
+        {
+          "path": "onnxruntime-web/dist/ort.all.min.js",
+          "bytes": 823379,
+          "sha256": "4f8c9e2241c34eda8515cee38b62ed9eb052c054a1e531591074459c8bd8ff97"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort.min.js",
+          "bytes": 371810,
+          "sha256": "cb76ed9827dd1f2c96fcf902f04aa5a8eb0958b7c6bf8a244b362d06e9104797"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort.webgpu.min.js",
+          "bytes": 70811,
+          "sha256": "03f4423bd12fdbf5eb4ffcf6c1a3c471c760e10c2a1533f1ca64f5a7619c7731"
+        },
+        {
+          "path": "onnxruntime-web/package.json",
+          "bytes": 4594,
+          "sha256": "81fa53b6bf23c91d6fdd37dac97ebec558048bbd14ccbcc02e54fb47d3c1c699"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs",
+          "bytes": 53457,
+          "sha256": "59cf781530e1a16df2a291d78798e3ec1152467edaec402d6f9599d85047c302"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs",
+          "bytes": 47250,
+          "sha256": "7838b4b2e77d6f1a739cd0de800e7f18a089328b365e6af4d416a88a94fd7fd3"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.mjs",
+          "bytes": 51321,
+          "sha256": "eeb051cdbdb9f6edd8992cb4f81ad3c94ad01e4d8f767ffb415143e8afc41fc5"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+          "bytes": 24738,
+          "sha256": "30ed0b5cd1182ede931fea448afb567d4dc705ec957af09f108a2be5f770dac3"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort.all.bundle.min.mjs",
+          "bytes": 869537,
+          "sha256": "2aef479af24d8ebb0d4f94abfa26eb738e0791cba6fb0b1717d0e0439415cb4c"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort.bundle.min.mjs",
+          "bytes": 417713,
+          "sha256": "5d801ce7f8f6957a32a789322dcac612e22abed275d702d8af3fa75ea74be62e"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort.webgpu.bundle.min.mjs",
+          "bytes": 122491,
+          "sha256": "c90275ffcd0e74e8929f527840ce9339399bfd45f11a74887e4b81a893907b70"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm",
+          "bytes": 28747738,
+          "sha256": "ca319e9539cd0f1e291cf56074760121eaf39650f5dbf84b6e52c07f4b2944ec"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm",
+          "bytes": 29520971,
+          "sha256": "5ab8361783822d02a57d1e97cf2514bceb451a628f2b29ae0d7b6e618201ff8f"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.jspi.wasm",
+          "bytes": 17920659,
+          "sha256": "b89a3efceeb6df2ba29a66fef59f48fd7b7c22a62af54c3cfe05e63863a07fd5"
+        },
+        {
+          "path": "onnxruntime-web/dist/ort-wasm-simd-threaded.wasm",
+          "bytes": 14848852,
+          "sha256": "4b884c203b0fa48d057be3332c65513ff85aa3c5bddd6946acc0fab7ecda001d"
+        }
+      ]
+    },
+    {
+      "name": "@xterm/xterm",
+      "version": "5.5.0",
+      "integrity": "sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==",
+      "files": [
+        {
+          "path": "xterm__xterm/LICENSE",
+          "bytes": 1261,
+          "sha256": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd"
+        },
+        {
+          "path": "xterm__xterm/css/xterm.css",
+          "bytes": 5559,
+          "sha256": "ba8e6985669488981ccf40c0cefe3aba80722cb6c92de7ad628b0bd717faf2b6"
+        },
+        {
+          "path": "xterm__xterm/lib/xterm.js",
+          "bytes": 289441,
+          "sha256": "1f991ac3b4b283ebf96e60ae23a00a52765dd3a2e46fa6fdda9f1aab032f7495"
+        },
+        {
+          "path": "xterm__xterm/package.json",
+          "bytes": 4006,
+          "sha256": "bca13138acbc44abfe6f5b5eb9eb4fa4337b29e62c71800436cabf44dd49920e"
+        }
+      ]
+    },
+    {
+      "name": "@xterm/addon-fit",
+      "version": "0.10.0",
+      "integrity": "sha512-UFYkDm4HUahf2lnEyHvio51TNGiLK66mqP2JoATy7hRZeXaGMRDr00JiSF7m63vR5WKATF605yEggJKsw0JpMQ==",
+      "files": [
+        {
+          "path": "xterm__addon-fit/LICENSE",
+          "bytes": 1103,
+          "sha256": "e256f01188af527e4d06d21d06fbf785ae9c50d4b328bf03cbe0ba7f0aa4228f"
+        },
+        {
+          "path": "xterm__addon-fit/lib/addon-fit.js",
+          "bytes": 1497,
+          "sha256": "bdaefa370b1bfc42ee88d46fe6072400902a4d4b2d45cd93438dda9b23c97089"
+        },
+        {
+          "path": "xterm__addon-fit/package.json",
+          "bytes": 632,
+          "sha256": "5a70fc5520ab1b7b4c4d9e527acc78395e99a8aa539de583c930f5671dbcc044"
+        }
+      ]
+    }
+  ]
+}

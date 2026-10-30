@@ -1608,7 +1608,7 @@ for sec_id in ('trajSection', 'vecSection', 'mcpSection'):
 rep("openSettings(); $('#sProvider').value = p; showProvFields(); return; }", "openSettings(); showSettingsSection('#sProvider'); $('#sProvider').value = p; showProvFields(); return; }")
 # settings tabs: every section gets data-tab (an unknown section fails the build, so none is ever lost)
 TABS = [('model', 'Model'), ('memory', 'Memory'), ('tools', 'Tools'), ('connect', 'Connect'), ('app', 'App')]
-TAB_OF = {'Model provider': 'model', 'Web search': 'model', 'Ollaya decisions': 'model',
+TAB_OF = {'Model provider': 'model', 'Web search': 'model', 'Decision models': 'model',
           'Persona, instructions & skills': 'memory', 'Long-term memory': 'memory', 'Embeddings (sqlite-vec)': 'memory', 'History compaction': 'memory', 'Trajectory log (fine-tuning data)': 'memory',
           'MCP servers': 'tools', 'Secrets (API keys for Jade\'s HTTP requests)': 'tools', 'BusyBox WASM': 'tools',
           'API endpoint': 'connect', 'Vector messenger (Pandora as a bot)': 'connect', 'Discord (Pandora as a bot)': 'connect',
@@ -1806,11 +1806,11 @@ s = s.replace('/* ==============================================================
 rep("Object.assign(window, { setNoteMode,", "Object.assign(window, { replyBar, replyText, replyRetry, replyRetrySync, setNoteMode,")
 
 # ---------- v20: TensorFlow.js 4.22 for Jade's scripts (embedded, gzip + base64, unpacked on first use) ----------
-_tf = open(os.path.join(D, 'vendor', 'tf.min.js'), 'rb').read()
+_tf = open(os.path.join(D, 'vendor', 'tf.min.js'), 'rb').read() + b'\n' + open(os.path.join(D, 'vendor', 'tf-backend-webgpu.min.js'), 'rb').read()   # + the WebGPU backend (2.22)
 _tfb = _b64.b64encode(_gz.compress(_tf, 9, mtime=0)).decode()
 _i = s.index('<script type="application/octet-stream" id="sqlite-wasm">'); _j = s.index('</script>', _i) + len('</script>')
 s = s[:_j] + '\n<script type="application/octet-stream" id="tfjs-src">' + _tfb + '</script>' + s[_j:]
-rep(r"pandora.shell(cmd) and pandora.notify(title, body) call your tools, decisions, model and rituals (jade.* is the same object).\n", r"pandora.shell(cmd) and pandora.notify(title, body) call your tools, decisions, model and rituals (jade.* is the same object). TensorFlow.js 4.22 is built in: use tf (or require('@tensorflow/tfjs')) in node for tensors and small models; keep a trained model with await model.save('indexeddb://name') and tf.loadLayersModel('indexeddb://name').\n")
+rep(r"pandora.shell(cmd) and pandora.notify(title, body) call your tools, decisions, model and rituals (jade.* is the same object).\n", r"pandora.shell(cmd) and pandora.notify(title, body) call your tools, decisions, model and rituals (jade.* is the same object). TensorFlow.js 4.22 is built in: use tf (or require('@tensorflow/tfjs')) in node for tensors and small models; it runs on WebGPU when the device has it, else WebGL, else the CPU (tf.getBackend() says which); keep a trained model with await model.save('indexeddb://name') and tf.loadLayersModel('indexeddb://name').\n")
 rep("Object.assign(window, { replyBar,", "Object.assign(window, { tfjsSource, replyBar,")
 # ---------- v21: Discord bot (next to Vector, one shared turn queue) ----------
 rep("const activeTools = () => vecFilterTools([", "const activeTools = () => dcFilterTools(vecFilterTools([")
@@ -1945,6 +1945,19 @@ rep("""      for (const tc of asst.tool_calls) {
 rep("async function agentLoop() {", "const PARALLEL_TOOLS = new Set(['web_search', 'web_fetch']);   // read-only network tools: safe to run together\nasync function agentLoop() {")
 # on the phone the app reaches Ollama natively (no CORS), so OLLAMA_ORIGINS is not the fix there
 rep("""hint = activeProv === 'local' ? `Could not reach Ollama at ${S.host}. Make sure it is running with OLLAMA_ORIGINS="*" so this page is allowed to call it${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.` :""", """hint = activeProv === 'local' ? (RustCore.net ? `Could not reach Ollama at ${S.host}. Make sure it is running and reachable from the phone (on a computer, start it with OLLAMA_HOST=0.0.0.0 and use the computer's address)${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.` : `Could not reach Ollama at ${S.host}. Make sure it is running with OLLAMA_ORIGINS="*" so this page is allowed to call it${providerChain().length > 1 ? '' : ', or add fallback providers in Config'}.`) :""")
+# ---------- 2.22: ONNX Runtime (onnx tool) next to LiteRT ----------
+rep("|| t.name === 'litert' || t.name === 'browser')", "|| t.name === 'litert' || t.name === 'onnx' || t.name === 'browser')")
+rep("    case 'senses': case 'look': case 'litert': case 'browser':", "    case 'senses': case 'look': case 'litert': case 'onnx': case 'browser':")
+rep("litert: run .tflite models;", "litert: run .tflite models; onnx: run .onnx models with ONNX Runtime (WebGPU, or the CPU);")
+rep("  litert: 'tflite model", "  onnx: 'onnx model inference run classify detect tensor embedding network onnxruntime',\n  litert: 'tflite model")
+# ---------- 2.22: USB (navigator.usb on Android, WebUSB in browsers) and the usb tool ----------
+s = s.replace('/* =====================================================================\n   BOOT', rd('usb.js') + '\n/* =====================================================================\n   BOOT', 1)
+rep("...DC_TOOL_DEFS.map(f => ({ type: 'function', function: f })), ...WORLD_TOOL_DEFS", "...DC_TOOL_DEFS.map(f => ({ type: 'function', function: f })), ...USB_TOOL_DEFS.filter(() => S.usbOn !== false).map(f => ({ type: 'function', function: f })), ...WORLD_TOOL_DEFS")
+rep("    case 'senses': case 'look': case 'litert': case 'onnx': case 'browser':", "    case 'usb': return await usbTool(args);\n    case 'senses': case 'look': case 'litert': case 'onnx': case 'browser':")
+rep("onnx: run .onnx models with ONNX Runtime (WebGPU, or the CPU);", "onnx: run .onnx models with ONNX Runtime (WebGPU, or the CPU); usb: USB devices plugged into the phone (OTG) or the computer: list, ask the user to allow one, open, claim, control and bulk transfers;")
+rep("  onnx: 'onnx model", "  usb: 'usb device otg plugged arduino microcontroller serial adapter dongle port firmware endpoint',\n  onnx: 'onnx model")
+# the xterm instance itself, for the Fleet client's real terminal and for reading the whole scrollback
+rep('return { write: s => t.write(s), clear: () => t.clear(), onData: f => t.onData(f), fit: doFit, focus: () => t.focus() };', 'return { write: s => t.write(s), clear: () => t.clear(), onData: f => t.onData(f), fit: doFit, focus: () => t.focus(), _t: t };')
 # ---------- v22: Pandora Dee's moving day: /Jade → /Pandora, flows → rituals; old paths still resolve ----------
 rep("    return '/' + out.join('/');\n  }\n  parent(p)", "    return pandoraPath('/' + out.join('/'));\n  }\n  parent(p)")
 s = s.replace('/* =====================================================================\n   BOOT', rd('migrate.js') + '\n/* =====================================================================\n   BOOT', 1)

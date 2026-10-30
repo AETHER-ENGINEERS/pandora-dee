@@ -49,7 +49,7 @@ function rawDb() { return new Promise((res, rej) => { const r = indexedDB.open('
 // everything in IndexedDB but the vault and the settings copy (it holds API keys; backups carry settings their own way)
 async function dbDump() {
   const db = await rawDb();
-  return new Promise((res, rej) => { const st = db.transaction('kv').objectStore('kv'); const out = {}; const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); if (c.key !== 'vfs' && c.key !== 'settingsCopy') out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); });
+  return new Promise((res, rej) => { const st = db.transaction('kv').objectStore('kv'); const out = {}; const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); if (c.key !== 'vfs' && c.key !== 'settingsCopy' && c.key !== 'settingsMirror' && c.key !== 'pendingSettings') out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); });
 }
 async function dbRestore(obj, wipe) {
   const db = await rawDb();

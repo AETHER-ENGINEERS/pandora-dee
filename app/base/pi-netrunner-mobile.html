@@ -501,7 +501,7 @@ body.drawer-open .drawer{transform:none} body.drawer-open .drawer-bg{opacity:1;p
     <select id="modelSel" class="field cut-sm cut" style="border-color:var(--line-hot);color:var(--yl)"></select>
     <span class="chip" id="chipOllama" title="Ollama connection"><span class="dot" id="dotOllama"></span><span id="txtOllama">OLLAMA</span></span>
     <span class="chip" id="chipShell" title="Shell engine"><span class="dot" id="dotShell"></span><span id="txtShell">SHELL</span></span>
-    <span class="chip" id="chipOllaya" title="Ollaya decision models" hidden><span class="dot" id="dotOllaya"></span><span id="txtOllaya">OLLAYA</span></span>
+    <span class="chip" id="chipOllaya" title="Decision models" hidden><span class="dot" id="dotOllaya"></span><span id="txtOllaya">OLLAYA</span></span>
     <div class="mono text-[10px] tracking-[.18em] text-dim mt-1">PI NETRUNNER MOBILE · JADE CAT EDITION</div>
   </div>
 </aside>
@@ -551,17 +551,18 @@ body.drawer-open .drawer{transform:none} body.drawer-open .drawer-bg{opacity:1;p
       </section>
 
       <section class="flex flex-col gap-3">
-        <div class="pane-h">Ollaya decisions</div>
-        <p class="text-sm leading-relaxed text-[#c2d6ce]">Ollaya runs decision models locally. It doesn't write text: it answers questions you define with calibrated probabilities. When it's on, the agent gets a <span class="mono text-yl">decide</span> tool for triage, classification, scoring and yes/no checks. Ollama still does the chatting.</p>
+        <div class="pane-h">Decision models</div>
+        <p class="text-sm leading-relaxed text-[#c2d6ce]">Ollaya, or Ollama 0.35 and newer, runs decision models locally. It doesn't write text: it answers questions you define with calibrated probabilities. When it's on, the agent gets a <span class="mono text-yl">decide</span> tool for triage, classification, scoring and yes/no checks. Ollama still does the chatting.</p>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
           <label class="flex items-center gap-2 text-sm" for="sOllayaOn"><input type="checkbox" id="sOllayaOn" class="accent-emerald-400 w-4 h-4"> Give the agent the decide tool</label>
+          <div><label class="lbl" for="sDecideProv">Server</label><select id="sDecideProv" class="field mt-1"><option value="ollaya">Ollaya</option><option value="ollama">Ollama (0.35+)</option></select></div>
           <div><label class="lbl" for="sOllayaHost">Address</label><input id="sOllayaHost" class="field mt-1" placeholder="http://localhost:11435"></div>
           <div><label class="lbl" for="sOllayaModel">Decision model</label><div class="flex gap-2 mt-1"><select id="sOllayaModel" class="field"></select><button class="btn" id="btnOllayaScan">Scan</button></div></div>
-          <div><label class="lbl" for="sOllayaKey">API key (only if OLLAYA_API_KEY is set)</label><input id="sOllayaKey" type="password" class="field mt-1" placeholder="optional"></div>
+          <div><label class="lbl" for="sOllayaKey">API key (only if the server needs one)</label><input id="sOllayaKey" type="password" class="field mt-1" placeholder="optional"></div>
         </div>
         <div class="flex gap-2 items-center flex-wrap"><button class="btn btn-cy" id="btnOllayaTest">Run a test decision</button><span class="hint" id="ollayaNote"></span></div>
         <pre class="mono text-[11.5px] whitespace-pre-wrap border border-line p-2 text-[#cde3da]" id="ollayaResult" hidden></pre>
-        <p class="hint leading-relaxed">Install from ollaya.dev, then run <span class="text-yl">ollaya serve</span> and pull a model (for example <span class="text-yl">ollaya pull winnow:e4b</span>). It accepts requests from localhost and local files by default. For the hosted page, start it with <span class="text-yl">OLLAYA_ORIGINS="*" ollaya serve</span>.</p>
+        <p class="hint leading-relaxed">Ollaya: install from ollaya.dev, run <span class="text-yl">ollaya serve</span> and pull a model (for example <span class="text-yl">ollaya pull laya</span>). Ollama: version 0.35 or newer serves decision models on the same API; pull one with <span class="text-yl">ollama pull</span> and leave the address blank to use the Ollama address above. Both accept requests from localhost and local files by default; for the hosted page, start them with <span class="text-yl">OLLAYA_ORIGINS="*"</span> or <span class="text-yl">OLLAMA_ORIGINS="*"</span>.</p>
       </section>
 
       <section class="flex flex-col gap-3">
@@ -663,7 +664,7 @@ const idb = (() => {
 })();
 
 /* ---------------- settings ---------------- */
-const DEFAULTS = { compactAuto: true, compactAfter: 8, compactKeep: 2, compactPct: 85, jadeCompact: false, jadeShow: true, jadeVoice: false, voiceName: '', voicePitch: 1.25, voiceRate: 1.03, jadeFrame: 'portrait', ollayaOn: false, ollayaHost: 'http://localhost:11435', ollayaModel: '', ollayaKey: '', host: 'http://localhost:11434', model: '', temperature: 0.2, numCtx: 16384, think: false, maxTurns: 40, bbUrl: '', engine: 'auto', search: 'auto', ollamaKey: '', searx: '' };
+const DEFAULTS = { compactAuto: true, compactAfter: 8, compactKeep: 2, compactPct: 85, jadeCompact: false, jadeShow: true, jadeVoice: false, voiceName: '', voicePitch: 1.25, voiceRate: 1.03, jadeFrame: 'portrait', ollayaOn: false, ollayaHost: 'http://localhost:11435', ollayaModel: '', ollayaKey: '', decideProv: 'ollaya', decideOllamaHost: '', host: 'http://localhost:11434', model: '', temperature: 0.2, numCtx: 16384, think: false, maxTurns: 40, bbUrl: '', engine: 'auto', search: 'auto', ollamaKey: '', searx: '' };
 const S = Object.assign({}, DEFAULTS, ls.get('settings', {}));
 const saveSettings = () => ls.set('settings', S);
 
@@ -1885,7 +1886,7 @@ const TOOL_DEFS = [
     parameters: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, max_results: { type: 'number', description: 'Max results (default 5, max 10)' } }, required: ['query'] } },
   { name: 'web_fetch', description: 'Fetch a web page and return it as readable text/markdown.',
     parameters: { type: 'object', properties: { url: { type: 'string', description: 'Absolute http(s) URL' } }, required: ['url'] } },
-  { name: 'decide', description: 'Ask the local Ollaya decision model to judge a piece of text. Returns calibrated probabilities, not prose. Use for triage, routing, classification, severity scores and yes/no checks (e.g. "is this test output a pass?", "which module does this stack trace point to?").',
+  { name: 'decide', description: 'Ask the local decision model (Ollaya or Ollama) to judge a piece of text. Returns calibrated probabilities, not prose. Use for triage, routing, classification, severity scores and yes/no checks (e.g. "is this test output a pass?", "which module does this stack trace point to?").',
     parameters: { type: 'object', properties: { state: { type: 'string', description: 'The text to judge: a message, log, diff, error or JSON' }, question: { type: 'string', description: 'What to decide, as an instruction' }, type: { type: 'string', enum: ['choice', 'score', 'yesno'], description: 'choice = pick one option; score = pick a level; yesno = true/false' }, options: { type: 'array', items: { type: 'string' }, description: 'choice: 2+ option labels. score: 2-10 level descriptions, lowest first. Not used for yesno.' } }, required: ['state', 'question', 'type'] } },
   { name: 'schedule', description: 'Create, list, pause/resume or delete scheduled prompts and reminders. Use whenever the user wants something to happen at a time or repeatedly. Each run sends the prompt to you as a new message. For add, give "when" in plain English (e.g. "every day at 9am", "weekdays at 8:30", "every 30 minutes", "in 20 minutes", "tomorrow at 7pm") and "prompt" = what to do or say at that time. Do not ask the user for cron syntax.',
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['add', 'list', 'remove', 'enable', 'disable'] }, name: { type: 'string', description: 'Short name (add)' }, when: { type: 'string', description: 'When to run, in plain English or 5-field cron. Examples: "every day at 9am", "weekdays at 8:30", "every monday at 6pm", "every 30 minutes", "in 20 minutes", "tomorrow at 7pm", "0 9 * * *" (add)' }, prompt: { type: 'string', description: 'What to do or say each time, e.g. "Remind the user to finish their projects" (add)' }, chat: { type: 'string', enum: ['new', 'same'], description: 'new = fresh chat per run (default), same = keep one chat' }, id: { type: 'string', description: 'Schedule id (remove/enable/disable)' } }, required: ['action'] } },
@@ -1893,20 +1894,23 @@ const TOOL_DEFS = [
 const OLLAMA_TOOLS = TOOL_DEFS.map(t => ({ type: 'function', function: t }));
 const activeTools = () => OLLAMA_TOOLS.filter(t => t.function.name !== 'decide' || (S.ollayaOn && S.ollayaModel));
 
-/* ---------------- Ollaya (local decision models) ---------------- */
-const ollayaBase = () => (S.ollayaHost || DEFAULTS.ollayaHost).replace(/\/+$/, '');
+/* ---------------- decision models: Ollaya, or Ollama 0.35+ (same /v1/systemone API) ---------------- */
+const decName = () => S.decideProv === 'ollama' ? 'Ollama' : 'Ollaya';
+const ollayaBase = () => (S.decideProv === 'ollama' ? (S.decideOllamaHost || S.host || DEFAULTS.host) : (S.ollayaHost || DEFAULTS.ollayaHost)).replace(/\/+$/, '');
 const ollayaHeaders = () => { const h = { 'Content-Type': 'application/json' }; if (S.ollayaKey) h.Authorization = 'Bearer ' + S.ollayaKey; return h; };
 let ollayaModels = [], ollayaState = 'off';
 async function ollayaErr(r) {
   let msg = 'HTTP ' + r.status;
   try { const j = await r.json(); msg = (j.error || msg) + (j.detail ? ' — ' + JSON.stringify(j.detail).slice(0, 300) : ''); } catch {}
-  if (r.status === 403) msg += `. Ollaya refused this page's origin: restart it with OLLAYA_ORIGINS="*" ollaya serve (opening the page as a local file also works).`;
-  if (r.status === 401) msg += '. The API key does not match OLLAYA_API_KEY.';
+  const N = decName(), U = N.toUpperCase();
+  if (r.status === 403) msg += `. ${N} refused this page's origin: restart it with ${U}_ORIGINS="*" ${N.toLowerCase()} serve (opening the page as a local file also works).`;
+  if (r.status === 401) msg += `. The API key was rejected${N === 'Ollaya' ? ' (OLLAYA_API_KEY)' : ''}.`;
+  if (r.status === 404 && N === 'Ollama') msg += '. Decision models need Ollama 0.35 or newer.';
   return msg;
 }
 async function ollayaFetch(path, init = {}) {
   try { return await fetch(ollayaBase() + path, { ...init, headers: ollayaHeaders() }); }
-  catch (e) { throw new Error(`could not reach Ollaya at ${ollayaBase()}. Is "ollaya serve" running? If it is, the browser blocked the request: restart it with OLLAYA_ORIGINS="*".`); }
+  catch (e) { const N = decName(); throw new Error(`could not reach ${N} at ${ollayaBase()}. Is "${N.toLowerCase()} serve" running? If it is, the browser blocked the request: restart it with ${N.toUpperCase()}_ORIGINS="*".`); }
 }
 async function ollayaScan() {
   const r = await ollayaFetch('/api/tags'); if (!r.ok) throw new Error(await ollayaErr(r));
@@ -1914,8 +1918,8 @@ async function ollayaScan() {
   return ollayaModels;
 }
 async function ollayaDecide({ state, question, type = 'choice', options } = {}) {
-  if (!S.ollayaOn) throw new Error('Ollaya is turned off (Config → Ollaya decisions).');
-  if (!S.ollayaModel) throw new Error('No Ollaya model is selected (Config → Ollaya decisions → Scan).');
+  if (!S.ollayaOn) throw new Error('Decisions are turned off (Config → Decision models).');
+  if (!S.ollayaModel) throw new Error(`No decision model is selected (Config → Decision models → Scan ${decName()}).`);
   const t = type === 'yesno' ? 'noul' : type;
   const q = { type: t, instructions: String(question || '') };
   const opts = Array.isArray(options) ? options.map(String).map(x => x.trim()).filter(Boolean) : [];
@@ -1936,9 +1940,9 @@ async function ollayaDecide({ state, question, type = 'choice', options } = {}) 
 async function ollayaCheck() {
   const chip = $('#chipOllaya'); chip.hidden = !S.ollayaOn;
   if (!S.ollayaOn) { ollayaState = 'off'; return; }
-  $('#dotOllaya').className = 'dot busy'; $('#txtOllaya').textContent = 'OLLAYA';
-  try { await ollayaScan(); ollayaState = 'ok'; $('#dotOllaya').className = 'dot ok'; $('#txtOllaya').textContent = 'OLLAYA ' + (S.ollayaModel || 'no model'); chip.title = `Ollaya at ${ollayaBase()} · ${ollayaModels.length} model(s)`; }
-  catch (e) { ollayaState = 'bad'; $('#dotOllaya').className = 'dot bad'; $('#txtOllaya').textContent = 'OLLAYA OFFLINE'; chip.title = e.message; }
+  const U = decName().toUpperCase(); $('#dotOllaya').className = 'dot busy'; $('#txtOllaya').textContent = U;
+  try { await ollayaScan(); ollayaState = 'ok'; $('#dotOllaya').className = 'dot ok'; $('#txtOllaya').textContent = U + ' ' + (S.ollayaModel || 'no model'); chip.title = `${decName()} decisions at ${ollayaBase()} · ${ollayaModels.length} model(s)`; }
+  catch (e) { ollayaState = 'bad'; $('#dotOllaya').className = 'dot bad'; $('#txtOllaya').textContent = U + ' OFFLINE'; chip.title = e.message; }
 }
 
 function tasksText() {
@@ -2689,17 +2693,27 @@ function fillOllayaModels() {
   const sel = $('#sOllayaModel'); const list = [...new Set([...(S.ollayaModel ? [S.ollayaModel] : []), ...ollayaModels])];
   sel.innerHTML = list.length ? list.map(m => `<option ${m === S.ollayaModel ? 'selected' : ''}>${esc(m)}</option>`).join('') : '<option value="">press Scan</option>';
 }
+// the Address field shows the chosen decision server's address; switching servers keeps each one's draft
+const decDraft = { ollaya: '', ollama: '' };
+const decAddr = (p, v) => ({ [p === 'ollama' ? 'decideOllamaHost' : 'ollayaHost']: v || (p === 'ollama' ? '' : DEFAULTS.ollayaHost) });
+function decFill() {
+  const p = $('#sDecideProv').value; $('#sOllayaHost').value = decDraft[p];
+  $('#sOllayaHost').placeholder = p === 'ollama' ? (S.host || DEFAULTS.host) + '  (blank: the Ollama address above)' : DEFAULTS.ollayaHost;
+}
+$('#sDecideProv').onchange = () => { const other = $('#sDecideProv').value === 'ollama' ? 'ollaya' : 'ollama'; decDraft[other] = $('#sOllayaHost').value.trim(); decFill(); };
+const decTry = () => ({ decideProv: $('#sDecideProv').value, ...decAddr($('#sDecideProv').value, $('#sOllayaHost').value.trim()) });
 $('#btnOllayaScan').onclick = async () => {
-  const prev = S.ollayaHost, prevKey = S.ollayaKey; S.ollayaHost = $('#sOllayaHost').value.trim() || DEFAULTS.ollayaHost; S.ollayaKey = $('#sOllayaKey').value.trim();
+  const keepD = { decideProv: S.decideProv, ollayaHost: S.ollayaHost, decideOllamaHost: S.decideOllamaHost };
+  const prev = S.ollayaHost, prevKey = S.ollayaKey; Object.assign(S, decTry()); S.ollayaKey = $('#sOllayaKey').value.trim();
   $('#ollayaNote').textContent = 'Scanning…';
   try { const m = await ollayaScan(); fillOllayaModels(); $('#ollayaNote').textContent = m.length ? `Found ${m.length} model${m.length > 1 ? 's' : ''}.` : 'Connected, but no models are pulled yet. Run: ollaya pull winnow:e4b'; }
   catch (e) { $('#ollayaNote').textContent = e.message; }
-  finally { S.ollayaHost = prev; S.ollayaKey = prevKey; }
+  finally { Object.assign(S, keepD); S.ollayaHost = prev; S.ollayaKey = prevKey; }
 };
 $('#btnOllayaTest').onclick = async () => {
-  const keep = { ollayaOn: S.ollayaOn, ollayaHost: S.ollayaHost, ollayaModel: S.ollayaModel, ollayaKey: S.ollayaKey };
-  Object.assign(S, { ollayaOn: true, ollayaHost: $('#sOllayaHost').value.trim() || DEFAULTS.ollayaHost, ollayaModel: $('#sOllayaModel').value, ollayaKey: $('#sOllayaKey').value.trim() });
-  const out = $('#ollayaResult'); out.hidden = false; out.textContent = 'Asking Ollaya…';
+  const keep = { ollayaOn: S.ollayaOn, ollayaHost: S.ollayaHost, ollayaModel: S.ollayaModel, ollayaKey: S.ollayaKey, decideProv: S.decideProv, decideOllamaHost: S.decideOllamaHost };
+  Object.assign(S, { ollayaOn: true, ...decTry(), ollayaModel: $('#sOllayaModel').value, ollayaKey: $('#sOllayaKey').value.trim() });
+  const out = $('#ollayaResult'); out.hidden = false; out.textContent = `Asking ${decName()}…`;
   try { out.textContent = await ollayaDecide({ state: "TypeError: Cannot read properties of undefined (reading 'map')\n    at renderList (src/ui/list.js:42:18)", question: 'What kind of problem is this?', type: 'choice', options: ['bug in our code', 'missing dependency', 'network problem', 'bad user input'] }); }
   catch (e) { out.textContent = 'Error: ' + e.message; }
   finally { Object.assign(S, keep); }
@@ -2714,7 +2728,7 @@ $('#btnDelAllChats').onclick = async () => {
 function openSettings() {
   $('#sCompactAuto').checked = !!S.compactAuto; $('#sCompactAfter').value = S.compactAfter; $('#sCompactKeep').value = S.compactKeep; $('#sCompactPct').value = S.compactPct;
   $('#sJadeShow').checked = S.jadeShow; $('#sJadeVoice').checked = S.jadeVoice; fillVoices(); $('#sPitch').value = S.voicePitch; $('#sRate').value = S.voiceRate; showRange();
-  $('#sOllayaOn').checked = S.ollayaOn; $('#sOllayaHost').value = S.ollayaHost; $('#sOllayaKey').value = S.ollayaKey; fillOllayaModels(); $('#ollayaNote').textContent = ''; $('#ollayaResult').hidden = true;
+  $('#sOllayaOn').checked = S.ollayaOn; $('#sDecideProv').value = S.decideProv || 'ollaya'; decDraft.ollaya = S.ollayaHost || ''; decDraft.ollama = S.decideOllamaHost || ''; decFill(); $('#sOllayaKey').value = S.ollayaKey; fillOllayaModels(); $('#ollayaNote').textContent = ''; $('#ollayaResult').hidden = true;
   delAllArmed = false; $('#btnDelAllChats').textContent = 'Delete all chats';
   $('#sHost').value = S.host; $('#sTemp').value = S.temperature; $('#sCtx').value = S.numCtx; $('#sTurns').value = S.maxTurns; $('#sThink').checked = S.think;
   $('#sEngine').value = S.engine; $('#sSearch').value = S.search; $('#sKey').value = S.ollamaKey; $('#sSearx').value = S.searx;
@@ -2732,7 +2746,7 @@ $('#btnSave').onclick = async () => {
     const keep = Math.min(after - 1, Math.max(0, Math.round(+$('#sCompactKeep').value)));
     Object.assign(S, { compactAuto: $('#sCompactAuto').checked, compactAfter: after, compactKeep: Number.isFinite(keep) ? keep : DEFAULTS.compactKeep, compactPct: Math.min(98, Math.max(40, Math.round(+$('#sCompactPct').value || DEFAULTS.compactPct))) }); }
   Object.assign(S, { jadeShow: $('#sJadeShow').checked, voiceName: $('#sVoice').value, voicePitch: +$('#sPitch').value, voiceRate: +$('#sRate').value,
-    ollayaOn: $('#sOllayaOn').checked, ollayaHost: $('#sOllayaHost').value.trim() || DEFAULTS.ollayaHost, ollayaModel: $('#sOllayaModel').value || S.ollayaModel, ollayaKey: $('#sOllayaKey').value.trim(),
+    ollayaOn: $('#sOllayaOn').checked, ...decAddr($('#sDecideProv').value === 'ollama' ? 'ollaya' : 'ollama', decDraft[$('#sDecideProv').value === 'ollama' ? 'ollaya' : 'ollama']), ...decTry(), ollayaModel: $('#sOllayaModel').value || S.ollayaModel, ollayaKey: $('#sOllayaKey').value.trim(),
     host: $('#sHost').value.trim() || DEFAULTS.host, model: $('#sModel').value || S.model, temperature: +$('#sTemp').value || 0, numCtx: +$('#sCtx').value || 16384, maxTurns: +$('#sTurns').value || 40, think: $('#sThink').checked, engine: $('#sEngine').value, search: $('#sSearch').value, ollamaKey: $('#sKey').value.trim(), searx: $('#sSearx').value.trim() });
   saveSettings(); setVoice($('#sJadeVoice').checked); applyJadeVisibility(); updateShellChip(); closeSettings(); ollayaCheck(); await connect();
 };

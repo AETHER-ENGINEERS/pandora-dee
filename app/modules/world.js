@@ -130,9 +130,33 @@ async function senseRead({ sensor, seconds = 1, hz = 10, raw = false }) {
 }
 
 /* ---------- camera and microphone ---------- */
-async function wSave(bytes, dir, name) {
-  let p = `${dir}/${name}`, i = 2; const m = /^(.*?)(\.[^.]+)?$/.exec(name); while (vfs.exists(p)) p = `${dir}/${m[1]}-${i++}${m[2] || ''}`;
+async function wSave(bytes, dir, name, reuse = false) {
+  let p = `${dir}/${name}`, i = 2; const m = /^(.*?)(\.[^.]+)?$/.exec(name);
+  while (vfs.exists(p)) { if (reuse && wSameBytes(p, bytes)) return p; p = `${dir}/${m[1]}-${i++}${m[2] || ''}`; }
   vfs.write(p, bytes, { mkdirs: true }); return p;
+}
+// a download of a file that is already in the vault, byte for byte, reuses it instead of saving another copy
+function wSameBytes(p, bytes) {
+  try { const n = vfs.nodes.get(p); if (!n || n.dir || fsize(n) !== bytes.length) return false; const d = n.data; if (!d || d.length !== bytes.length) return false; for (let i = 0; i < d.length; i++) if (d[i] !== bytes[i]) return false; return true; } catch { return false; }
+}
+/* A model file must be a model: a download that failed quietly (an XML or HTML error page, a JSON error, a git-LFS
+   pointer) is caught here, with what it actually is, instead of the runtime's "Failed to load model from buffer". */
+function wModelCheck(bytes, kind, where) {
+  const n = bytes?.length || 0; const what = (m) => `${where} is not a ${kind === 'tflite' ? '.tflite' : '.onnx'} model: ${m}`;
+  if (n < 16) throw new Error(what(n ? `it is only ${n} bytes` : 'it is empty'));
+  const head = new TextDecoder('utf-8', { fatal: false }).decode(bytes.subarray(0, Math.min(n, 400)));
+  const snip = () => JSON.stringify(head.replace(/\s+/g, ' ').trim().slice(0, 160));
+  const t = /[\x00-\x08\x0e-\x1f]/.test(head.slice(0, 64)) ? '' : head.replace(/^\uFEFF/, '').trimStart();   // binary models fail this, text answers pass
+  if (/^version https:\/\/git-lfs/i.test(t)) throw new Error(what('it is a git-LFS pointer file, not the model itself (download the file\'s "resolve" or raw link instead) ' + snip()));
+  if (/^<\?xml|^<!doctype|^<html|^<error|^<[a-z]/i.test(t)) throw new Error(what(`it is an ${/^<\?xml|^<error/i.test(t) ? 'XML' : 'HTML'} page (${n} bytes), usually a server's error answer: ` + snip()));
+  if (/^[{[]\s*["{[\]]/.test(t)) throw new Error(what('it is a JSON text, usually an error answer: ' + snip()));
+  if (kind === 'tflite' && String.fromCharCode(...bytes.subarray(4, 8)) !== 'TFL3') throw new Error(what(`bytes 4 to 8 should be "TFL3" and are ${JSON.stringify(String.fromCharCode(...bytes.subarray(4, 8)))} (${n} bytes)`));
+}
+async function wModelFetch(url, kind) {
+  const r = await fetch(url); if (!r.ok) throw new Error(`download failed (${r.status})`);
+  const bytes = new Uint8Array(await r.arrayBuffer()); wModelCheck(bytes, kind, 'the download from ' + url.split('?')[0]);
+  const fn = decodeURIComponent(url.split('?')[0].split('/').pop() || 'model.' + kind); const ext = new RegExp('\\.' + kind + '$', 'i');
+  return { bytes, name: await wSave(bytes, '/models', ext.test(fn) ? fn : fn + '.' + kind, true) };
 }
 async function openCamera({ facing = 'back', width = 1280, audio = false } = {}) {
   sensesAllowed(); if (!navigator.mediaDevices?.getUserMedia) throw new Error('this view cannot reach the camera');
@@ -311,14 +335,87 @@ async function wTensorData(spec, det, qi) {
   const arr = ArrayBuffer.isView(data) ? data : (dtype === 'uint8' || dtype === 'int8' ? TA.from(wFlat(data).map(x => Math.max(lim[0], Math.min(lim[1], quantizeReal ? Math.round(x / qi.scale) + qi.zeroPoint : Math.round(x))))) : TA.from(wFlat(data)));
   return { arr, shape: shape || (det && wDims(det).length ? wDims(det) : [arr.length]) };
 }
+/* ---------- ONNX Runtime Web: any .onnx model on the GPU (WebGPU) or the CPU (WebAssembly) ----------
+   The phone app carries ONNX Runtime in its own files (assets/ort/); a browser takes it from jsDelivr. One build of
+   the runtime (ort.webgpu + its asyncify WebAssembly) does both: the WebGPU execution provider, with the CPU for any
+   layer WebGPU cannot run. Threads need a cross-origin-isolated page, which the Android WebView is not: one thread. */
+const ORT_VER = '1.31.1';
+W_CDN['ort/'] = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
+const WOX = { p: null, models: new Map(), gpu: null };
+function ortLoad() {
+  return (WOX.p ||= (async () => {
+    try { window.jvGpuShim?.(navigator.gpu); } catch {}
+    if (!window.ort) await wRunScript(wBlobUrl(await wXhr(worldAssetUrl('ort/ort.webgpu.min.js'), 'text'), 'text/javascript'));
+    const ort = window.ort; if (!ort?.InferenceSession) throw new Error('ONNX Runtime did not load');
+    ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
+    ort.env.wasm.proxy = false;
+    ort.env.wasm.wasmPaths = { mjs: wBlobUrl(await wXhr(worldAssetUrl('ort/ort-wasm-simd-threaded.asyncify.mjs'), 'text'), 'text/javascript') };
+    ort.env.wasm.wasmBinary = await wXhr(worldAssetUrl('ort/ort-wasm-simd-threaded.asyncify.wasm'), 'arraybuffer');
+    ort.env.logLevel = 'error';
+    return ort;
+  })().catch(e => { WOX.p = null; throw e; }));
+}
+async function ortGpu() { if (WOX.gpu == null) { try { WOX.gpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch { WOX.gpu = false; } } return WOX.gpu; }
+const oxDet = m => ({ name: m.name, shape: (m.shape || m.dims || []).map(d => typeof d === 'number' && d >= 0 ? d : -1), dtype: m.type || 'float32' });
+const oxMeta = (s, which) => { const md = s[which + 'Metadata']; const names = s[which + 'Names']; return names.map((n, i) => { const m = Array.isArray(md) ? md[i] : md?.[n]; return { name: n, ...(m ? oxDet({ ...m, name: n }) : { shape: [], dtype: 'float32' }) }; }); };
+async function onnxTool(a) {
+  const action = a.action || 'info';
+  const ort = await ortLoad();
+  if (action === 'status') return JSON.stringify({ runtime: 'onnxruntime-web ' + (ort.env.versions?.web || ORT_VER), webgpu: await ortGpu(), threads: ort.env.wasm.numThreads, models: [...WOX.models].map(([id, m]) => ({ id, name: m.name, accelerator: m.acc })) });
+  if (action === 'load') {
+    let bytes, name = String(a.model || ''); if (!name) throw new Error('model is required: a .onnx path in the vault, or a URL to download it from');
+    if (/^https?:\/\//i.test(name)) ({ bytes, name } = await wModelFetch(name, 'onnx'));
+    else { const p = resolveFile(name, '/'); if (!p) throw new Error(`${name} is not in the vault`); bytes = vfs.nodes.get(p).data; name = p; wModelCheck(bytes, 'onnx', p); }
+    let acc = a.accelerator || ((await ortGpu()) ? 'webgpu' : 'wasm'), note;
+    const make = (ac) => ort.InferenceSession.create(bytes, { executionProviders: ac === 'webgpu' ? ['webgpu', 'wasm'] : ['wasm'], graphOptimizationLevel: 'all' });
+    let session; try { session = await make(acc); } catch (e) { if (acc === 'wasm') throw e; note = `${acc} failed (${e.message}); using wasm`; acc = 'wasm'; session = await make('wasm'); }
+    while (WOX.models.size >= 4) { const [k, m] = WOX.models.entries().next().value; try { await m.session.release(); } catch {} WOX.models.delete(k); }
+    const id = a.id || 'x' + (WOX.models.size + 1) + '-' + wStamp().slice(-6);
+    WOX.models.set(id, { session, name, acc });
+    return JSON.stringify({ id, model: name, accelerator: acc, inputs: oxMeta(session, 'input'), outputs: oxMeta(session, 'output'), ...(note ? { note } : {}) });
+  }
+  const m = WOX.models.get(a.id); if (!m) throw new Error(`no loaded model "${a.id || ''}". Load one first: ${[...WOX.models.keys()].join(', ') || '(none loaded)'}`);
+  if (action === 'info') return JSON.stringify({ id: a.id, model: m.name, accelerator: m.acc, inputs: oxMeta(m.session, 'input'), outputs: oxMeta(m.session, 'output') });
+  if (action === 'unload') { try { await m.session.release(); } catch {} WOX.models.delete(a.id); return 'unloaded ' + a.id; }
+  if (action === 'run') {
+    const ins = oxMeta(m.session, 'input');
+    const given = a.inputs && !Array.isArray(a.inputs) && typeof a.inputs === 'object' && ins.some(d => d.name in a.inputs) ? ins.map(d => a.inputs[d.name]) : (Array.isArray(a.inputs) ? a.inputs : [a.inputs ?? a.input]);
+    if (!given.length || given[0] == null) throw new Error(`inputs is required: one {data, shape?, dtype?} per model input (${ins.map(d => d.name).join(', ')}), as an array in order or an object by name; data = numbers, nested arrays, a vault path to .json/.f32, or {image: path} for a picture`);
+    const feeds = {}, prep = [];
+    for (let i = 0; i < ins.length; i++) {
+      if (given[i] == null) throw new Error(`no data for input ${ins[i].name}`);
+      const dtype = given[i]?.dtype || ins[i].dtype;
+      const t = await wTensorData(given[i], { ...ins[i], dtype: dtype === 'int64' || dtype === 'bool' ? 'float32' : dtype }); if (t.note) prep.push(t.note);
+      let shape = given[i]?.shape || t.shape; if (shape.some(d => d < 0)) { const k = shape.filter(d => d > 0).reduce((p, q) => p * q, 1); const free = shape.filter(d => d < 0).length; if (free !== 1) throw new Error(`input ${ins[i].name} has a flexible shape ${JSON.stringify(ins[i].shape)}: give shape`); shape = shape.map(d => d < 0 ? t.arr.length / k : d); }
+      let arr = t.arr; if (dtype === 'int64') arr = BigInt64Array.from(arr, x => BigInt(Math.round(Number(x)))); else if (dtype === 'bool') arr = Uint8Array.from(arr, x => (x ? 1 : 0));
+      feeds[ins[i].name] = new ort.Tensor(dtype, arr, shape);
+    }
+    let labels = null; if (a.labels) { const lp = resolveFile(a.labels, '/'); if (!lp) throw new Error(`labels file ${a.labels} is not in the vault`); labels = new TextDecoder().decode(vfs.nodes.get(lp).data).split(/\r?\n/); }
+    const t0 = performance.now(); const outs = await m.session.run(feeds); const ms = Math.round(performance.now() - t0);
+    const res = [];
+    for (const [i, name] of m.session.outputNames.entries()) {
+      const t = outs[name]; const raw = t.location && t.location !== 'cpu' ? await t.getData() : t.data;
+      const v = Array.from(raw, x => typeof x === 'bigint' ? Number(x) : +x); try { t.dispose?.(); } catch {}
+      const n = v.length; let mn = Infinity, mx = -Infinity, sum = 0; for (const x of v) { if (x < mn) mn = x; if (x > mx) mx = x; sum += x; }
+      const o = { index: i, name, shape: [...t.dims], dtype: t.type, count: n, min: wRound(mn, 5), max: wRound(mx, 5), mean: wRound(sum / (n || 1), 5), first: v.slice(0, 16).map(x => wRound(x, 5)) };
+      if (n > 1 && n <= 100000) o.top5 = v.map((x, j) => [j, x]).sort((p, q) => q[1] - p[1]).slice(0, 5).map(([j, x]) => ({ index: j, ...(labels && labels[j + (+a.label_offset || 0)] ? { label: labels[j + (+a.label_offset || 0)].trim() } : {}), value: wRound(x, 5) }));
+      if (n > 16 || a.save) o.saved = await wSave(new TextEncoder().encode(JSON.stringify({ shape: o.shape, data: v.map(x => wRound(x, 6)) })), '/models/out', `${a.id}-${wStamp()}-out${i}.json`);
+      res.push(o);
+    }
+    return JSON.stringify({ ms, accelerator: m.acc, ...(prep.length ? { prepared: prep } : {}), outputs: res });
+  }
+  throw new Error('unknown onnx action ' + action);
+}
+const WLG = { gpu: null };
+async function litertGpu(L) { if (WLG.gpu == null) { try { WLG.gpu = !!(await L.isWebGPUSupported?.()); } catch { WLG.gpu = false; } } return WLG.gpu; }
 async function litertTool(a) {
   const action = a.action || 'info'; const { L, variant } = await litertLoad();
-  if (action === 'status') return JSON.stringify({ runtime: variant, webgpu: !!(await L.isWebGPUSupported?.().catch?.(() => false)), models: [...WRL.models].map(([id, m]) => ({ id, name: m.name, accelerator: m.acc })) });
+  if (action === 'status') return JSON.stringify({ runtime: variant, webgpu: await litertGpu(L), models: [...WRL.models].map(([id, m]) => ({ id, name: m.name, accelerator: m.acc })) });
   if (action === 'load') {
     let bytes, name = String(a.model || ''); if (!name) throw new Error('model is required: a .tflite path in the vault, or a URL to download it from');
-    if (/^https?:\/\//i.test(name)) { const r = await fetch(name); if (!r.ok) throw new Error(`download failed (${r.status})`); bytes = new Uint8Array(await r.arrayBuffer()); const fn = decodeURIComponent(name.split('?')[0].split('/').pop() || 'model.tflite'); const sp = await wSave(bytes, '/models', /\.tflite$/i.test(fn) ? fn : fn + '.tflite'); name = sp; }
-    else { const p = resolveFile(name, '/'); if (!p) throw new Error(`${name} is not in the vault`); bytes = vfs.nodes.get(p).data; name = p; }
-    let acc = a.accelerator || 'wasm', note;
+    if (/^https?:\/\//i.test(name)) ({ bytes, name } = await wModelFetch(name, 'tflite'));
+    else { const p = resolveFile(name, '/'); if (!p) throw new Error(`${name} is not in the vault`); bytes = vfs.nodes.get(p).data; name = p; wModelCheck(bytes, 'tflite', p); }
+    let acc = a.accelerator || ((await litertGpu(L)) ? 'webgpu' : 'wasm'), note;
     let model; try { model = await L.loadAndCompile(bytes, { accelerator: acc }); } catch (e) { if (acc === 'wasm') throw e; note = `${acc} failed (${e.message}); using wasm`; acc = 'wasm'; model = await L.loadAndCompile(bytes, { accelerator: 'wasm' }); }
     while (WRL.models.size >= 4) { const [k, m] = WRL.models.entries().next().value; try { m.model.delete(); } catch {} WRL.models.delete(k); }
     const id = a.id || 'm' + (WRL.models.size + 1) + '-' + wStamp().slice(-6); let q = null; try { q = tfliteQuant(bytes); } catch {}
@@ -335,7 +432,8 @@ async function litertTool(a) {
     const t0 = performance.now(); let outs; try { outs = await m.model.run(tensors); } finally { tensors.forEach(t => { try { t.delete(); } catch {} }); }
     const od = [...m.model.getOutputDetails()]; const list = Array.isArray(outs) ? outs : Object.values(outs); const res = [];
     for (let i = 0; i < list.length; i++) {
-      const t = list[i]; let ta = t.toTypedArray(); const shape = [...(t.type?.layout?.dimensions || wDims(od[i]))]; try { t.delete(); } catch {}
+      let t = list[i]; if (m.acc !== 'wasm') { try { const c = await t.moveTo('wasm'); if (c && c !== t) t = c; } catch {} }   // WebGPU results live in GPU memory until copied back
+      let ta = t.toTypedArray(); const shape = [...(t.type?.layout?.dimensions || wDims(od[i]))]; try { t.delete(); } catch {}
       const qo = m.q?.outputs?.[i]; const dq = qo && !a.raw_output && (ta instanceof Int8Array || ta instanceof Uint8Array);
       const v = dq ? Array.from(ta, x => (x - qo.zeroPoint) * qo.scale) : Array.from(ta); const n = v.length; const mn = Math.min(...v), mx = Math.max(...v), mean = v.reduce((p, q) => p + q, 0) / (n || 1);
       const o = { index: i, name: od[i]?.name, shape, count: n, ...(dq ? { dequantized: qo } : {}), min: wRound(mn, 5), max: wRound(mx, 5), mean: wRound(mean, 5), first: v.slice(0, 16).map(x => wRound(x, 5)) };
@@ -406,11 +504,13 @@ const WORLD_TOOL_DEFS = [
       facing: { type: 'string', enum: ['back', 'front'] }, every: { type: 'number' }, frames: { type: 'number' }, audio: { type: 'boolean' }, look: { type: 'boolean', description: 'show the picture to you (default true)' } }, required: ['action'] } },
   { name: 'look', description: 'Open an image from the vault and see it (png, jpg, webp, gif, svg…), or frames of a video. No need for the user to share it again. path or paths: a vault file; a folder lists the images and videos in it; for a video, at is a list of seconds to grab (default three spread across it). The picture arrives in the next message.',
     parameters: { type: 'object', properties: { path: { type: 'string' }, paths: { type: 'array', items: { type: 'string' } }, at: { type: 'array', items: { type: 'number' }, description: 'video: seconds to grab frames at' }, label: { type: 'string' } } } },
-  { name: 'litert', description: 'LiteRT.js: run any .tflite model on this device. load: model is a vault path or an https URL (downloaded to /models); returns an id and the input/output shapes; accelerator wasm (default) or webgpu. run: id and inputs (one {data, shape?, dtype?} per model input; data = numbers, nested arrays, or a vault path to a .json or raw .f32 file); returns summaries, top-5 indices and saves big outputs to /models/out. info, status, unload. Pictures: an input can be {image: vault path, size?:[h,w], fit?: crop|stretch|letterbox, norm?: minus1_1|zero_1|imagenet|none, layout?: nhwc|nchw}: Pandora resizes and converts it for the model (uint8 models get raw 0-255 pixels automatically; float models get -1..1 unless norm says otherwise), so a camera_snap photo can go straight in. Quantized (int8 and uint8) models work: outputs are converted back to real numbers using the scale and zero point stored in the model (raw_output:true keeps the integers), and for inputs {data, real:true} quantizes real numbers the same way (otherwise numbers are taken as the raw integers). Pass labels (a vault text file, one label per line, label_offset 1 if the model has a background class first) to name the top 5.',
+  { name: 'litert', description: 'LiteRT.js: run any .tflite model on this device. load: model is a vault path or an https URL (downloaded to /models); returns an id and the input/output shapes; accelerator webgpu (default when the device has it; falls back to wasm) or wasm. run: id and inputs (one {data, shape?, dtype?} per model input; data = numbers, nested arrays, or a vault path to a .json or raw .f32 file); returns summaries, top-5 indices and saves big outputs to /models/out. info, status, unload. Pictures: an input can be {image: vault path, size?:[h,w], fit?: crop|stretch|letterbox, norm?: minus1_1|zero_1|imagenet|none, layout?: nhwc|nchw}: Pandora resizes and converts it for the model (uint8 models get raw 0-255 pixels automatically; float models get -1..1 unless norm says otherwise), so a camera_snap photo can go straight in. Quantized (int8 and uint8) models work: outputs are converted back to real numbers using the scale and zero point stored in the model (raw_output:true keeps the integers), and for inputs {data, real:true} quantizes real numbers the same way (otherwise numbers are taken as the raw integers). Pass labels (a vault text file, one label per line, label_offset 1 if the model has a background class first) to name the top 5.',
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['load', 'run', 'info', 'status', 'unload'] }, model: { type: 'string' }, id: { type: 'string' }, accelerator: { type: 'string', enum: ['wasm', 'webgpu'] }, inputs: { type: 'array', items: { type: 'object' } }, raw_output: { type: 'boolean' }, labels: { type: 'string' }, label_offset: { type: 'number' }, save: { type: 'boolean' } }, required: ['action'] } },
+  { name: 'onnx', description: 'ONNX Runtime: run any .onnx model on this device, on the GPU (WebGPU) when it has one (layers WebGPU cannot run use the CPU), else the CPU. load: model is a vault path or an https URL (downloaded to /models); returns an id and each input and output (name, type, shape; -1 = flexible); accelerator webgpu (default when available) or wasm. run: id and inputs (one {data, shape?, dtype?} per model input, as an array in order or an object by input name; data = numbers, nested arrays, a vault path to .json/.f32, or {image: vault path, size?, layout?, fit?, norm?} for a picture); returns each output (shape, min/max/mean, first values, top5 with labels from a labels file) and saves big outputs to /models/out. info, status (is WebGPU there), unload. FP32 models are the safest on phone GPUs.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['load', 'run', 'info', 'status', 'unload'] }, model: { type: 'string' }, id: { type: 'string' }, accelerator: { type: 'string', enum: ['webgpu', 'wasm'] }, inputs: { description: 'array (in input order) or object by input name' }, labels: { type: 'string', description: 'vault path of a labels file, one per line' }, label_offset: { type: 'number' }, save: { type: 'boolean' } }, required: ['action'] } },
 ];
 async function worldTool(name, a) {
-  switch (name) { case 'senses': return await sensesTool(a); case 'look': return await lookTool(a); case 'litert': return await litertTool(a); case 'browser': return await browserTool(a); case 'phone': return await phoneTool(a); case 'screen': return await screenTool(a); case 'sentry': return await sentryTool(a); case 'ssh': return await sshTool(a); case 'think': return await thinkTool(a); }
+  switch (name) { case 'senses': return await sensesTool(a); case 'look': return await lookTool(a); case 'litert': return await litertTool(a); case 'onnx': return await onnxTool(a); case 'browser': return await browserTool(a); case 'phone': return await phoneTool(a); case 'screen': return await screenTool(a); case 'sentry': return await sentryTool(a); case 'ssh': return await sshTool(a); case 'think': return await thinkTool(a); }
   throw new Error('unknown tool ' + name);
 }
 
@@ -705,4 +805,4 @@ for (const id of ['sVisProv', 'sSttProv']) { const e = document.getElementById(i
     if (st) st.textContent = `Camera ${mark(r.camera)} · Microphone ${mark(r.mic)} · Location ${mark(r.location)}` + (hfAvailable() ? ' · Speech recognition ✓' : ' · Speech recognition ✗ (install Google speech services)');
   };
 })();
-Object.assign(window, { HFS, jadeBubble, hfSoloEnter, hfSoloExit, wakeParse, wakeGate, tfliteQuant, wImageTensor, wTensorData, send, newSession, buildApiMessages, composeUserMessage, activeTools, openSettings, saveSession, PROVIDERS, queue, Jade, setVoice, visionOn, visionPrepass, visionNote, transcribeWav, transcribeFile, sideOnce, sideModels, worldFillSettings, worldReadSettings, sttServer, wavFromFloat, resampleTo, worldTool, WORLD_TOOL_DEFS, worldFlushViews, hfStart, hfStop, HF, senseRead, senseList, sensesTool, lookTool, litertTool, litertLoad });
+Object.assign(window, { HFS, jadeBubble, hfSoloEnter, hfSoloExit, wakeParse, wakeGate, tfliteQuant, wImageTensor, wTensorData, send, newSession, buildApiMessages, composeUserMessage, activeTools, openSettings, saveSession, PROVIDERS, queue, Jade, setVoice, visionOn, visionPrepass, visionNote, transcribeWav, transcribeFile, sideOnce, sideModels, worldFillSettings, worldReadSettings, sttServer, wavFromFloat, resampleTo, worldTool, WORLD_TOOL_DEFS, worldFlushViews, hfStart, hfStop, HF, senseRead, senseList, sensesTool, lookTool, litertTool, litertLoad, onnxTool, ortLoad });

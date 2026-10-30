@@ -13,6 +13,34 @@ for a_, b_ in [('<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.j
     assert s.count(a_) == 1; s = s.replace(a_, b_)
 m = re.search(r'<link rel="stylesheet" href="https://fonts.googleapis.com[^"]*">', s); s = s.replace(m.group(0), m.group(0)[:-1] + ' media="print" onload="this.media=\'all\'">')
 
+import base64, os, re as _re
+K = NM + 'katex/dist/'
+kjs = open(K + 'katex.min.js').read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+assert '</script' not in kjs.lower()
+kcss = open(K + 'katex.min.css').read()
+def _font(m):
+    f = m.group(1); b = base64.b64encode(open(K + 'fonts/' + f, 'rb').read()).decode()
+    return f'src:url(data:font/woff2;base64,{b}) format("woff2")'
+kcss = _re.sub(r'src:url\(fonts/([^)]+\.woff2)\) format\("woff2"\)[^;}]*', _font, kcss)
+assert 'url(fonts/' not in kcss, 'unreplaced font'
+TK1 = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" id="katex-css">'
+TK2 = '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" id="katex-js"></script>'
+assert s.count(TK2) == 1
+s = s.replace(TK2, '<script id="katex-js">' + kjs + '</script>')
+
+# the terminal (xterm.js) is in the page too, so it works offline (2.22)
+V = os.path.join(ROOT, 'app', 'vendor')
+for tag, f in [('<script defer src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>', 'xterm/xterm.js'),
+               ('<script defer src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>', 'xterm/addon-fit.js')]:
+    js = open(os.path.join(V, f)).read().replace('//# sourceMappingURL=', '//# sourceMappingURL_removed=')
+    assert s.count(tag) == 1 and '</script' not in js.lower(), f
+    s = s.replace(tag, '<script>' + js + '</script>')
+# ONNX Runtime ships as the app's own files (too big to inline): assets/ort/
+import shutil
+os.makedirs(os.path.join(ROOT, 'android', 'proj', 'assets', 'ort'), exist_ok=True)
+for f in os.listdir(os.path.join(V, 'ort')):
+    shutil.copyfile(os.path.join(V, 'ort', f), os.path.join(ROOT, 'android', 'proj', 'assets', 'ort', f))
+
 s = '<!doctype html>\n<html lang="en">\n' + s + '\n</html>\n'
 os.makedirs(os.path.join(ROOT, 'android', 'proj', 'assets'), exist_ok=True)
 open(os.path.join(ROOT, 'android', 'proj', 'assets', 'index.html'), 'w', encoding='utf-8').write(s); print('index.html', len(s))

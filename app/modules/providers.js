@@ -159,7 +159,7 @@ class AICordClient {
 var aicordClient = null; // kept so the character → UUID map survives re-creating the client
 function makeClientFor(p, c = S) {
   const c0 = c;
-  if (p === 'cloud') return new FetchOllama({ host: 'https://ollama.com', headers: c.ollamaKey ? { Authorization: 'Bearer ' + c.ollamaKey } : {} });
+  if (p === 'cloud') return new OpenAICompat({ base: 'https://ollama.com/v1', key: c.ollamaKey, name: 'Ollama Cloud' });
   if (p === 'groq') return new OpenAICompat({ base: 'https://api.groq.com/openai/v1', key: c.groqKey, name: 'Groq' });
   if (p === 'llamacpp') return new OpenAICompat({ base: (c.lcppHost || 'http://localhost:8080').replace(/\/+$/, '').replace(/(\/v1)?$/, '/v1'), key: c.lcppKey, name: 'llama.cpp' });
   if (p === 'aicord') { const old = aicordClient; const c = new AICordClient({ key: c0.aicKey }); if (old && old.key === c.key) c.chars = old.chars; return aicordClient = c; }

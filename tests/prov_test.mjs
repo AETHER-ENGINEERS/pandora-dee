@@ -47,6 +47,17 @@ await page.route('**/*', async route => {
       : [{ choices: [{ delta: { content: 'Found it: [[Graph View]] ' } }] }, { choices: [{ delta: { content: 'explains the graph.' } }] }, { choices: [{ delta: {}, finish_reason: 'stop' }], x_groq: { usage: { prompt_tokens: 1500, completion_tokens: 12, completion_time: 0.02 } } }];
     return route.fulfill({ headers: CORS, contentType: 'text/event-stream', body: sse(chunks) });
   }
+  // Ollama Cloud through its OpenAI-compatible API (the cloud provider uses https://ollama.com/v1)
+  if (url.startsWith('https://ollama.com/v1/')) {
+    if (cloudDown) return route.fulfill({ status: 503, headers: CORS, contentType: 'application/json', body: JSON.stringify({ error: 'service unavailable' }) });
+    cloudReqs.push({ url, auth: req.headers().authorization, body: req.postData() });
+    if (url.endsWith('/v1/models')) return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ data: [{ id: 'gemma4:31b' }, { id: 'gpt-oss:120b' }] }) });
+    if (url.endsWith('/v1/chat/completions')) {
+      const b = JSON.parse(req.postData());
+      if (!b.stream) return route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Cloud Jade reporting.' } }] }) });
+      return route.fulfill({ headers: CORS, contentType: 'text/event-stream', body: sse([{ choices: [{ delta: { role: 'assistant', content: 'Cloud Jade reporting.' } }] }, { choices: [{ delta: {}, finish_reason: 'stop' }] }]) });
+    }
+  }
   if (url.startsWith('https://ollama.com/api/')) {
     if (cloudDown) return route.fulfill({ status: 503, headers: CORS, contentType: 'application/json', body: JSON.stringify({ error: 'service unavailable' }) });
     cloudReqs.push({ url, auth: req.headers().authorization, body: req.postData() });
@@ -91,8 +102,8 @@ await page.tap('#drawerBg').catch(() => {}); await page.evaluate(() => document.
 await page.fill('#input', '/new'); await page.tap('#btnSend'); await page.waitForTimeout(300);
 await page.fill('#input', 'hello cloud'); await page.tap('#btnSend');
 await page.waitForFunction(() => !running && /Cloud Jade reporting/.test(document.querySelector('#chat').textContent), null, { timeout: 20000 });
-const cb = JSON.parse(cloudReqs.find(r => r.url.endsWith('/api/chat')).body);
-ok(cb.model === 'gpt-oss:120b' && cb.tools?.length > 5 && cb.stream === true, 'cloud chat uses the native Ollama API with tools');
+const cb = JSON.parse(cloudReqs.find(r => r.url.endsWith('/v1/chat/completions')).body);
+ok(cb.model === 'gpt-oss:120b' && cb.tools?.length > 5 && cb.tools[0].type === 'function' && cb.stream === true, "cloud chat uses Ollama Cloud's OpenAI-compatible API with tools");
 await page.screenshot({ path: OUT + '/3_cloud.png' });
 // settings UI shows the right fields
 await page.tap('#btnSettings'); await page.waitForTimeout(300);

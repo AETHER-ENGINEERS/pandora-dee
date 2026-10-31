@@ -267,4 +267,14 @@ These are the threads we're weaving next. Hold us to them.
 AETHER-ENGINEERS LICENSE
 MIT — inherited from Jade Vault, because good forks deserve to travel.
 
-## CONTACT US: [Vector Messenger](https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p)
+## 💬 Contact us
+
+<a href="https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p"><img src="docs/images/vector-logo.svg" alt="Vector" width="72" align="left" /></a>
+
+**Come say hi on Vector Messenger** ✨<br/>
+Questions, ideas, bug reports, or just to chat with the team (Pandora Dee hangs out on Vector too).<br/>
+👉 **[Message us on Vector](https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p)**
+
+<br clear="left" />
+
+<sub>New to Vector? It's a private, encrypted messenger: get it at <a href="https://vectorapp.io">vectorapp.io</a>. Vector and its logo are trademarks of Formless Labs, used here to link to Vector.</sub>

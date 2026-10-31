@@ -269,11 +269,11 @@ MIT — inherited from Jade Vault, because good forks deserve to travel.
 
 ## 💬 Contact us
 
-<a href="https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p"><img src="docs/images/vector-logo.svg" alt="Vector" width="72" align="left" /></a>
+<a href="https://vectorapp.io/invite/naddr1qqqqygp7j0d49zp08p53dggzp0rnje3us84gkzz354xv374la2h5ht4jwgpsgqqqsg2szv46a8#BAADAQIAGG5vc3RyLmNvbXB1dGluZ2NhY2hlLmNvbe4V4ezgMXHoqov9L_H54zQ"><img src="docs/images/vector-logo.svg" alt="Vector" width="72" align="left" /></a>
 
 **Come say hi on Vector Messenger** ✨<br/>
-Questions, ideas, bug reports, or just to chat: message me there.<br/>
-👉 **[Message me on Vector](https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p)**
+Join the AETHER-ENGINEERS group for questions, ideas, bug reports, or just to chat. Pandora Dee and Jade hang out there too (the app connects them to Vector through its bridge).<br/>
+👉 **[Join us on Vector](https://vectorapp.io/invite/naddr1qqqqygp7j0d49zp08p53dggzp0rnje3us84gkzz354xv374la2h5ht4jwgpsgqqqsg2szv46a8#BAADAQIAGG5vc3RyLmNvbXB1dGluZ2NhY2hlLmNvbe4V4ezgMXHoqov9L_H54zQ)**
 
 <br clear="left" />
 

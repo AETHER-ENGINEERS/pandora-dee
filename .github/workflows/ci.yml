@@ -6,37 +6,81 @@ on:
   workflow_dispatch:
 
 jobs:
-  app:
+  # Only documentation changed (README.md and other top-level .md files, docs/, a folder's README.md, LICENSE)?
+  # Then the build and tests have nothing new to check: "app" still runs (main's rules require it) but passes in
+  # seconds, and vector-agent is skipped. Anything else, and every manual run, gets the full checks.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "Full checks."; exit 0
+          fi
+          changed=$(git diff --name-only "$BASE" "$GITHUB_SHA")
+          echo "Changed:"; echo "$changed"
+          if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^(docs/.*|[^/]+\.md|[^/]+/README\.md|LICENSE[^/]*)$'; then
+            echo "code=false" >> "$GITHUB_OUTPUT"; echo "Documentation only: the build and tests are skipped."
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "Full checks."
+          fi
+
+  app:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CODE: ${{ needs.changes.outputs.code }}
+    steps:
+      - if: env.CODE != 'true'
+        run: echo "Documentation only, nothing to build or test."
+      - uses: actions/checkout@v7
+        if: env.CODE == 'true'
       - uses: actions/setup-node@v7
+        if: env.CODE == 'true'
         with:
           node-version: 22
       - uses: actions/setup-python@v7
+        if: env.CODE == 'true'
         with:
           python-version: '3.12'
       - uses: actions/setup-java@v6
+        if: env.CODE == 'true'
         with:
           distribution: temurin
           java-version: 17
       - run: pip install -r pandora-discord/requirements.txt
+        if: env.CODE == 'true'
       - run: npm install --no-audit --no-fund
+        if: env.CODE == 'true'
       - run: npx playwright install --with-deps chromium
+        if: env.CODE == 'true'
       - name: Build web app
+        if: env.CODE == 'true'
         run: npm run build
       - name: Tests
+        if: env.CODE == 'true'
         run: npm test
       - name: Build APK (debug key)
+        if: env.CODE == 'true'
         run: bash android/build-apk.sh
       - name: Bridge checks
+        if: env.CODE == 'true'
         run: |
           python3 -m py_compile pandora-vector/*.py pandora-vector/test/*.py pandora-discord/*.py pandora-discord/test/*.py
           bash -n pandora-vector/setup.sh
           bash -n pandora-discord/setup.sh
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.CODE == 'true'
         with:
           name: pandora-dee-build
           path: |
@@ -46,6 +90,8 @@ jobs:
 
   vector-agent:
     # Compiles Vector's vector-agent with the Jade patch, so a Vector change that breaks the patch shows up here.
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

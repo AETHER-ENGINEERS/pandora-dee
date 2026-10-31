@@ -264,5 +264,7 @@ These are the threads we're weaving next. Hold us to them.
 - **🏛️ GitHub org integration:** wire Pandora Dee into your org's projects and workflows!
 
 ## 📜 License
-
+AETHER-ENGINEERS LICENSE
 MIT — inherited from Jade Vault, because good forks deserve to travel.
+
+## CONTACT US: [Vector Messenger](https://vectorapp.io/profile/npub1vrte0qmajxq7f805h02s2lle9q9czpcnzezasf8eydnz3mk63ansrwzk8p)

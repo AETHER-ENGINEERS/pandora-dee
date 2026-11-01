@@ -111,7 +111,9 @@ ok(tabs.join() === 'model,memory,tools,connect,look,app', 'six settings tabs: ' 
 const vis = () => page.evaluate(() => [...document.querySelectorAll('#settings section[data-tab]')].filter(s => !s.classList.contains('tab-off') && !s.hidden && s.offsetParent !== null).map(s => s.querySelector('.pane-h').textContent.trim()));
 const allSections = await page.evaluate(() => document.querySelectorAll('#settings section[data-tab]').length);
 // 2.10.0: Jade Vault's sections came with its features (each behind a switch)
-ok(allSections === 25, 'every settings section is on a tab: ' + allSections);
+// v34: Pair with PDA SEASIDE (Connect)
+ok(allSections === 26, 'every settings section is on a tab: ' + allSections);
+ok(await page.evaluate(() => document.querySelector('#seasPair')?.dataset.tab === 'connect'), 'Pair with PDA SEASIDE is on the Connect tab');
 await page.screenshot({ path: 'set_model.png' });
 let v = await vis();
 ok(v.includes('Model provider') && !v.includes('Long-term memory') && v.length <= 3, 'Model tab shows only its sections: ' + v);

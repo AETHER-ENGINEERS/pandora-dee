@@ -2273,6 +2273,7 @@ rep("'sshHosts', 'abToken', 'abPass'];", "'sshHosts', 'abToken', 'abPass', 'seas
 # ---------- enhanced: Jade Vault 2.18.2's features, each behind its own switch, all off (app/enhanced_pandora.py) ----------
 exec(open(os.path.join(D, 'enhanced_pandora.py'), encoding='utf-8').read())
 exec(open(os.path.join(D, 'people_layer.py'), encoding='utf-8').read())   # names, not ranks: last, on the finished page
+exec(open(os.path.join(D, 'vault_tree.py'), encoding='utf-8').read())     # a new chat is a new branch
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

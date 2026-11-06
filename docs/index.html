@@ -1544,7 +1544,7 @@ body[data-jade-theme="custom-gradient"] .jade-theme-label{background:var(--theme
       <span class="logo glitch" id="logo" data-text="PANDORA DEE">PANDORA DEE</span>
       <span class="m-model"><span class="dot" id="hdrDot"></span><span id="hdrModel">no model</span></span>
     </button>
-    <button class="icon-btn cut cut-sm" id="btnNewTop" aria-label="New chat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="icon-btn cut cut-sm" id="btnNewTop" aria-label="New branch"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="icon-btn cut cut-sm" id="btnSettings" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg></button>
   </header>
 
@@ -1563,14 +1563,14 @@ body[data-jade-theme="custom-gradient"] .jade-theme-label{background:var(--theme
         <div class="jade-bubble" id="jadeBubble" hidden></div>
       </div>
       <div class="chat-bar">
-        <button class="chat-title" id="chatTitle" title="Rename this chat">New session</button>
+        <button class="chat-title" id="chatTitle" title="Rename this branch">New session</button>
         <input id="chatTitleInput" class="field chat-title-input" aria-label="Chat title" hidden>
         <span class="hud" id="chatMeta"></span>
         <span class="flex-1"></span>
         <button class="btn btn-ghost" id="btnShowJade" hidden>Pandora</button>
         <button class="btn btn-ghost" id="btnCompactChat" title="Summarise older turns to free up context">Compact</button>
-        <button class="btn btn-ghost" id="btnCopyChat" title="Copy this chat as Markdown">Copy</button>
-        <button class="btn btn-ghost" id="btnDelChat" title="Delete this chat">Delete</button>
+        <button class="btn btn-ghost" id="btnCopyChat" title="Copy this branch as Markdown">Copy</button>
+        <button class="btn btn-ghost" id="btnDelChat" title="Delete this branch">Delete</button>
       </div>
       <div id="chat" class="flex-1 overflow-y-auto min-h-0 flex flex-col"></div>
       <div class="composer-wrap">
@@ -1777,8 +1777,8 @@ body[data-jade-theme="custom-gradient"] .jade-theme-label{background:var(--theme
 <div class="drawer-bg" id="drawerBg"></div>
 <aside class="drawer" id="drawer" aria-label="Chats and status">
   <div class="p-3 flex items-center justify-between gap-2">
-    <div class="pane-h">Chats</div>
-    <button class="btn btn-solid cut cut-sm" id="btnNew">+ New chat</button>
+    <div class="pane-h">Branches</div>
+    <button class="btn btn-solid cut cut-sm" id="btnNew">+ New branch</button>
   </div>
   <div id="sessList" class="overflow-y-auto min-h-0"></div>
   <div class="status-grid">
@@ -2220,7 +2220,7 @@ Over Wi-Fi the traffic is plain HTTP, so use a trusted network.</pre></details>
 
       <section data-tab="app" class="flex flex-col gap-3">
         <div class="pane-h">Danger zone</div>
-        <div class="flex gap-2 flex-wrap"><button class="btn btn-red" id="btnDelAllChats">Delete all chats</button><button class="btn btn-red" id="btnResetFs">Reset filesystem</button><span class="hint self-center" id="resetNote"></span></div>
+        <div class="flex gap-2 flex-wrap"><button class="btn btn-red" id="btnDelAllChats">Delete all branches</button><button class="btn btn-red" id="btnResetFs">Reset filesystem</button><span class="hint self-center" id="resetNote"></span></div>
       </section>
 
       <div class="flex justify-end gap-2 set-foot"><button class="btn" id="btnCancel">Cancel</button><button class="btn btn-solid cut cut-sm" id="btnSave">Save &amp; reconnect</button></div>
@@ -5153,7 +5153,7 @@ async function openSession(id) { if (cur?.id !== id) saveSession.flush?.(); if (
   if (!s) return newSession(); cur = s; tasks.items = s.tasks || []; tasks.seq = s.taskSeq || 0; renderTasks(); renderChat(); renderSessions(); ls.set('lastSession', id); setView('chat'); }
 function renderSessions() {
   const list = [...sessions]; if (cur && !list.find(s => s.id === cur.id)) list.unshift({ id: cur.id, title: cur.title, _unsaved: true });
-  $('#sessList').innerHTML = list.map(s => `<div class="sess-row"><button class="sess ${cur && s.id === cur.id ? 'on' : ''}" data-id="${s.id}" title="${esc(s.title)}">${esc(s.title)}</button>${s._unsaved ? '' : `<button class="sess-x" data-del="${s.id}" title="Delete this chat" aria-label="Delete chat ${esc(s.title)}">✕</button>`}</div>`).join('') || '<div class="px-3 text-xs text-dim">No sessions yet</div>';
+  $('#sessList').innerHTML = list.map(s => `<div class="sess-row"><button class="sess ${cur && s.id === cur.id ? 'on' : ''}" data-id="${s.id}" title="${esc(s.title)}">${esc(s.title)}</button>${s._unsaved ? '' : `<button class="sess-x" data-del="${s.id}" title="Delete this branch" aria-label="Delete chat ${esc(s.title)}">✕</button>`}</div>`).join('') || '<div class="px-3 text-xs text-dim">No sessions yet</div>';
   renderChatBar();
 }
 $('#sessList').addEventListener('click', e => {
@@ -5165,7 +5165,7 @@ $('#sessList').addEventListener('click', e => {
   const b = e.target.closest('.sess'); if (b && !running) openSession(b.dataset.id);
 });
 async function deleteSession(id) {
-  if (running && cur?.id === id) { toast('Stop the agent before deleting this chat.', 'err'); return; }
+  if (running && cur?.id === id) { toast('Stop the current turn before deleting this branch.', 'err'); return; }
   const title = (sessions.find(s => s.id === id) || cur || {}).title || 'chat';
   saveSession.drop(id); await idb.del('session:' + id); sessions = sessions.filter(s => s.id !== id); await idb.set('sessions', sessions);
   if (cur?.id === id) { cur = null; if (sessions[0]) await openSession(sessions[0].id); else newSession(); } else renderSessions();
@@ -5637,7 +5637,7 @@ function slash(text) {
   if (cmd === 'context' || cmd === 'ctx') { showContext(); return; }
   if (cmd === 'compact') { if (running) return toast('Wait for the agent to finish first.'); compactHistory({ keepTurns: arg !== '' && Number.isFinite(+arg) ? +arg : +S.compactKeep, reason: 'manual' }); return; }
   if (cmd === 'schedule' || cmd === 'schedules' || cmd === 'cron') { setTab('sched'); return; }
-  if (cmd === 'help') { toast('<b>/new</b> new chat · <b>/rename name</b> · <b>/delete</b> this chat · <b>/copy</b> as Markdown · <b>/compact</b> summarise old turns · <b>/context</b> what fills the context · <b>/inbox</b> Vector messages for you · <b>/vector</b> bot settings · <b>/discord</b> Discord bot settings · <b>/trajectories</b> [export] fine-tuning log · <b>/clear</b> messages · <b>/model name</b> · <b>/voice</b> toggle speech · <b>/schedule</b> scheduled prompts · <b>/remember text</b> · <b>/memory</b> open memory · <b>/journal</b> journal this chat now · <b>/skill:name</b> run a skill · <b>/skills</b> · <b>/export</b> [config] · <b>/heartbeat</b> [edit] · <b>/mcp</b> [reconnect] · <b>/soul</b> · <b>/agents</b> · <b>/config</b>'); return; }
+  if (cmd === 'help') { toast('<b>/new</b> new branch · <b>/rename name</b> · <b>/delete</b> this branch · <b>/copy</b> as Markdown · <b>/compact</b> summarise old turns · <b>/context</b> what fills the context · <b>/inbox</b> Vector messages for you · <b>/vector</b> bot settings · <b>/discord</b> Discord bot settings · <b>/trajectories</b> [export] fine-tuning log · <b>/clear</b> messages · <b>/model name</b> · <b>/voice</b> toggle speech · <b>/schedule</b> scheduled prompts · <b>/remember text</b> · <b>/memory</b> open memory · <b>/journal</b> journal this chat now · <b>/skill:name</b> run a skill · <b>/skills</b> · <b>/export</b> [config] · <b>/heartbeat</b> [edit] · <b>/mcp</b> [reconnect] · <b>/soul</b> · <b>/agents</b> · <b>/config</b>'); return; }
   if (cmd === 'remember') { if (!arg) return toast('Usage: /remember something worth keeping'); try { toast(esc(memorySave(arg, 'notes').msg), 'ok'); } catch (e) { toast(esc(e.message), 'err'); } return; }
   if (cmd === 'memory') { ensureMemory(); openFile(MEM_PATH, { mode: 'read' }); return; }
   if (cmd === 'journal') { if (!cur?.messages.length) return toast('Nothing to journal in this chat yet.'); toast('Writing the journal…'); journalSession(cur); return; }
@@ -6741,7 +6741,7 @@ $('#btnCompactChat').onclick = () => { if (running) return toast('Wait for the a
 $('#btnCopyChat').onclick = e => { if (!cur?.messages.length) return toast('Nothing to copy yet.'); copyText(chatMarkdown(), e.currentTarget); };
 $('#btnDelChat').onclick = () => {
   if (!cur) return;
-  if (!cur.messages.length && !sessions.find(s => s.id === cur.id)) return toast('This chat is already empty.');
+  if (!cur.messages.length && !sessions.find(s => s.id === cur.id)) return toast('This branch is already empty.');
   const d = $('#btnDelChat');
   if (!delChatArmed) { delChatArmed = true; d.classList.add('armed'); d.textContent = 'Confirm delete'; setTimeout(() => { if (delChatArmed) renderChatBar(); }, 3500); return; }
   deleteSession(cur.id);
@@ -6803,7 +6803,7 @@ $('#btnOllayaTest').onclick = async () => {
 let delAllArmed = false;
 $('#btnDelAllChats').onclick = async () => {
   const b = $('#btnDelAllChats');
-  if (!sessions.length) { $('#resetNote').textContent = 'There are no saved chats.'; return; }
+  if (!sessions.length) { $('#resetNote').textContent = 'There are no saved branches.'; return; }
   if (!delAllArmed) { delAllArmed = true; b.textContent = `Click again to delete ${sessions.length} chat${sessions.length > 1 ? 's' : ''}`; $('#resetNote').textContent = 'This cannot be undone.'; return; }
   delAllArmed = false; b.textContent = 'Delete all chats'; await deleteAllSessions(); $('#resetNote').textContent = 'All chats deleted.';
 };
@@ -7405,7 +7405,7 @@ chatEl.addEventListener('click', e => {
 });
 
 /* ---------- "/" suggestions above the composer ---------- */
-const SLASH_CMDS = [['/new', 'new chat'], ['/mcp', 'MCP servers'], ['/heartbeat', 'run the heartbeat now'], ['/compact', 'summarise old turns'], ['/context', 'what fills the context'], ['/inbox', 'messages people left for you'], ['/vector', 'Vector messenger settings'], ['/discord', 'Discord bot settings'], ['/trajectories', 'fine-tuning log'], ['/trajectories export', 'export the log as JSONL'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'write this chat into the quest log'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
+const SLASH_CMDS = [['/new', 'new branch'], ['/mcp', 'MCP servers'], ['/heartbeat', 'run the heartbeat now'], ['/compact', 'summarise old turns'], ['/context', 'what fills the context'], ['/inbox', 'messages people left for you'], ['/vector', 'Vector messenger settings'], ['/discord', 'Discord bot settings'], ['/trajectories', 'fine-tuning log'], ['/trajectories export', 'export the log as JSONL'], ['/remember ', 'save a memory'], ['/memory', 'open memory'], ['/journal', 'write this chat into the quest log'], ['/skills', 'list skills'], ['/rename ', 'rename chat'], ['/copy', 'copy as Markdown'], ['/schedule', 'scheduled prompts'], ['/voice', 'toggle speech'], ['/model ', 'switch model'], ['/clear', 'clear messages'], ['/config', 'settings'], ['/help', 'all commands']];
 function updateSlashSuggest() {
   const box = $('#slashSuggest'); const v = input.value;
   if (!/^\/\S*$/.test(v)) { box.hidden = true; return; }

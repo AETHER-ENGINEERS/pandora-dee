@@ -7,7 +7,7 @@ anywhere a person or a model could read it. Internal names stay allowed (vecOwne
 import os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RANKS = re.compile(r"\b(key ?holders?|keybearers?|secretary|your owner|the owner|the user|an? AI assistant)\b", re.I)
+RANKS = re.compile(r"\b(key ?holders?|keybearers?|secretary|your owner|the owner|(?<!not )my owner|the user|an? AI assistant)\b", re.I)
 ALLOW = (
     'Request was aborted by the user.',   # a bundled HTTP library's own message
 )

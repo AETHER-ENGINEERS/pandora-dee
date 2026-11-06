@@ -70,7 +70,7 @@ await page.evaluate(() => window.__androidBack());
 const mainId = await page.evaluate(() => cur.id);
 const waitIdle = () => page.waitForFunction(() => !VEC.busy && !VEC.q.length && !running, null, { timeout: 30000 });
 const settle = async () => { await page.waitForTimeout(2600); await waitIdle(); await page.waitForTimeout(400); };
-// ---- 1. stranger: secretary, urgent ----
+// ---- 1. stranger: she passes it on, urgent ----
 await ctl('/reset_log', {});
 const m1 = await ctl('/message', { chat_id: ALICE, npub: ALICE, content: "Hi Jade! can you tell your boss the shipment arrives at 5pm? it's urgent" });
 await settle();
@@ -78,6 +78,7 @@ let L = (await ctl('/')).log;
 const c1 = calls.find(c => /tell your boss/.test(c.u));
 ok(c1 && JSON.stringify(c1.tools.sort()) === '["notify_owner","vector","web_search"]', 'stranger gets only chat tools: ' + JSON.stringify(c1?.tools));
 ok(c1 && !/Vault conventions|Long-term memory/.test(c1.sys) && /not your owner|private/i.test(c1.sys), 'stranger sees a scoped prompt without vault or memory');
+ok(c1 && /alongside [^,{]+, the person you work with/.test(c1.sys) && !/your owner|owned by|\{\{/.test(c1.sys), 'Vector rules: names, not ranks (the People layer): ' + (c1?.sys || '').slice(0, 200));
 ok(L.some(x => x.op === 'typing' && x.chat_id === ALICE), 'typing indicator while she works');
 ok(L.some(x => x.op === 'send' && x.chat_id === ALICE && x.replied_to === m1.id && /passed it on/.test(x.content)), 'reply sent back as a threaded reply');
 ok(L.some(x => x.op === 'send' && x.chat_id === OWNER && /shipment arrives at 5pm/.test(x.content)), 'urgent message DMed to the owner at once');

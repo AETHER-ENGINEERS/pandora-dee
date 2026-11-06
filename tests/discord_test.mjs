@@ -117,7 +117,7 @@ const settle = async () => { await page.waitForTimeout(2200); await idle(); awai
 const inject = o => fd('/_inject', o);
 const sent = async () => (await fd('/_state')).sent; const calls_ = async () => (await fd('/_state')).calls;
 const ownerUser = '100', aliceU = '111';
-// ---- 1. stranger in the whitelisted channel, @mentions her: secretary ----
+// ---- 1. stranger in the whitelisted channel, @mentions her: she passes it on ----
 await fd('/_reset', {});
 const m1 = await inject({ channel_id: C_GEN, author: ALICE, content: `<@${BOT}> can you tell your boss the shipment arrives at 5pm?`, mention_bot: true });
 await settle();
@@ -125,7 +125,7 @@ const c1 = calls.find(c => /tell your boss/.test(c.u));
 ok(c1 && JSON.stringify([...c1.tools].sort()) === '["discord","discord_history","notify_owner","web_search"]', 'stranger gets only chat tools: ' + JSON.stringify(c1?.tools));
 ok(c1 && !/Vault conventions|Long-term memory/.test(c1.sys) && /not your owner|private/i.test(c1.sys) && /@Jade/.test(c1.u), 'scoped prompt without vault or memory; <@id> shown as @Jade: ' + c1?.u.slice(0, 120));
 ok(c1 && /channel topic: "Books we are reading this month"/.test(c1.u) && /Channels in Book Club/.test(c1.u) && /#offtopic/.test(c1.u), 'she sees the channel topic, and the server\'s channels at the start of a conversation: ' + c1?.u.slice(0, 400));
-ok(c1 && /keyholder/.test(c1.sys) && !/owned by/.test(c1.sys) && /Size it to the moment/.test(c1.sys) && /no LaTeX/.test(c1.sys), 'Discord rules: keyholder wording, reply length follows the persona');
+ok(c1 && /alongside [^,{]+, the person you work with/.test(c1.sys) && !/keyholder|owned by|your owner|\{\{/.test(c1.sys) && /Size it to the moment/.test(c1.sys) && /no LaTeX/.test(c1.sys), 'Discord rules: names, not ranks (the People layer); reply length follows the persona');
 let S1 = await sent();
 const reply1 = S1.find(r => r.chat_id === C_GEN && /passed it on/.test(r.content || ''));
 ok(reply1 && reply1.reply_to == m1.id && JSON.stringify(reply1.allowed_mentions) === '{"parse":[],"replied_user":false}', 'answer is a threaded reply and never pings anyone: ' + JSON.stringify(reply1));
@@ -239,9 +239,9 @@ await inject({ channel_id: C_GEN, author: ALICE, content: 'remember the velvet l
 await settle();
 const hist = await page.evaluate(async () => { const t = async (a, scope) => { const keep = cur.dcScope; cur.dcScope = scope; try { return await runTool('discord_history', a, null); } catch (e) { return 'ERR ' + e.message; } finally { cur.dcScope = keep; } };
   return { own: await t({ action: 'search', query: 'velvet' }, 'owner'), pub: await t({ action: 'search', query: 'velvet' }, 'public'), chans: await t({ action: 'channels' }, 'public') }; });
-ok(/cloak/.test(hist.own) && /lantern/.test(hist.own), 'keyholder: discord_history searches every kept channel: ' + hist.own.slice(0, 160));
+ok(/cloak/.test(hist.own) && /lantern/.test(hist.own), 'the person she works with: discord_history searches every kept channel: ' + hist.own.slice(0, 160));
 ok(/lantern/.test(hist.pub) && !/cloak/.test(hist.pub) && !/staff/.test(hist.chans), 'public chat: discord_history only sees channels everyone can see: ' + hist.pub.slice(0, 160));
-ok(c1 && c1.tools.includes('discord_history') && /discord_history/.test(c1.sys) && c6.tools.includes('discord_history'), 'discord_history is offered in public chats and to the keyholder, with a hint to use it');
+ok(c1 && c1.tools.includes('discord_history') && /discord_history/.test(c1.sys) && c6.tools.includes('discord_history'), 'discord_history is offered in public chats and to the person she works with, with a hint to use it');
 // ---- bridge goes away and comes back ----
 dbridge.kill(); await page.waitForTimeout(3500);
 ok(await page.evaluate(() => !!DC.error) && /Not connected|Online/.test(await page.textContent('#dcStatus').catch(() => '') || 'Online'), 'bridge stopped: the app notices (' + (await page.evaluate(() => DC.error)).slice(0, 70) + ')');

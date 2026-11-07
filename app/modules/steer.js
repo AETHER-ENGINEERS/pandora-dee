@@ -156,7 +156,7 @@ function steering() {
 function steeringContext(st) {
   let out = '';
   if (st.soul) out += `\n\nYour persona (from /Pandora/SOUL.md; this is who you are, keep this voice in chat):\n${st.soul}`;
-  for (const a of st.agents) out += `\n\nStanding instructions from the user (${a.p}; always follow them):\n${a.t}`;
+  for (const a of st.agents) out += `\n\nStanding instructions (${a.p}; always follow them):\n${a.t}`;
   if (st.skills.length) out += `\n\nSkills (instruction packs in ${SKILLS_DIR}). When a request matches a skill's description, FIRST call the skill tool with its name, then follow the instructions it returns step by step:\n${st.skills.map(s => `- ${s.name}: ${s.description}`).join('\n')}\nTo create a skill, write ${SKILLS_DIR}/<kebab-name>/SKILL.md beginning with frontmatter ("---", "name: …", "description: … Use when …", "---") followed by numbered steps.`;
   return out;
 }

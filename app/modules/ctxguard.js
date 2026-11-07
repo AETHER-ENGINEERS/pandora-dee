@@ -26,12 +26,16 @@ function ctxLearn(msg, estTok) {
   const maxM = /(?:maximum context length(?: is)?|context (?:length|size|window)(?: is| of)?|n_ctx|max(?:imum)?(?: allowed)?(?: tokens)?)\D{0,24}?(\d[\d,]{2,})/i.exec(msg);
   const prM = /(?:prompt is too long|resulted in|request(?:ed)?|prompt has|prompt tokens?|input (?:is|of|length))\D{0,24}?(\d[\d,]{2,})/i.exec(msg);
   const lims = ls.get('ctxLimits', {}), rat = ls.get('ctxRatio', {}), k = ctxKey();
+  // "exceeded max context length by 15856 tokens": that number is how far over, not the limit (Ollama Cloud says it
+  // this way). The real limit is about our estimate minus that, with room to spare.
+  const overM = /(?:exceed(?:s|ed)?|over)\b[^.;\n]{0,40}?\bby\s+(\d[\d,]*)\s*tokens?/i.exec(msg);
+  if (overM && estTok) { lims[k] = Math.max(2048, Math.floor((Math.min(ctxLimit(), estTok) - num(overM[1])) * 0.9)); ls.set('ctxLimits', lims); return; }
   if (prM && estTok) { const actual = num(prM[1]); if (actual > estTok) rat[k] = Math.max(0.8, ctxRatio() * estTok / actual * 0.97); }
   if (maxM && num(maxM[1]) >= 1024) lims[k] = num(maxM[1]);
   else if (!prM) lims[k] = Math.max(2048, Math.floor(Math.min(ctxLimit(), estTok) * 0.7));   // no numbers: assume we were well over
   ls.set('ctxLimits', lims); ls.set('ctxRatio', rat);
 }
-const isCtxError = msg => /prompt is too long|maximum context length|context[_ ]length[_ ]exceeded|exceeds? (?:the )?(?:available |maximum )?context|context (?:size|window) (?:exceeded|is too small)|too many (?:input )?tokens|reduce the length of the (?:messages|prompt)|input is too long/i.test(msg);
+const isCtxError = msg => /prompt (?:is )?too long|(?:max|maximum) context length|context[_ ]length[_ ]exceeded|exceeds? (?:the )?(?:available |maximum )?context|context (?:size|window) (?:exceeded|is too small)|too many (?:input )?tokens|reduce the length of the (?:messages|prompt)|input is too long/i.test(msg);
 function clip(s, keep, why) {
   s = String(s || ''); if (s.length <= keep) return s;
   const head = Math.round(keep * 0.7), tail = keep - head;

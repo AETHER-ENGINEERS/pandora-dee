@@ -36,7 +36,8 @@ jobs:
 
   app:
     needs: changes
-    runs-on: ubuntu-latest
+    # Playwright 1.56 has no Chromium for Ubuntu 26.04 (ubuntu-latest since late October 2026)
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       CODE: ${{ needs.changes.outputs.code }}
@@ -67,6 +68,9 @@ jobs:
       - name: Build web app
         if: env.CODE == 'true'
         run: npm run build
+      - name: Names, not ranks (the People layer)
+        if: env.CODE == 'true'
+        run: python3 tests/people_check.py
       - name: Tests
         if: env.CODE == 'true'
         run: npm test

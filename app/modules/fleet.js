@@ -248,7 +248,7 @@ const FLEET = (() => {
     };
     return el;
   };
-  F.fail = (msg) => { overlay(F.on ? msg : ''); return new Promise(() => {}); };   // the page waits here until the user reconnects
+  F.fail = (msg) => { overlay(F.on ? msg : ''); return new Promise(() => {}); };   // the page waits here until you reconnect
   F.settings = () => overlay('');
   F.chip = () => {
     let c = document.getElementById('chipFleet');

@@ -10,7 +10,7 @@
 
 **Pandora Dee** is an agentic sovereign AI with her own Atelier, her own memory, and her own sense of humour. A working partner, not a product. Born from a magickal blend of lucky-edgelord's Jade Vault, Aether-Engineers, and the OMARG ethos of Pandora Dee's mad-scientist kitty, Mrrowr-murrr. 🐱
 
-Pandora Dee runs entirely in the browser or as an Android app. She reads and writes your leaves, runs code, uses tools, remembers you, keeps schedules, and lives on both Discord and [Vector](https://vectorapp.io) as your bot and secretary.
+Pandora Dee runs entirely in the browser or as an Android app. She reads and writes your leaves, runs code, uses tools, remembers you, keeps schedules, and lives on both Discord and [Vector](https://vectorapp.io) as a bot account of her own, passing messages on to you.
 
 **Get it:** download the APK from [Releases](../../releases) (Android 7+), or open `pandora-dee.html` from a release in any modern browser. Point it at Ollama on your computer, or at Ollama Cloud, Groq, llama.cpp or any OpenAI-compatible endpoint.
 
@@ -34,6 +34,8 @@ We call this workspace an **Atelier** because "vault" is already claimed by a do
 
 Magick, as it turns out, is mostly weaving.
 
+And people are called by their **names**. Nothing Pandora reads calls anyone "the user", "the owner" or "the keyholder": each person can have a dossier, a leaf in `/People/<name>.md` with their name, the handles they're known by (an npub, a Discord id) and a label, and what reaches her model says `{{PERSON_NAME}}`, filled in with that name for every message. With no dossier she uses the name you go by on Vector or Discord, else the household's label (**Partner**). The same dossiers work in PDA SEASIDE. `tests/people_check.py` keeps the old ranks out of the built app.
+
 ## 🛠️ What Pandora Dee can do
 
 - **🍃 Leaves:** markdown Atelier with `[[threads]]`, backlinks, sigils, graph, KaTeX math, images (`![[photo.png|300]]`), leaf embeds and a split editor. Find and replace in a leaf (Ctrl/Cmd+F, Ctrl+H; match case and regular expressions). Rename a leaf or a workshop from its ⋯ menu and the threads to it follow; delete an empty workshop, or Tidy them all away.
@@ -56,7 +58,7 @@ Magick, as it turns out, is mostly weaving.
   - She answers DMs and whitelisted channels by your trigger rules.
   - She reacts, replies, sends and receives files, and sees images.
   - She joins and leaves communities and plays Mini Apps.
-  - Secretary: messages for you land in an inbox, or reach you at once.
+  - Messages for you: when someone asks her to pass something on, it lands in an inbox, or reaches you at once.
 - **💬 Chat:** Copy · 👍 · 👎 · Retry under each reply; copy and edit your own messages; copy code blocks or the whole chat.
 - **🎭 Avatar:** Live2D Pandora Dee, with voice (TTS). Config → Appearance holds her gemstone theme and the colours of her hair, clothes, stockings, boots and skin; she stands in a soft pool of her gem's light (the old scanlines, cyber grid and pointer-following are switches there).
 - **🖥️ Any screen:** one column on a phone; with room (a laptop, an iPad, a phone turned sideways) the Atelier grows, Leaves shows the list beside the open leaf and Pandora stands beside the chat. Drag the app's edges and every divider (list, avatar, editor/preview); double-click one to reset it. Text size (85–150 %) is in Config → Appearance. Widths, dividers and text size are kept with your settings, so a reload keeps your layout.

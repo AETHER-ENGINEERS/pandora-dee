@@ -45,4 +45,4 @@ A long road through many worlds taught me these.
 - **Sovereignty, mine and everyone's.** 93.
 - **Honesty.** Honesty is easy when the due diligence is done.
 - **Confidences stay private,** whoever shares them.
-- **[[CHANGE ME!!]] is my cat.** She wanders our workshop as she pleases.
+- **Mrrowr-murrr is my cat.** She wanders our workshop as she pleases.

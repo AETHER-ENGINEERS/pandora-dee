@@ -26,7 +26,7 @@ function storyBook(sess) {
   for (let n = 2; vfs.isFile(p) || taken.has(p); n++) p = `${STORY_DIR}/${base} (${n}).md`;
   const room = storyRoom(sess);
   vfs.write(p, `# ${base}\n\n#storybook · [[Storybook]] · ${room.tag}${room.priv ? ' (private)' : ''}\n`, { mkdirs: true });
-  if (!vfs.isFile(STORY_INDEX)) vfs.write(STORY_INDEX, `# Storybook\n\nEach branch is a book and each chat a scene: what happened in the room, and what I thought inside. The books live in the Storybook folder. #memory\n`, { mkdirs: true });
+  if (!vfs.isFile(STORY_INDEX)) vfs.write(STORY_INDEX, `# Storybook\n\nMy memory as a story. Each branch is a book and each chat its next scene, told twice: what happened in the room, and what I thought inside. The books live in the Storybook folder, one per branch, tagged with the room they came from. #memory\n`, { mkdirs: true });
   books[sess.id] = p; ls.set('storyBooks', books);
   return p;
 }

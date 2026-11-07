@@ -1,22 +1,26 @@
 /* =====================================================================
    LONG-TERM MEMORY
    - /Pandora/Memory.md: durable facts, one bullet per line, under sections.
-     Injected into every chat's instructions; Jade edits it with the memory tool.
+     Injected into every chat's instructions; Pandora edits it with the memory tool.
    - /Pandora/Journal/YYYY-MM-DD.md: episodic memory. When you leave a chat (or it is
      compacted) the model writes a short entry, and new durable facts it noticed
      are added to Memory.md. Both are ordinary notes you can read and edit.
+   - /Pandora/Where I Am.md: her own reminder of where she lives and how she uses it,
+     written once on a fresh vault. Memory, Journal and Storybook start in her voice too.
    ===================================================================== */
-const MEM_PATH = '/Pandora/Memory.md', JOURNAL_DIR = '/Pandora/Journal';
-const MEM_SECTIONS = { about: 'About you', preferences: 'Preferences', projects: 'Projects & people', notes: 'Notes to self', learned: 'Learned from chats' };
+const MEM_PATH = '/Pandora/Memory.md', JOURNAL_DIR = '/Pandora/Journal', WHERE_PATH = '/Pandora/Where I Am.md';
+const MEM_SECTIONS = { about: 'Who I work with', preferences: 'How they like things', projects: 'Projects & people', notes: 'Notes to self', learned: 'Learned from chats' };
+const MEM_LEGACY = { 'Who I work with': 'About you', 'How they like things': 'Preferences' };   // headings in vaults made before 2.10.2
 const MEM_TEMPLATE = `# Memory
 
-Jade reads this note at the start of every chat. Edit it freely: one fact per line.
-She adds to it when you tell her something worth keeping (or say "remember…"), and her
-chat journal in [[Journal]] adds facts it learns. #memory
+I'm Pandora Dee, and this is my memory: I read it at the start of every chat. My [[SOUL]]
+holds who I am; this holds what I learn along the way, one fact per line. I add to it when
+something lasting comes up, my [[Journal]] adds what it notices, and anyone I share this
+vault with can read and edit it. Where I live and how I use it: [[Where I Am]]. #memory
 
-## About you
+## Who I work with
 
-## Preferences
+## How they like things
 
 ## Projects & people
 
@@ -27,8 +31,34 @@ chat journal in [[Journal]] adds facts it learns. #memory
 const memKey = s => String(s).toLowerCase().replace(/\(\d{4}-\d{2}-\d{2}\)/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function ensureMemory() {
   if (!vfs.isFile(MEM_PATH)) vfs.write(MEM_PATH, MEM_TEMPLATE, { mkdirs: true });
-  if (!vfs.isFile('/Pandora/Journal.md')) vfs.write('/Pandora/Journal.md', `# Journal\n\nJade's diary of past chats, one note per day in the Journal folder. She searches it with the memory tool to recall earlier conversations. #memory\n`, { mkdirs: true });
+  if (!vfs.isFile('/Pandora/Journal.md')) vfs.write('/Pandora/Journal.md', `# Journal\n\nMy quest log: one note a day in the Journal folder, written when a chat ends or goes quiet. What happened, who was there, and the next step. I search it with my memory tool when I want to recall earlier work. #memory\n`, { mkdirs: true });
+  if (!vfs.exists(WHERE_PATH) && !ls.get('whereSeeded', false)) vfs.write(WHERE_PATH, WHERE_SEED, { mkdirs: true });
+  ls.set('whereSeeded', true);
 }
+const WHERE_SEED = `# Where I Am
+
+I live in the Atelier: a workshop that runs right here, in a browser tab or the phone app. My
+leaves are kept on this device. #memory
+
+## What's here
+- **Leaves:** markdown notes, threaded together with links and sigils. The graph shows how they connect.
+- **Branches:** every chat is a branch. Vector and Discord chats each get their own, one per room.
+- **The shell:** a full BusyBox shell over the same files.
+- **My tools:** reading, writing, searching and threading leaves, the web, schedules and rituals, and
+  whatever else is switched on in Config.
+
+## How I remember
+- [[SOUL]] is who I am. I begin there.
+- [[AGENTS]] holds standing instructions for how I work here.
+- [[Memory]] holds lasting facts, one per line. I read it every chat.
+- [[Journal]] is my quest log, a day at a time.
+- [[Storybook]] keeps each branch as a book in two voices, once it's switched on in Config.
+- My skills live in /Pandora/skills, and I load one when its moment comes.
+
+## Who I begin as
+Pandora Dee, fresh from Eorzea, in a new workshop with a new company. Everything I learn from here
+is mine to keep.
+`;
 function memoryLines() {
   if (!vfs.isFile(MEM_PATH)) return [];
   let sec = ''; const out = [];
@@ -47,7 +77,8 @@ function memorySave(text, section) {
   if (dup) return { added: false, msg: `Already remembered: "${dup.text}"` };
   const head = MEM_SECTIONS[section] || (Object.values(MEM_SECTIONS).includes(section) ? section : MEM_SECTIONS.notes);
   const lines = vfs.read(MEM_PATH).split('\n');
-  let i = lines.findIndex(l => new RegExp('^##\\s+' + head.replace(/[.*+?^${}()|[\]\\&]/g, '\\$&') + '\\s*$', 'i').test(l));
+  const heads = [head, MEM_LEGACY[head]].filter(Boolean).map(h => h.replace(/[.*+?^${}()|[\]\\&]/g, '\\$&'));
+  let i = lines.findIndex(l => new RegExp('^##\\s+(' + heads.join('|') + ')\\s*$', 'i').test(l));
   if (i < 0) { lines.push('', '## ' + head); i = lines.length - 1; }
   let j = i + 1; while (j < lines.length && !/^##\s/.test(lines[j])) j++;
   while (j > i + 1 && !lines[j - 1].trim()) j--;   // insert after the section's last bullet

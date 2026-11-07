@@ -1,6 +1,6 @@
 /* =====================================================================
    HEARTBEAT (Moltbot-style)
-   Every N minutes inside active hours, Jade wakes up, reads /Pandora/HEARTBEAT.md and acts on it.
+   Every N minutes inside active hours, Pandora wakes up, reads /Pandora/HEARTBEAT.md and acts on it.
    If nothing needs attention she answers HEARTBEAT_OK: that run is silent and pruned from the chat.
    Anything else is an alert: kept in the Heartbeat chat and sent as a notification.
    An effectively empty HEARTBEAT.md (only comments, headings, blank lines or empty checkboxes)
@@ -10,7 +10,7 @@ const HB_PATH = '/Pandora/HEARTBEAT.md';
 const HB_DEFAULT_PROMPT = 'Read HEARTBEAT.md (below). Follow it strictly. Do not infer or repeat old tasks from prior chats. Use your tools to check what it asks. If nothing needs attention, reply HEARTBEAT_OK.';
 const HB_SEED = `# HEARTBEAT
 
-<!-- Jade reads this on every heartbeat (Config → Heartbeat; every 30 minutes by default, only while
+<!-- Pandora reads this on every heartbeat (Config → Heartbeat; every 30 minutes by default, only while
      the app is open and inside your active hours). Keep it short: a checklist of things to look at.
      If nothing needs attention she replies HEARTBEAT_OK and you never see it; otherwise you get a
      notification and the details land in the "♥ Heartbeat" chat.

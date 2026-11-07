@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.2
+- **Her first notes are her own.** A fresh vault's Memory, Journal and Storybook notes start in Pandora's voice, as
+  reminders to herself, and a new **Where I Am** note says where she lives, how she uses it and who she begins as.
+  Memory's sections are now "Who I work with" and "How they like things"; vaults made earlier keep their headings and
+  she keeps writing under them.
+- The Heartbeat note and the memory notes no longer say "Jade" in Pandora's vault.
+
 ## 2.10.1
 - **Names, not ranks (the People layer).** Pandora's prompts, bridges and messages name the person she's with (from
   a dossier in `/People/<name>.md`, or the labels in Config) instead of calling anyone "the user" or "the owner". A

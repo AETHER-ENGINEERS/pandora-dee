@@ -200,6 +200,7 @@ No other text.`;
 const journaling = new Set();
 const jMarks = () => ls.get('journaled', {});
 async function journalSession(sess, { reason = 'leave', summary = null, upto = null } = {}) {
+  storySession(sess, { reason, upto });   // the Storybook (storybook.js), when it's on
   if (!S.journalOn || !sess || !S.model) return;
   const done = jMarks()[sess.id] || 0; const msgs = sess.messages || [];
   const end = upto ?? msgs.length;
@@ -232,5 +233,5 @@ async function journalSession(sess, { reason = 'leave', summary = null, upto = n
 }
 
 let journalT = null;
-function scheduleJournal() { clearTimeout(journalT); if (!S.journalOn) return; journalT = setTimeout(() => { if (!running && cur) journalSession(cur, { reason: 'quiet' }); }, 4 * 60e3); }
+function scheduleJournal() { clearTimeout(journalT); if (!S.journalOn && !S.storyOn) return; journalT = setTimeout(() => { if (!running && cur) journalSession(cur, { reason: 'quiet' }); }, 4 * 60e3); }
 document.addEventListener('visibilitychange', () => { if (document.hidden && !running && cur) journalSession(cur, { reason: 'quiet' }); });

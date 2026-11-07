@@ -235,7 +235,7 @@ const mem = await page.evaluate(async () => { const t = async (a) => { try { ret
   r.s3 = await t({ action: 'save', text: 'Their cat is called Byte', section: 'about' });
   r.search = await t({ action: 'search', text: 'cat' });
   r.prompt = systemPrompt(); r.f = await t({ action: 'forget', text: 'cat is called' }); r.after = vfs.read('/Pandora/Memory.md'); return r; });
-ok(/Saved to memory under "Preferences"/.test(mem.s1) && /Already remembered/.test(mem.s2), 'memory save + dedupe');
+ok(/Saved to memory under "How they like things"/.test(mem.s1) && /Already remembered/.test(mem.s2), 'memory save + dedupe');
 ok(/Byte/.test(mem.search), 'memory search');
 ok(/Long-term memory/.test(mem.prompt) && /synthwave/.test(mem.prompt) && /Byte/.test(mem.prompt), 'memory in system prompt');
 ok(/Forgot 1/.test(mem.f) && !/Byte/.test(mem.after) && /synthwave/.test(mem.after), 'memory forget');

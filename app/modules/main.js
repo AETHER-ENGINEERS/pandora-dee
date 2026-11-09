@@ -2097,6 +2097,10 @@ Guidelines:
 - Be concise. When finished, say which notes changed, as [[links]].`}${steeringContext(steer)}${mcpPromptBlock()}`; };
 
 let running = false; const queue = [];
+// The chat a turn started from send() belongs to. Messages typed while a turn runs are queued; they steer only that
+// turn, in that chat. A background turn (Vector, Discord, a Mini App, the heartbeat) never takes them: they wait and go
+// to the chat they were typed in once it's back (restoreChat), so nothing typed here lands in a channel, or the reverse.
+let humanTurn = null;
 function setState(s) { bgState(s); $('#hudState').textContent = s; $('#hudState').style.color = s === 'IDLE' ? '' : 'var(--yl)'; }
 function setRunning(v) {
   running = v; const b = $('#btnSend');
@@ -2110,16 +2114,21 @@ async function send(text) {
   $('#slashSuggest').hidden = true;
   text = text.trim(); if (!text && !ATT.pending.length) return;
   if (running) { queue.push(text); updateQueueNote(); return; }
-  let content = text;
-  if (/^\/skill:/i.test(text)) { content = expandSkillCommand(text); if (!content) return; }
-  else if (text.startsWith('/')) return slash(text);
-  await maybeRestorePrimary();
-  if (!S.model) { toast('Pick a model first (Config → Ollama link).', 'err'); return; }
-  if (!cur) newSession();
-  if (!cur.messages.length) { chatEl.innerHTML = ''; if (!cur._named) cur.title = (text || '📎 ' + ATT.pending.map(a => a.name).join(', ')).slice(0, 60); }
-  if (Jade.ready) Jade.nod();
-  const umsg = composeUserMessage(text, content === text ? '' : content); cur.messages.push(umsg); chatEl.appendChild(userBlock(umsg.display || umsg.content, cur.messages.length - 1)); scrollDown(true); saveSession();
-  await agentLoop();
+  // (starting now: a Vector or Discord turn waits for this one rather than slipping in before it runs)
+  humanTurn = 'starting';
+  try {
+    let content = text;
+    if (/^\/skill:/i.test(text)) { content = expandSkillCommand(text); if (!content) return; }
+    else if (text.startsWith('/')) return slash(text);
+    await maybeRestorePrimary();
+    if (!S.model) { toast('Pick a model first (Config → Ollama link).', 'err'); return; }
+    if (!cur) newSession();
+    if (!cur.messages.length) { chatEl.innerHTML = ''; if (!cur._named) cur.title = (text || '📎 ' + ATT.pending.map(a => a.name).join(', ')).slice(0, 60); }
+    if (Jade.ready) Jade.nod();
+    const umsg = composeUserMessage(text, content === text ? '' : content); cur.messages.push(umsg); chatEl.appendChild(userBlock(umsg.display || umsg.content, cur.messages.length - 1)); scrollDown(true); saveSession();
+    humanTurn = cur.id;
+    await agentLoop();
+  } finally { humanTurn = null; }
   if (queue.length) { const next = queue.splice(0).join('\n\n'); updateQueueNote(); await send(next); }
 }
 function updateQueueNote() { const n = $('#queueNote'); n.hidden = !queue.length; n.textContent = `QUEUED ▸ ${queue.length} message${queue.length > 1 ? 's' : ''} will be delivered after the current tool round`; }
@@ -2233,7 +2242,7 @@ async function agentLoop() {
       if (turns >= S.maxTurns) { body.appendChild(errorEl(`Stopped after ${S.maxTurns} tool rounds (Config → Max tool rounds). Send "continue" to keep going.`)); break; }
       turns++; $('#hudTurn').textContent = turns; setState('THINKING');
       // steering: queued user messages get injected before the next model call
-      if (turns > 1 && queue.length) { const q = queue.splice(0).join('\n\n'); updateQueueNote(); cur.messages.push({ role: 'user', content: q }); body.appendChild(userBlock(q)); }
+      if (turns > 1 && queue.length && humanTurn && humanTurn === cur?.id) { const q = queue.splice(0).join('\n\n'); updateQueueNote(); cur.messages.push({ role: 'user', content: q }); body.appendChild(userBlock(q)); }
       const apiMsgs = buildApiMessages();
       let content = '', thinking = '', calls = [], final = null;
       const thinkD = thinkEl('', true); thinkD.hidden = true; body.appendChild(thinkD);

@@ -130,7 +130,8 @@ function vecEnqueue(item) {
 }
 async function vecPump() {
   if (VEC.busy || !VEC.q.length) return;
-  if (running || compacting || (typeof XWAKE !== 'undefined' && XWAKE.busy) || (typeof DC !== 'undefined' && DC.busy)) { setTimeout(vecPump, 1200); return; }   // one conversation at a time, shared with Discord
+  // one conversation at a time, shared with Discord; and a person typing here goes first (humanTurn, a queued message)
+  if (running || compacting || humanTurn || queue.length || (typeof XWAKE !== 'undefined' && XWAKE.busy) || (typeof DC !== 'undefined' && DC.busy)) { setTimeout(vecPump, 1200); return; }
   VEC.busy = true; const item = VEC.q.shift();
   try { await vecWake(item); } catch (e) { console.warn('vector turn failed', e); }
   finally { VEC.busy = false; if (VEC.q.length) setTimeout(vecPump, 200); if (typeof DC !== 'undefined' && DC.q.length) setTimeout(dcPump, 250); }
@@ -220,9 +221,11 @@ async function vecWake(item) {
     const umsg = { role: 'user', content, display: content.split('\n(Your plain-text')[0], ts: Date.now(), _vec: true };
     if (images.length) umsg.images = images;
     cur.messages.push(umsg); chatEl.appendChild(userBlock(umsg.display, cur.messages.length - 1)); saveSession();
-    const before = cur.messages.length;
+    // this channel's own chat: the reply is read from it, and goes only to the channel it belongs to
+    const sess = cur, before = sess.messages.length;
     await agentLoop();
-    const fresh = cur.messages.slice(before);
+    if (cur !== sess || sess.vec?.chat_id !== item.chat_id) { console.warn('vector: the chat changed during the turn; nothing is posted'); return; }
+    const fresh = sess.messages.slice(before);
     const err = fresh.find(m => m._error);
     const last = [...fresh].reverse().find(m => m.role === 'assistant' && String(m.content || '').trim());
     let text = last ? String(last.content).replace(/<think>[\s\S]*?<\/think>/g, '').trim() : '';

@@ -44,6 +44,8 @@ await ctx.route('**/*', async route => {
     else if (/Mini App session/.test(u)) step = k === 0 ? T('vector', { action: 'xdc_send', topic: (u.match(/session (\S+)/) || [])[1], frame: '{"move":4}' }) : { content: 'NO_REPLY' };
     else if (/message alice on vector/.test(u)) step = k === 0 ? T('vector', { action: 'send', to: ALICE, text: 'Hello from Jade' }) : { content: 'Messaged Alice.' };
     else if (/send it everywhere/.test(u)) step = k === 0 ? T('vector', { action: 'send', to: OWNER, text: 'spam' }) : { content: 'tried' };
+    else if (/check the weather slowly/.test(u)) { if (k === 0) await new Promise(r => setTimeout(r, 2000)); step = k === 0 ? T('notify_owner', { message: 'Alice asked about the weather.' }) : { content: 'Sunny all day.' }; }
+    else if (/atelier secret plan/.test(u)) step = { content: 'ATELIER-ONLY ANSWER' };
     return route.fulfill({ headers: CORS, contentType: 'application/x-ndjson', body: JSON.stringify({ message: { role: 'assistant', content: step.content || '', ...(step.tool_calls ? { tool_calls: step.tool_calls } : {}) }, done: false }) + '\n' + JSON.stringify({ message: { role: 'assistant', content: '' }, done: true }) + '\n' });
   }
   return route.abort();
@@ -154,6 +156,17 @@ await ctl('/message', { chat_id: ALICE, npub: ALICE, content: 'jade send it ever
 await settle();
 L = (await ctl('/')).log;
 ok(!L.some(x => x.op === 'send' && x.chat_id === OWNER && x.content === 'spam'), 'a stranger cannot make her message other people');
+// ---- 11. the Atelier and a channel keep apart: typing here during a Vector turn stays here ----
+await ctl('/reset_log', {});
+await ctl('/message', { chat_id: ALICE, npub: ALICE, content: 'jade check the weather slowly' });
+await page.waitForFunction(() => VEC.busy && running, null, { timeout: 20000 });
+await page.fill('#input', 'atelier secret plan'); await page.evaluate(() => document.querySelector('#btnSend').click());
+await page.waitForFunction(() => !VEC.busy && !running && !queue.length && /ATELIER-ONLY ANSWER/.test(document.querySelector('#chat').textContent), null, { timeout: 30000 });
+await page.waitForTimeout(500);
+L = (await ctl('/')).log;
+ok(L.some(x => x.op === 'send' && x.chat_id === ALICE && /Sunny all day/.test(x.content)) && !L.some(x => /ATELIER-ONLY|atelier secret/.test(x.content || '')), 'a Vector turn posts only its own reply: nothing typed in the Atelier meanwhile reaches the channel');
+const kept = await page.evaluate(async (alice) => { const s = await idb.get('session:' + ls.get('vecSess:' + alice, '')); return { inChannelChat: s.messages.some(m => /atelier secret plan/.test(String(m.content))), here: /atelier secret plan/.test(document.querySelector('#chat').textContent) }; }, ALICE);
+ok(!kept.inChannelChat && kept.here, 'what was typed went to the chat it was typed in, not into the channel\'s chat');
 // ---- UI ----
 await page.tap('.tab[data-tab="files"]').catch(() => {});
 await page.evaluate(() => openFile(VEC_INBOX, { mode: 'read' })); await page.waitForTimeout(400); await page.screenshot({ path: 'vec_inbox.png' });

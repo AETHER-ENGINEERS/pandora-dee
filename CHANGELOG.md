@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.10.3
+- **http_request keeps to where it should go.** This device, the home network and a tailnet are out of reach unless
+  the address is listed in Config → Secrets → "Local addresses", so a page Pandora reads can't steer a request at the
+  router, a service on this device or another app's keys.
+- **Secrets tied to their hosts.** A secret can be given hosts (`api.github.com, *.githubusercontent.com`): it's only
+  ever sent there, even when a playbook already filled it in, and it stays out of scripts' `process.env`.
+- **No redirects with a secret in the request**, since a key header would go along to wherever the redirect leads;
+  the result says it redirected instead.
+
 ## 2.10.2
 - **Her first notes are her own.** A fresh vault's Memory, Journal and Storybook notes start in Pandora's voice, as
   reminders to herself, and a new **Where I Am** note says where she lives, how she uses it and who she begins as.

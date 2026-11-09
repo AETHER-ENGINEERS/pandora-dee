@@ -1265,11 +1265,15 @@ SECRETS_HTML = """      <section class="flex flex-col gap-3" id="secretSection">
         <div class="pane-h">Secrets (API keys for Jade's HTTP requests)</div>
         <p class="text-sm leading-relaxed text-[#c2d6ce]">Jade writes <code class="text-cy">{{NAME}}</code> in a URL, header or body and the app fills in the value when the request goes out. She never sees the value, so it stays out of chats, the trajectory log and replies (any echo is blanked). Node scripts get them as <code class="text-cy">process.env.NAME</code>.</p>
         <div id="secretList" class="flex flex-col gap-2"></div>
-        <div class="grid gap-2" style="grid-template-columns:minmax(110px,1fr) minmax(140px,2fr) auto">
+        <div class="grid gap-2" style="grid-template-columns:minmax(110px,1fr) minmax(140px,2fr) minmax(140px,2fr) auto">
           <input id="sSecretName" class="field" placeholder="NAME" autocapitalize="characters" autocomplete="off" spellcheck="false">
           <input id="sSecretValue" class="field" type="password" placeholder="value" autocomplete="off">
-          <button type="button" class="btn btn-solid" id="btnSecretAdd">Add</button>
+          <input id="sSecretHosts" class="field" placeholder="only to (api.example.com)" autocapitalize="none" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn btn-solid" id="btnSecretAdd">Save</button>
         </div>
+        <p class="hint">A secret tied to hosts is only ever sent there, and stays out of scripts. To change an existing one's hosts, press its button, edit the hosts and Save (no value needed).</p>
+        <label class="flex flex-col gap-1"><span class="text-sm text-[#c2d6ce]">Local addresses (this device, the home network or a tailnet aren't reached unless listed here)</span>
+          <input id="sHttpLocal" class="field" placeholder="e.g. 192.168.1.20, homeassistant.local" autocapitalize="none" autocomplete="off" spellcheck="false"></label>
       </section>
 
 """
@@ -1297,7 +1301,7 @@ rep("web_fetch: a => a.url,", "web_fetch: a => a.url, http_request: a => `${(a.m
 rep("    web_fetch: () => `Fetching ${short(a.url)}`,", "    web_fetch: () => `Fetching ${short(a.url)}`, http_request: () => `${(a.method || 'GET').toUpperCase()} ${short(a.url)}`,")
 rep("- web_search / web_fetch: look things up on the web", "- web_search / web_fetch: look things up on the web\\n- http_request: call APIs with any method (POST JSON, forms, auth headers). ${Object.keys(secretsMap()).length ? `Secrets you can use (write them exactly like this, the app fills in the value): ${Object.keys(secretsMap()).map(k => '{{' + k + '}}').join(', ')}` : 'No secrets are saved yet: if an API needs a key, ask the user to add it in Config → Secrets and tell them the NAME to use'}")
 # node: secrets as env, redact echoes, mention fetch/https
-rep("    w.postMessage({ files, dirs, bins, sqliteModule: sqMod, cwd: c.sh.cwd, argv });", "    w.postMessage({ files, dirs, bins, sqliteModule: sqMod, env: { ...secretsMap() }, cwd: c.sh.cwd, argv });")
+rep("    w.postMessage({ files, dirs, bins, sqliteModule: sqMod, cwd: c.sh.cwd, argv });", "    w.postMessage({ files, dirs, bins, sqliteModule: sqMod, env: scriptSecrets(), cwd: c.sh.cwd, argv });")
 rep("  for (const [k, v] of r.out) k === 'o' ? c.o(v) : c.e(v);\n  const W = Object.entries(r.writes || {});", "  for (const [k, v] of r.out) k === 'o' ? c.o(redactSecrets(v)) : c.e(redactSecrets(v));\n  const W = Object.entries(r.writes || {});")
 rep("runs JavaScript in a sandboxed worker with require('fs') (readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, unlinkSync) and require('path').", "runs JavaScript in a sandboxed worker with require('fs') (readFileSync, writeFileSync, existsSync, readdirSync, appendFileSync, unlinkSync), require('path'), global fetch, require('https'/'http') and Buffer; secrets are in process.env.")
 # images

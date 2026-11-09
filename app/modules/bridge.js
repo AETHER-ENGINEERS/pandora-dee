@@ -74,7 +74,7 @@ async function runNodeScript({ code, argv = ['[eval]'], cwd = '/', globals = nul
     };
     w.onerror = e => { e.preventDefault?.(); finish({ out: [['e', `${e.message || 'SyntaxError'}${e.lineno ? ` (line ${Math.max(1, e.lineno - off)})` : ''}\n`]], writes: {}, code: 1 }); };
     if (!bridge) ctx.off = bridgeWhy || 'turned off';
-    w.postMessage({ files, dirs, bins, big, sqliteModule: sqMod, env: noNet ? {} : { ...secretsMap() }, cwd, argv, globals: globals ? cloneSafe(globals) : {}, bridge, bridgeWhy, noNet });
+    w.postMessage({ files, dirs, bins, big, sqliteModule: sqMod, env: noNet ? {} : scriptSecrets(), cwd, argv, globals: globals ? cloneSafe(globals) : {}, bridge, bridgeWhy, noNet });
   });
   URL.revokeObjectURL(url);
   if (!readOnly) applyNodeWrites(r, onErr);

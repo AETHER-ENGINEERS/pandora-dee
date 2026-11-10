@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.10.4
+- **Bridges keep to their rooms.** Something typed in the Atelier while Pandora was answering on Vector or Discord
+  went into that channel's chat, and her answer to it was posted to the channel. Now what's typed meanwhile waits and
+  goes to the chat it was typed in; Vector and Discord turns wait while you're typing; and each turn posts only its own
+  chat's reply, to its own channel. (Filed by Pandora Dee Fae.)
+- **Coming from 2.9.9.2?** Everything since is below: the People layer, the Vault Tree, a clean stock SOUL, her first
+  notes in her own voice, the Storybook, the context-guard fix, Jade Vault's additions through 2.22.1 (each off until
+  switched on), and http_request's guards. It opens the same vault: notes, chats, memory and settings carry over. Make
+  a backup first (Config → Backup) all the same.
+
 ## 2.10.3
 - **http_request keeps to where it should go.** This device, the home network and a tailnet are out of reach unless
   the address is listed in Config → Secrets → "Local addresses", so a page Pandora reads can't steer a request at the

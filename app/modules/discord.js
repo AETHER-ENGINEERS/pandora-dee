@@ -136,7 +136,8 @@ function dcEnqueue(item) {
   dcPump();
 }
 // Vector and Discord share the agent: one conversation at a time. Whoever finishes wakes the other queue.
-const bridgeBusy = () => running || compacting || (typeof XWAKE !== 'undefined' && XWAKE.busy) || (typeof VEC !== 'undefined' && VEC.busy);
+// (a person typing here goes first: their turn starting, or a message of theirs queued)
+const bridgeBusy = () => running || compacting || humanTurn || queue.length || (typeof XWAKE !== 'undefined' && XWAKE.busy) || (typeof VEC !== 'undefined' && VEC.busy);
 async function dcPump() {
   if (DC.busy || !DC.q.length) return;
   if (bridgeBusy()) { setTimeout(dcPump, 1200); return; }
@@ -222,9 +223,11 @@ async function dcWake(item) {
     const umsg = { role: 'user', content, display: content.split('\n(Your plain-text')[0], ts: Date.now(), _dc: true };
     if (images.length) umsg.images = images;
     cur.messages.push(umsg); chatEl.appendChild(userBlock(umsg.display, cur.messages.length - 1)); saveSession();
-    const before = cur.messages.length;
+    // this channel's own chat: the reply is read from it, and goes only to the channel it belongs to
+    const sess = cur, before = sess.messages.length;
     await agentLoop();
-    const fresh = cur.messages.slice(before);
+    if (cur !== sess || sess.dc?.chat_id !== item.chat_id) { console.warn('discord: the chat changed during the turn; nothing is posted'); return; }
+    const fresh = sess.messages.slice(before);
     const err = fresh.find(m => m._error);
     const last = [...fresh].reverse().find(m => m.role === 'assistant' && String(m.content || '').trim());
     let text = last ? String(last.content).replace(/<think>[\s\S]*?<\/think>/g, '').trim() : '';

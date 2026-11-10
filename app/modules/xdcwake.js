@@ -6,11 +6,16 @@
    ===================================================================== */
 // go back to the chat the user was in (an unsaved new chat is not in the list, so put the object back)
 async function restoreChat(prev) {
-  if (!prev || prev === cur) return;
-  saveSession.flush?.();
-  if (sessions.some(x => x.id === prev.id)) { await openSession(prev.id); return; }
-  if (cur?.messages?.length) journalSession(cur);
-  cur = prev; tasks.items = prev.tasks || []; tasks.seq = prev.taskSeq || 0; renderTasks(); renderChat(); renderSessions(); ls.set('lastSession', prev.id);
+  if (prev && prev !== cur) {
+    saveSession.flush?.();
+    if (sessions.some(x => x.id === prev.id)) await openSession(prev.id);
+    else {
+      if (cur?.messages?.length) journalSession(cur);
+      cur = prev; tasks.items = prev.tasks || []; tasks.seq = prev.taskSeq || 0; renderTasks(); renderChat(); renderSessions(); ls.set('lastSession', prev.id);
+    }
+  }
+  // anything typed while a background turn ran goes to the chat it was typed in, now that it's back
+  if (typeof queue !== 'undefined' && queue.length) setTimeout(() => { if (queue.length && !running) { const next = queue.splice(0).join('\n\n'); updateQueueNote(); send(next); } }, 0);
 }
 const XWAKE = { q: [], busy: false, cur: null };
 function xdcRealtime(appId, obj) { const s = XDC.session; if (s && s.app.id === appId && s.rt) s.post({ t: 'realtime', data: Array.from(new TextEncoder().encode(JSON.stringify(obj))) }); }

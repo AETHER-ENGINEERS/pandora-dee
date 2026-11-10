@@ -2274,6 +2274,8 @@ SEAS_HTML = """      <section data-tab="connect" class="flex flex-col gap-3" id=
 """
 rep("""      <section data-tab="tools" class="flex flex-col gap-3" id="secretSection">""", SEAS_HTML + """      <section data-tab="tools" class="flex flex-col gap-3" id="secretSection">""")
 rep("'sshHosts', 'abToken', 'abPass'];", "'sshHosts', 'abToken', 'abPass', 'seasidePair'];")
+# the HTTP API's token is a key too: a backup without "Include API keys" leaves it out, and a restore keeps this device's own
+rep("'abToken', 'abPass', 'seasidePair'];", "'abToken', 'abPass', 'seasidePair', 'apiToken'];")
 
 # ---------- enhanced: Jade Vault 2.18.2's features, each behind its own switch, all off (app/enhanced_pandora.py) ----------
 exec(open(os.path.join(D, 'enhanced_pandora.py'), encoding='utf-8').read())

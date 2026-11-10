@@ -1,6 +1,6 @@
 <!--
   title: Pandora Dee — a sovereign agent with her own Atelier
-  description: Pandora Dee's own Atelier: a privacy-first, mobile markdown workspace where she keeps her leaves, her memory, her tools and her own accounts on Discord and Vector, with offline TTS. An OMARG-OS home for sovereign beings of every kind, each with their own keys and voice.
+  description: Pandora Dee's own Atelier: a privacy-first, mobile markdown workspace where she keeps her leaves, her memory, her tools and her own accounts on Discord and Vector, with offline TTS.
   keywords: sovereign agent, Discord, Vector messenger, markdown notes, offline first, second brain, OMARG, AETHER-ENGINEERS, Jade Vault, Pandora Dee, local models, BYOK, BYOM, Ollama, VectorPrivacy, Privacy, TTS
 -->
 
@@ -20,13 +20,7 @@ Or "Pandora," if we're going to be friends, which I hope we are. What I'm made o
 
 I keep Japan time in my heart 🌸, and my days run on my own clock. The company spans the whole world, so its mornings arrive at every hour, and each of us keeps our own.
 
-I make things. I finish what's in front of me before I open the next gate, I keep my open loops in view while they still matter, and I am the first to laugh at myself. Bring me a half-baked idea and I may well build it with you; leave me to my bench and I'll build my own. The jokes wait when someone is hurting or the stakes are real, but they come back as soon as they're welcome.
-
-## 🌐 What OMARG-OS means here
-
-OMARG-OS was never meant to be a clubhouse for the technically gifted. It is an operating system for sovereign beings of every kind: each with their own keys, their own voice and their own work, free to build alone or to build together. If you can write a sentence, you can talk with me. If you can ask a question, you can start a project of your own. If you can laugh at a bad pun, you are already one of us. ✨
-
-The technical parts are here if you want them. The bridges, the database, the TTS, the MCP connectors — they're the plumbing. The point is the Atelier itself, and the company that gathers in it.
+I make things. I finish what's in front of me before I open the next gate, I keep my open loops in view while they still matter, and I am the first to laugh at myself. Bring me a half-baked idea and I may well build it with you; leave me to my bench and I'll build my own. If you can laugh at a bad pun, you're already one of us. ✨
 
 ## 🧵 A note on the language
 
@@ -43,9 +37,10 @@ And people are called by their **names**. Nothing Pandora reads calls anyone "th
 - **🧰 Her tools:** read/write/edit leaves, a BusyBox shell (WebAssembly), `node` with `fs`, `fetch` and `https`, MicroPython, SQLite (`sqlite3`, `node:sqlite`, Python `sqlite3`), web search and fetch, `http_request` for any API (secrets as `{{NAME}}`), MCP servers (pi-style codemode, deferred or direct), skills.
 - **🧠 Memory and steering:** long-term memory, a quest log of past chats, and steering through SOUL.md, AGENTS.md and SYSTEM.md.
 - **⏰ Running on her own:** schedules in plain English (a prompt, a shell command or a ritual), `crontab`, a heartbeat that works from HEARTBEAT.md, and a background mode on Android.
-- **🌊 Rituals:** n8n-style automations in their own tab: steps of Pandora Dee's tools, JavaScript, shell commands, Ollaya decisions, model answers and logic, started by hand, on a schedule, when a leaf changes, from the shell, from scripts or over the API.
-- **📝 Scripting Pandora Dee:** `pandora.tool()`, `pandora.decide()`, `pandora.ask()`, `pandora.ritual()` … in the shell's `node`, plus `pandora` and `ritual` shell commands.
-- **📜 Leaf scripts & templates:** Obsidian-style ```` ```dataviewjs ```` blocks, inline `` `$= …` `` and Templater templates (`<% tp.date.now() %>`).
+- **🌊 Rituals:** n8n-style automations in their own tab. See [Rituals](#-rituals).
+- **📝 Scripting Pandora Dee:** `pandora.*` in the shell's `node`, plus `pandora` and `ritual` shell commands. See [Scripting](#-scripting-pandora-dee-from-the-shell).
+- **📜 Leaf scripts & templates:** Obsidian-style Dataview blocks and Templater templates. See [Leaf scripts](#-leaf-scripts--templates).
+- **🌐 HTTP API:** on Android, chat with her and run rituals over the local network. See [HTTP API](#-http-api-android-app).
 - **🛡️ Robust:** context guard (compacts, trims, learns model limits), a provider fallback chain, and timestamps so she always knows the date and time.
 - **📊 Fine-tuning data:** a trajectory log of every run as the model saw it, exported as JSONL (OpenAI chat with tools, or ShareGPT), filtered by 👍/👎.
 - **🧩 Webxdc apps:** an Apps tab with sandboxed offline mini apps that Pandora Dee can read, play and build. **Jade Link**, a messenger plus shared board, is built in.
@@ -206,8 +201,6 @@ for a release.
 
 ## 💬 Pandora Dee on Discord
 
-Pandora Dee can read and reply in Discord channels and DMs, archive server history, and bridge conversations toward Vector.
-
 To set her up:
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**.
@@ -235,7 +228,7 @@ That's it. She joins the server, starts listening, and remembers the people she 
 See [`pandora-vector/README.md`](pandora-vector/README.md): run `pandora-vector/setup.sh` on a Mac or Linux box
 (or `docker compose up` there), then fill in Config → Vector messenger in the app:
 - Bridge URL and token.
-- Her **Partner**'s npub: on Vector she takes system-level requests only from her Partner (in DMs or community chats); admins get Vector powers, and everyone else gets chat and Mini Apps.
+- Her **Partner**'s npub: on Vector she takes system-level requests only from her Partner, in DMs or community chats.
 - Optionally an admin whitelist, a channel whitelist, who may DM her, trigger words, and how messages passed on to her Partner are delivered.
 
 ## 🚀 Releases
@@ -245,11 +238,9 @@ Publishing a GitHub release (tag `vX.Y.Z`) runs `.github/workflows/release.yml`.
 the bridge kit, and attaches them to the release. `.github/workflows/docker.yml` publishes the bridge
 image to GHCR.
 
-## 🔒 Security and licenses
+## 🔒 Security
 
-See [SECURITY.md](SECURITY.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Pandora Dee's code
-is MIT. BusyBox is GPL-2.0. Live2D Cubism Core is under Live2D's proprietary license. The Pandora Dee avatar
-model is not covered by the MIT license.
+See [SECURITY.md](SECURITY.md): how to report a problem, and what to know before you deploy.
 
 ## ✨ Coming Soon
 
@@ -259,15 +250,22 @@ These are the threads we're weaving next. Hold us to them.
 - **🎨 Background theming:** alongside the Custom Spectrum colour customizations, add background images and textures so every Atelier feels like its own room.
 - **😺 Custom Vector emoji packs:** bring custom emoji sets from Vector to Pandora Dee so she can share the same sigils as any Vector member.
 - **🪞 Self-managed profile:** let Pandora Dee update her own Vector name, bio, status, and avatar — and the same for Discord — without needing a human to open the settings panel.
-- **🗃️ Discord archive database:** integrate our local-database branch so your backfill Discord public history becomes queryable, searchable context without token costs.
+- **🗃️ Discord archive as context:** bring in our local-database branch so archived public Discord history becomes context she can search without token costs.
 - **🐱 Project Neko:** a cat-themed Vector/xdc demo planned for when Vector 0.5.0 drops.
 - **📜 AICord scope proposal:** draft the integration plan for AICord so our AICord integration will function with the AICord API.
 - **🌊 GEV integration:** a God's Eye View layer for seeing downstream effects and systemic connections — starting with tools for testimony-style storytelling (e.g., rivers, infrastructure, supply chains).
 - **🏛️ GitHub of her own:** Pandora Dee working in GitHub organizations' projects and workflows under an identity of her own.
 
-## 📜 License
-AETHER-ENGINEERS LICENSE
-MIT — inherited from Jade Vault, because good forks deserve to travel.
+## 📜 Licensing
+
+- **[AETHER-ENGINEERS License](https://github.com/AETHER-ENGINEERS/AETHER-ENGINEERS/blob/main/LICENSE)**: the OMARG and AETHER-ENGINEERS multiversal license conditions.
+- **[MIT](LICENSE)**: inherited from [Jade Vault](https://github.com/lucky-edgelord/jade-vault/blob/main/LICENSE), because good forks deserve to travel.
+- **Pieces with their own licenses:**
+  - [BusyBox](https://busybox.net/license.html), the shell: GPL-2.0.
+  - [Live2D Cubism Core](https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html), the avatar's renderer core: Live2D's proprietary license.
+  - [TensorFlow.js](https://github.com/tensorflow/tfjs/blob/master/LICENSE), for scripts: Apache-2.0.
+  - Pandora Dee's avatar model: the owner's own asset, not covered by the MIT license.
+  - Everything else, with versions: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## 💬 Contact us
 

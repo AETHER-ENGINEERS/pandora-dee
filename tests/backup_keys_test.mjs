@@ -26,4 +26,4 @@ for (const k of ['apiToken', 'dcToken', 'vecToken', 'aicKey', 'embedKey', 'abTok
 
 // and the backup builder uses the list
 assert.match(html, /if \(!withKeys\) for \(const k of SECRET_KEYS\) delete settings\[k\]/);
-console.log(`backup_keys_test: ok (${secretKeys.size} settings kept out of backups without keys)`);
+console.log(`ALL PASS backup_keys_test (${secretKeys.size} settings kept out of backups without keys)`);

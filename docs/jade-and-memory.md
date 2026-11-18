@@ -1,10 +1,10 @@
-# Jade, memory, and skills
+# Pandora, memory, and skills
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 ## Working safely with the agent
 
-Jade can search, read, create, replace, and edit notes, execute scripts, access configured integrations, and run automations. Ask for inspection before changes when working with important data:
+Pandora can search, read, create, replace, and edit notes, execute scripts, access configured integrations, and run automations. Ask for inspection before changes when working with important data:
 
 > Search my project notes and propose a reorganization. Do not write files until I approve.
 
@@ -32,7 +32,7 @@ Under **Config → Memory → Long-term memory**, enable **Rank memories with BM
 - Recent journal text is added separately; use memory search to retrieve older journal content.
 - With BM25 disabled, the normal memory block is still budgeted (approximately 2,600 characters), so it does not necessarily include every stored fact.
 
-Save the setting, then ask about a topic represented in your memory bullets. For important facts, explicitly ask Jade to search/read the relevant source rather than assuming it is present in the current prompt.
+Save the setting, then ask about a topic represented in your memory bullets. For important facts, explicitly ask Pandora to search/read the relevant source rather than assuming it is present in the current prompt.
 
 ## Steering files
 

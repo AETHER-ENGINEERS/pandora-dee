@@ -1,11 +1,11 @@
 # Development and architecture
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 ## Requirements
 
 - Node.js **20+** and npm (CI uses Node 22).
-- Python **3.9+** (CI uses 3.12), plus `jade-discord/requirements.txt` for Discord bridge/tests. Python 3.13+ also needs the conditional `audioop-lts` requirement.
+- Python **3.9+** (CI uses 3.12), plus `pandora-discord/requirements.txt` for Discord bridge/tests. Python 3.13+ also needs the conditional `audioop-lts` requirement.
 - Playwright Chromium and its OS dependencies for browser tests.
 - JDK **17+** for native API tests and APK builds.
 - Bash and standard Unix tools; use Linux or WSL for the most direct build path.
@@ -30,8 +30,8 @@ The app is a generated HTML application, not a conventional React/Vite frontend 
 | `android/proj/` | APK resources and manifest template |
 | `android/build-apk.sh` | Java/dex/APK assembly and signing |
 | `apps/jade-link/` | Built-in mini app source |
-| `jade-vector/` | Vector agent patch, Python bridge, installer, Docker |
-| `jade-discord/` | discord.py bridge, Python requirements, installer, Docker, fake test server |
+| `pandora-vector/` | Vector agent patch, Python bridge, installer, Docker |
+| `pandora-discord/` | discord.py bridge, Python requirements, installer, Docker, fake test server |
 | `sqlite-wasm/` | SQLite build reference and C wrapper |
 | `tests/` | Browser, SQLite, Python, and native Java coverage |
 | `.github/workflows/` | CI, release asset building, bridge image publishing |
@@ -50,7 +50,7 @@ Inspect `app/build.py` to determine which fragment is actually inserted. `app/mo
 
 ## Install and build
 
-Run the following commands from the root of the Jade Vault 2.9.0 source directory:
+Run the following commands from the root of the Pandora Dee source directory:
 
 ```sh
 npm install
@@ -62,7 +62,7 @@ Use `npm install`; the repository does not include a root package lockfile. The 
 ### Build pipeline
 
 1. Package `apps/jade-link` as `dist/jade-link.xdc`.
-2. `app/build.py` reads the base page, applies transformations/inserts feature fragments and embedded assets, and writes `dist/jade-vault.html`.
+2. `app/build.py` reads the base page, applies transformations/inserts feature fragments and embedded assets, and writes `dist/pandora-dee.html`.
 3. Compile Tailwind into `dist/tw.css`.
 4. `app/tools/build_index.py` writes `android/proj/assets/index.html` with core rendering dependencies inlined.
 
@@ -74,18 +74,18 @@ The exact-match build deliberately fails with `MISSING`, `AMBIGUOUS`, or `RANGE 
 python3 -m http.server 8000 --bind 0.0.0.0 --directory dist
 ```
 
-Open `/jade-vault.html` on that server. There is no application backend to start for ordinary browser use. For the inlined page, serve `android/proj/assets` and open `/index.html`. Bind to loopback instead when you do not want LAN access; `0.0.0.0` is useful in containers/previews but exposes the server on available interfaces.
+Open `/pandora-dee.html` on that server. There is no application backend to start for ordinary browser use. For the inlined page, serve `android/proj/assets` and open `/index.html`. Bind to loopback instead when you do not want LAN access; `0.0.0.0` is useful in containers/previews but exposes the server on available interfaces.
 
 Provider/MCP CORS must permit the actual browser origin. A phone opening the page must use reachable service addresses, not the development computer's `localhost`. Stable ports/origins also preserve access to the same browser storage.
 
 ## Tests
 
-Build first. For the full 2.9.0 suite, install Discord's Python requirements in a virtual environment **outside the repository**, so it cannot accidentally be committed. Keep the environment active while running the tests, which invoke `python3`:
+Build first. For the full test suite, install Discord's Python requirements in a virtual environment **outside the repository**, so it cannot accidentally be committed. Keep the environment active while running the tests, which invoke `python3`:
 
 ```sh
 python3 -m venv "$HOME/.jade-vault-test-venv"
 . "$HOME/.jade-vault-test-venv/bin/activate"
-python3 -m pip install -r jade-discord/requirements.txt
+python3 -m pip install -r pandora-discord/requirements.txt
 npx playwright install chromium
 # On supported Linux hosts needing browser libraries:
 # npx playwright install --with-deps chromium

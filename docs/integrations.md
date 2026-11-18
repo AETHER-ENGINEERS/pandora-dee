@@ -1,12 +1,12 @@
 # MCP and HTTP integrations
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 External integrations can transmit notes, prompts, and credentials to another service. Configure only trusted endpoints and review what tools do before exposing them to Jade.
 
 ## MCP servers
 
-Jade uses **streamable HTTP** MCP. A browser cannot spawn a local stdio process, and legacy SSE transport is not supported. Run a suitable HTTP server/bridge separately when necessary.
+Pandora uses **streamable HTTP** MCP. A browser cannot spawn a local stdio process, and legacy SSE transport is not supported. Run a suitable HTTP server/bridge separately when necessary.
 
 Configuration lives at `/Pandora/mcp.json` in the virtual vault:
 

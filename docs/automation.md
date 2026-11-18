@@ -1,6 +1,6 @@
 # Rituals, schedules, and heartbeat
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 > Automations execute while the app is running. A closed browser, suspended tab, stopped Android process, or unavailable provider can delay/prevent work. Android background mode helps but does not provide server-grade scheduling guarantees.
 
@@ -80,7 +80,7 @@ Text fields can interpolate `{{ JavaScript }}`. A field consisting solely of one
 
 Expression evaluation has no network access and a five-second worker timeout. Actual JavaScript and tool steps have broader capabilities. Ritual execution is bounded to 5,000 steps, nested ritual depth 5, and per-script/shell time limits (default 60 seconds, capped at 600). Run records show step status, input/output previews, errors, logs, and timing; do not treat previews as complete file archives.
 
-Discord's tool is available in the 2.9.0 ritual editor's tool list/descriptions. Configure the connector before calling it; no Discord-specific step type is needed. `notify_owner` invoked in a Discord chat routes to the Discord inbox/notification policy. See [Discord permissions](discord.md#4-roles-tools-and-Partner-notifications).
+Discord's tool is available in the ritual editor's tool list/descriptions. Configure the connector before calling it; no Discord-specific step type is needed. `notify_owner` invoked in a Discord chat routes to the Discord inbox/notification policy. See [Discord permissions](discord.md#4-roles-tools-and-Partner-notifications).
 
 ### Triggers and entry points
 
@@ -117,4 +117,14 @@ Config's Heartbeat section periodically runs instructions from `/Pandora/HEARTBE
 
 A file containing only headings, comments, blanks, or empty checkboxes skips the model call. `HEARTBEAT_OK` is treated as a quiet acknowledgment; other replies are retained in the Heartbeat chat and notified. Heartbeat can use a separate provider/model. It is a periodic agent check, not an exact-time alarm.
 
-Sources: [flows.js](../app/modules/flows.js), [cron.js](../app/modules/cron.js), [heartbeat.js](../app/modules/heartbeat.js).
+## Curiosity wake-ups
+
+With curiosity on (Config → World → Curiosity), Pandora wakes on her own at random times within the range, hours and daily cap you set, and chooses something to do: explore, reflect, connect notes, practise a skill, prepare something for you, or leave one good question. `/Pandora/CURIOSITY.md` is where you tell her what you'd like looked into and what to keep away from. The engine suggests an activity by learning progress and her track record; she may choose another, or rest. The reward is measured from what actually changed in the vault.
+
+When she reports, she names the wake-up's **subject**. Wake-ups on the same subject within two hours are one thread:
+
+- The engine keeps **one cluster entry** for the thread under `/Pandora/Sparks/clusters/`, each wake-up a sub-item, and tells her about it at her next wake-up, so she builds on the thread instead of writing another note about it.
+- A **third wake-up in a row** on one subject halts the thread, whatever the clustering did: it's filed under `/Pandora/Sparks/loop-halts/`, she leaves one question for you in `/Pandora/Curiosity/Questions.md`, and the subject rests for 12 hours.
+- She can tag a wake-up `thread: "same"` (it continues the last one, in other words) or `"new"` (it only looks like it), and the engine remembers where one thread ends and the next begins.
+
+Sources: [flows.js](../app/modules/flows.js), [cron.js](../app/modules/cron.js), [heartbeat.js](../app/modules/heartbeat.js), [curiosity.js](../app/modules/curiosity.js), [spark_clusters.py](../app/spark_clusters.py).

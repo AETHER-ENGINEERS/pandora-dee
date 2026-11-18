@@ -1,6 +1,6 @@
 # Android HTTP API
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 This is the optional **inbound Android app API**, not a browser-hosting API, model-provider API, or Vector/Discord bridge. There is no dedicated `/v1/discord` route in 2.9.0. It runs the normal Pandora chat/rituals inside the app.
 

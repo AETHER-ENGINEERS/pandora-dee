@@ -1,6 +1,6 @@
 # Build the Android APK
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md) · [Development guide](development.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md) · [Development guide](development.md)
 
 These instructions create Jade Vault's Android app from this repository. The current build does **not** use Gradle or require the Android SDK/Android Studio: it compiles Java against repository stubs, converts classes to dex, assembles with apktool, and signs the result.
 
@@ -62,7 +62,7 @@ bash android/build-apk.sh
 
 | Path | Purpose |
 | --- | --- |
-| `dist/jade-vault.html` | Generated browser app |
+| `dist/pandora-dee.html` | Generated browser app |
 | `dist/tw.css` | Compiled Tailwind CSS |
 | `dist/jade-link.xdc` | Built-in mini-app package |
 | `android/proj/assets/index.html` | Generated inlined page loaded by the Android WebView |
@@ -89,12 +89,12 @@ Do not remove checksum verification to work around a download failure. Confirm n
 
 ## 3. Test before distribution
 
-The build does not automatically run tests. Discord Python dependencies are needed for the full 2.9.0 suite and the separately hosted bridge, **not** for compiling the APK UI itself. Rebuilding from 2.9.0 includes the Discord connector; it does not bundle or start the Python bridge on the phone. From the repository root:
+The build does not automatically run tests. Discord Python dependencies are needed for the full test suite and the separately hosted bridge, **not** for compiling the APK UI itself. Rebuilding from 2.9.0 includes the Discord connector; it does not bundle or start the Python bridge on the phone. From the repository root:
 
 ```sh
 python3 -m venv "$HOME/.jade-vault-test-venv"
 . "$HOME/.jade-vault-test-venv/bin/activate"
-python3 -m pip install -r jade-discord/requirements.txt
+python3 -m pip install -r pandora-discord/requirements.txt
 npx playwright install chromium
 npm test
 ```

@@ -1,12 +1,12 @@
 # Notes and knowledge management
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 ## Files and editing
 
 Notes are `.md` or `.markdown` files in the virtual filesystem. Use Notes to create/open a file, then choose **Edit**, **Read**, or **Split**. Check the save indicator before navigating away. Markdown formatting buttons help insert headings, links, lists, tasks, tags, quotes, and code.
 
-This is an in-app filesystem, not automatic synchronization with an Obsidian folder or your device's ordinary files. Export or back up before migrating. The shell and Jade's tools operate on the same vault.
+This is an in-app filesystem, not automatic synchronization with an Obsidian folder or your device's ordinary files. Export or back up before migrating. The shell and Pandora's tools operate on the same vault.
 
 ## Markdown quick reference
 
@@ -66,7 +66,7 @@ Type `[[` to get suggestions. Existing links are distinguished from missing link
 - Open **Links** on a note for backlinks, outgoing links, and unresolved targets.
 - The graph shows notes as nodes and links as edges; missing notes are highlighted. Tap to open, drag to pan, and pinch/scroll to zoom. Local graph focuses on the neighborhood around a note.
 
-`.git`, `node_modules`, `.trash`, and Jade's skill files are excluded from normal note indexing. These exclusions are indexing behavior, not a security boundary.
+`.git`, `node_modules`, `.trash`, and Pandora's skill files are excluded from normal note indexing. These exclusions are indexing behavior, not a security boundary.
 
 ## Attachments
 

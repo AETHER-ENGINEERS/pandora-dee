@@ -1,6 +1,6 @@
 # Note scripts and templates
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Jade Vault implements Dataview- and Templater-style features. Enable **Run JavaScript in notes** in Config → Tools → Note scripts & templates to render live script blocks (enabled by default). These are compatibility features, not full installations of the Obsidian plugins; do not assume every plugin API is supported.
 
@@ -66,7 +66,7 @@ Supported features include:
 
 ## Permission model
 
-By default, note scripts can read the vault but cannot make network requests or persist file changes. Calling Jade's tools requires **Config → Tools → Note scripts & templates → Let note scripts and templates call Jade's tools**, which is off by default. Enabling it widens the power of code embedded in notes, including imported notes: review the source before granting it. Direct script network access remains disabled, but permitted tool calls can perform network requests or change files. The read-only script setting does not make those tool effects read-only.
+By default, note scripts can read the vault but cannot make network requests or persist file changes. Calling Pandora's tools requires **Config → Tools → Note scripts & templates → Let note scripts and templates call Pandora's tools**, which is off by default. Enabling it widens the power of code embedded in notes, including imported notes: review the source before granting it. Direct script network access remains disabled, but permitted tool calls can perform network requests or change files. The read-only script setting does not make those tool effects read-only.
 
 Rendering can rerun note scripts, so avoid non-idempotent tool calls from a computed note. Use a manually run flow or shell script for intentional writes and external effects.
 

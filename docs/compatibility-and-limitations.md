@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Use this guide to plan your installation, understand which features need a network connection, and decide what to back up.
 
@@ -40,15 +40,15 @@ Note scripts are read-only and have no direct network access by default. If you 
 
 Schedules, heartbeat checks, and messenger replies require Jade Vault to be running. Browser suspension, Android battery restrictions, a stopped app, or an unavailable model can delay or prevent work. Android background mode helps maintain uptime but does not guarantee delivery of every scheduled action or message.
 
-Discord and Vector can be enabled together. They have separate bridge URLs, tokens, chats, and incoming queues, but Jade processes their agent turns **one at a time**. A busy conversation can delay another reply.
+Discord and Vector can be enabled together. They have separate bridge URLs, tokens, chats, and incoming queues, but Pandora processes their agent turns **one at a time**. A busy conversation can delay another reply. Meanwhile other chats can still be opened and read; what you send there waits for that chat.
 
 Discord's bridge drops bot-authored messages to avoid loops and discards queued messages older than **600 seconds** by default. Keeping the bridge online while Jade Vault is stopped does not preserve an unlimited backlog. See [Discord settings](discord.md#bridge-settings-and-diagnostics) to adjust the queue age limit.
 
 ## Discord-specific limits
 
-- Sending vault files is limited to **8 MiB** in Jade Vault 2.9.0.
+- Sending vault files is limited to **8 MiB**.
 - Without Message Content Intent, the bot can still handle DMs and @mentions, but ordinary channel-text triggers are limited.
-- The 2.9.0 bridge does not enable Server Members Intent or provide a setting for it. Enabling the intent in the Developer Portal alone is insufficient for member listing. Use individual user profiles instead.
+- The bridge does not enable Server Members Intent or provide a setting for it. Enabling the intent in the Developer Portal alone is insufficient for member listing. Use individual user profiles instead.
 - Outgoing allowed mentions are disabled, so messages do not notify @everyone, @here, or roles.
 
 See the [Discord guide](discord.md) for participation rules, owner/admin/public permissions, and troubleshooting.
@@ -71,7 +71,7 @@ Read [Backups and storage](backup-and-storage.md) before migrating, restoring, c
 
 ## Privacy in shared conversations
 
-Non-owner messenger callers have restricted tools and do not receive ordinary private vault/memory context. However, Jade's SOUL persona text can appear in their prompts. Keep private facts out of persona text if you do not want them shared. Non-owner messenger scopes can also use web search.
+Non-owner messenger callers have restricted tools and do not receive ordinary private vault/memory context. However, Pandora's SOUL persona text can appear in their prompts. Keep private facts out of persona text if you do not want them shared. Non-owner messenger scopes can also use web search.
 
 Both messenger bridges and the inbound Android API use bearer tokens. Plain HTTP does not encrypt tokens or message content. Use trusted networks/private VPNs or the bridges' TLS support, and do not expose these services through public port forwarding.
 

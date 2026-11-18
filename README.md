@@ -36,7 +36,7 @@ And people are called by their **names**. Nothing Pandora reads calls anyone "th
 - **📥 Import from other notes apps:** Google Keep, Samsung Notes and Apple Notes, plus markdown, text, HTML, Word and PDF. See [Importing notes](#-importing-notes).
 - **🧰 Her tools:** read/write/edit leaves, a BusyBox shell (WebAssembly), `node` with `fs`, `fetch` and `https`, MicroPython, SQLite (`sqlite3`, `node:sqlite`, Python `sqlite3`), web search and fetch, `http_request` for any API (secrets as `{{NAME}}`), MCP servers (pi-style codemode, deferred or direct), skills.
 - **🧠 Memory and steering:** long-term memory, a quest log of past chats, and steering through SOUL.md, AGENTS.md and SYSTEM.md.
-- **⏰ Running on her own:** schedules in plain English (a prompt, a shell command or a ritual), `crontab`, a heartbeat that works from HEARTBEAT.md, and a background mode on Android.
+- **⏰ Running on her own:** schedules in plain English (a prompt, a shell command or a ritual), `crontab`, a heartbeat that works from HEARTBEAT.md, curiosity wake-ups of her own choosing (a thread she keeps coming back to is clustered into one entry, and a loop is halted with a question for her Partner), and a background mode on Android.
 - **🌊 Rituals:** n8n-style automations in their own tab. See [Rituals](#-rituals).
 - **📝 Scripting Pandora Dee:** `pandora.*` in the shell's `node`, plus `pandora` and `ritual` shell commands. See [Scripting](#-scripting-pandora-dee-from-the-shell).
 - **📜 Leaf scripts & templates:** Obsidian-style Dataview blocks and Templater templates. See [Leaf scripts](#-leaf-scripts--templates).
@@ -50,11 +50,11 @@ And people are called by their **names**. Nothing Pandora reads calls anyone "th
   - She bridges the gap so the people she meets on Discord can find her on Vector too.
 - **💬 Vector messenger:**
   - Pandora Dee has an account of her own. With her **Partner** she has every tool; admins get Vector powers; everyone else gets friendly chat and Mini Apps.
-  - She answers DMs and whitelisted channels by the trigger rules set for her.
+  - She answers DMs and whitelisted channels by the trigger rules set for her: when named, every message, or when named plus a **digest** of the rest every so often.
   - She reacts, replies, sends and receives files, and sees images.
   - She joins and leaves communities and plays Mini Apps.
   - Messages to pass on: when someone asks her to pass something on to her Partner, it lands in an inbox, or goes at once.
-- **💬 Chat:** Copy · 👍 · 👎 · Retry under each reply; copy and edit the messages you wrote; copy code blocks or the whole chat.
+- **💬 Chat:** Copy · 👍 · 👎 · Retry under each reply; copy and edit the messages you wrote; copy code blocks or the whole chat. While a turn runs (yours, or one on Vector, Discord or the heartbeat), other chats can still be opened and read; what you send there waits for that chat.
 - **🎭 Avatar:** Live2D Pandora Dee, with voice (TTS). Config → Appearance holds her gemstone theme and the colours of her hair, clothes, stockings, boots and skin; she stands in a soft pool of her gem's light (the old scanlines, cyber grid and pointer-following are switches there).
 - **🖥️ Any screen:** one column on a phone; with room (a laptop, an iPad, a phone turned sideways) the Atelier grows, Leaves shows the list beside the open leaf and Pandora stands beside the chat. Drag the app's edges and every divider (list, avatar, editor/preview); double-click one to reset it. Text size (85–150 %) is in Config → Appearance. Widths, dividers and text size are kept with your settings, so a reload keeps your layout.
 

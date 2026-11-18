@@ -1,6 +1,6 @@
-# Jade Vault documentation
+# Pandora Dee documentation
 
-Jade Vault is a device-local Markdown vault with an AI assistant, browser-based scripting, automations, and an Android wrapper. These guides target **Jade Vault 2.9.0**; UI labels may vary slightly between releases. Config has Model, Memory, Tools, Connect, and App tabs, plus a search box.
+Pandora Dee is a device-local Markdown Atelier with an AI companion, browser-based scripting, automations, and an Android wrapper, grown from Jade Vault. These guides follow **Pandora Dee 2.10.7**; UI labels may vary slightly between releases. Config has Model, Memory, Tools, Connect, and App tabs, plus a search box.
 
 ## Pandora Dee's words
 
@@ -24,7 +24,7 @@ Jade Vault's names keep working: `jade.*`, the `jade` and `flow` commands, `/v1/
 
 ## Version and compatibility
 
-These guides cover **Jade Vault 2.9.0**. For platform requirements, network access, background operation, and backup coverage, see [Compatibility and limitations](compatibility-and-limitations.md).
+These guides cover **Pandora Dee 2.10.7**. They began as Jade Vault 2.9.0's, and most of that still applies as written. What's newer is in the [CHANGELOG](../CHANGELOG.md); the larger pieces since 2.9.0 are the People layer and the Vault Tree, chats that can be read while a turn runs, Vector's [digest mode](vector.md#digest-mode), and curiosity's [thread clustering and loop halt](automation.md#curiosity-wake-ups). For platform requirements, network access, background operation, and backup coverage, see [Compatibility and limitations](compatibility-and-limitations.md).
 
 ## Start here
 
@@ -41,7 +41,7 @@ These guides cover **Jade Vault 2.9.0**. For platform requirements, network acce
 | [Compatibility and limitations](compatibility-and-limitations.md) | Platform requirements, network access, background work, backup coverage |
 | [Configuration and providers](configuration.md) | Ollama, cloud providers, llama.cpp, AICord, fallbacks, secrets |
 | [Notes and knowledge management](notes.md) | Markdown, links, tags, search, graph, images, attachments |
-| [Jade, memory, and skills](jade-and-memory.md) | Chat, tools, steering files, journal, skills, context management |
+| [Pandora, memory, and skills](jade-and-memory.md) | Chat, tools, steering files, journal, skills, context management |
 | [Shell and scripting](scripting.md) | BusyBox, JavaScript bridge, MicroPython, SQLite, TensorFlow.js |
 | [Note scripts and templates](note-scripts-and-templates.md) | Dataview-style queries, inline expressions, Templater syntax |
 | [Rituals and scheduling](automation.md) | Ritual JSON reference, expressions, schedules, crontab, heartbeat |
@@ -67,7 +67,7 @@ These guides cover **Jade Vault 2.9.0**. For platform requirements, network acce
 - [Project README](../README.md), [changelog](../CHANGELOG.md), and [version](../VERSION).
 - [Browser deployment README](README.md) and [browser application](index.html).
 - [Security policy](../SECURITY.md), [license](../LICENSE), and [third-party notices](../THIRD_PARTY_NOTICES.md).
-- [Vector bridge reference](../jade-vector/README.md).
+- [Vector bridge reference](../pandora-vector/README.md).
 - [Jade Link protocol](../apps/jade-link/README.md).
 - [SQLite WebAssembly build reference](../sqlite-wasm/README.md).
 

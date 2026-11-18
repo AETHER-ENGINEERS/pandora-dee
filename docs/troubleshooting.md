@@ -1,6 +1,6 @@
 # Troubleshooting
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Before clearing storage, reinstalling, or restoring: **export your current data**. Record app version, platform, provider/model, and the exact error without exposing tokens or private notes.
 
@@ -49,7 +49,7 @@ See [scripting](scripting.md) and [note scripts/templates](note-scripts-and-temp
 - Check device clock/timezone, trigger configuration, enabled state, and catch-up settings.
 - Heartbeat silently skips an effectively empty HEARTBEAT file or acknowledges with `HEARTBEAT_OK`.
 - Inspect flow run details and `/Pandora/Logs/cron.log` for command/flow schedules.
-- “Jade is busy” can mean an agent-containing flow was called during another chat turn. Launch it manually or later.
+- “Pandora is busy” can mean an agent-containing flow was called during another chat turn. Launch it manually or later.
 - Expression errors/timeouts: validate JavaScript and available `$json` shape; inspect the previous step's output.
 - Continued errors produce `{error:...}` rather than the expected success object; handle that explicitly.
 - Repeated writes/messages may come from retries or self-triggering note flows. Disable the trigger while debugging.
@@ -62,7 +62,7 @@ See [automation](automation.md).
 
 **Vector:** confirm bridge process/container, reachable URL/token, dedicated bot key, owner npub, DM/channel/trigger policy, and that Jade Vault is running. The bridge can stay online without the app generating replies. Protect logs that print the token.
 
-**Discord:** confirm app/source version 2.9.0, bridge URL ending in `/mcp`, bridge bearer token (not the bot token), numeric owner/admin IDs, channel whitelist, and trigger/DM settings. Missing Message Content Intent limits ordinary channel text while DMs/@mentions can still work. Messages older than the default ten-minute bridge cutoff are dropped. A Vector turn can delay a Discord turn because agent work is serialized. See the [Discord troubleshooting table](discord.md#troubleshooting), including the member-intent limitation.
+**Discord:** confirm app/source version 2.9.0 or later, bridge URL ending in `/mcp`, bridge bearer token (not the bot token), numeric owner/admin IDs, channel whitelist, and trigger/DM settings. Missing Message Content Intent limits ordinary channel text while DMs/@mentions can still work. Messages older than the default ten-minute bridge cutoff are dropped. A Vector turn can delay a Discord turn because agent work is serialized. See the [Discord troubleshooting table](discord.md#troubleshooting), including the member-intent limitation.
 
 **HTTP request tool:** inspect status/body, method and body compatibility, secret names, CORS, and timeout. GET/HEAD cannot carry request bodies. A remote API may receive a write even if the client later times out; check before retrying.
 
@@ -79,7 +79,7 @@ See [integrations](integrations.md), [Vector](vector.md), [Discord](discord.md),
 | Missing generated test pages | Run `npm run build` before tests |
 | Chromium executable missing | Run `npx playwright install chromium` |
 | Missing Linux browser libraries | On supported systems use `npx playwright install --with-deps chromium` |
-| Discord tests cannot import discord.py/audioop | Activate the test virtual environment and install `jade-discord/requirements.txt`; see [development setup](development.md#tests) |
+| Discord tests cannot import discord.py/audioop | Activate the test virtual environment and install `pandora-discord/requirements.txt`; see [development setup](development.md#tests) |
 | Java API test fails to launch | Install full JDK 17+, verify `java`/`javac` PATH |
 | Tests interfere with one another | Do not run multiple runners concurrently: each resets `tests/.work` |
 | All-suite run slow | Run a specific suite via `node tests/run.mjs flows_test`, then broaden coverage |

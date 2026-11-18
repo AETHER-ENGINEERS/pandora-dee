@@ -1,6 +1,6 @@
 # Configuration and model providers
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Use Config's search box if a section is not visible in the selected tab. Keep credentials in the designated settings fields, not in chat or notes.
 
@@ -29,16 +29,16 @@ Do not expose an unauthenticated model endpoint to the public internet. An HTTPS
 
 ## Fallbacks and model capabilities
 
-The configured primary provider is tried first, then the fallback providers in order. Jade remembers model selections per provider and can switch after connection/run failures. It checks for recovery of the primary before later prompts.
+The configured primary provider is tried first, then the fallback providers in order. Pandora remembers model selections per provider and can switch after connection/run failures. It checks for recovery of the primary before later prompts.
 
 - Configure credentials and a working model for every fallback.
 - Review data policy and cost for **every** provider in the chain: failover can send context to a different service.
 - Tool calling, image input, output quality, and context size depend on the selected model/provider.
 - Context guard can compact or trim history and learn limits; it does not make a small model's context unlimited.
 
-## Jade's gemstone themes
+## Gemstone themes
 
-Open Config → Appearance → Pandora's colors, or click the gemstone label above the avatar. Choose from ten gemstone palettes—Jade, Ruby, Amethyst, Gold, Sapphire, Diamond, Rose Gold, Emerald, Obsidian, and Quartz—or use **Spectrum** to pick any accent color. **Gradient** lets you choose two colors and a vertical, horizontal, or diagonal blend. Themes recolor Jade's green accents and coordinate the app highlights.
+Open Config → Appearance → Pandora's colors, or click the gemstone label above the avatar. Choose from ten gemstone palettes—Jade, Ruby, Amethyst, Gold, Sapphire, Diamond, Rose Gold, Emerald, Obsidian, and Quartz—or use **Spectrum** to pick any accent color. **Gradient** lets you choose two colors and a vertical, horizontal, or diagonal blend. Themes recolor the app's green accents and coordinate the app highlights.
 
 Under **Customize Pandora's appearance**, hair, clothes, stockings, and boots can each keep their original colors, use a Spectrum color, or use an independent two-color gradient. Skin offers natural tones (Porcelain, Fair, Light, Medium, Tan, and Deep), Spectrum color picking, or a gradient. The color changes preserve shading and texture detail. Each selection is saved with app settings.
 

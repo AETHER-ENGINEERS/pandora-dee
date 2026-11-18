@@ -1,6 +1,6 @@
 # Discord bridge and connector
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Connect Pandora to Discord to answer DMs and channel messages, react, share files, and take messages for you. Discord support requires Jade Vault **2.8.0 or later** and a bridge running on a separate computer.
 
@@ -22,7 +22,7 @@ Two different secrets are involved:
 
 | Credential | Stored/used where | Purpose |
 | --- | --- | --- |
-| Discord bot token | Bridge host; `~/.jade-discord/bot_token` by default | Logs the bot into Discord |
+| Discord bot token | Bridge host; `~/.pandora-discord/bot_token` by default | Logs the bot into Discord |
 | Bridge bearer token | Bridge state plus Jade Vault Config | Authorizes access to the bridge's HTTP/MCP service |
 
 Never paste the Discord bot token into Pandora's chat or the app's Bridge token field. Keep bot/bridge tokens separate from model keys, Vector bridge tokens, and Android API tokens.
@@ -41,22 +41,22 @@ Discord's server/channel permission system is additional to Pandora's app-level 
 
 ## 2. Install the bridge
 
-Run these commands on the computer hosting the bridge, from a repository checkout containing `jade-discord/`.
+Run these commands on the computer hosting the bridge, from a repository checkout containing `pandora-discord/`.
 
 ### Automatic setup: macOS/Linux
 
 ```sh
-cd jade-discord
+cd pandora-discord
 ./setup.sh
 ```
 
 The script requires Python 3.9+, creates a private virtual environment under `~/.jade-discord`, installs the requirements, prompts for the bot token, and registers a launchd or systemd user service. On Debian/Ubuntu you may need the `python3-venv` OS package.
 
-It prints the Bridge URL/token; treat terminal output and logs as private. `./setup.sh --no-service` installs without registering a service; run `~/.jade-discord/run.sh` yourself. `./setup.sh --uninstall` removes the service but **keeps tokens/state**. `JADE_DISCORD_HOME` can change the state directory.
+It prints the Bridge URL/token; treat terminal output and logs as private. `./setup.sh --no-service` installs without registering a service; run `~/.pandora-discord/run.sh` yourself. `./setup.sh --uninstall` removes the service but **keeps tokens/state**. `JADE_DISCORD_HOME` can change the state directory.
 
 ### Manual setup
 
-From `jade-discord/`, in a trusted terminal:
+From `pandora-discord/`, in a trusted terminal:
 
 ```sh
 python3 -m venv "$HOME/.jade-discord-manual-venv"
@@ -70,7 +70,7 @@ python3 jade_discord_bridge.py
 
 ### Docker Compose
 
-From `jade-discord/`:
+From `pandora-discord/`:
 
 ```sh
 docker compose build
@@ -87,7 +87,7 @@ The source provides a local Dockerfile/Compose image named `jade-discord:latest`
 
 ## 3. Connect the app
 
-In the **2.9.0 app**, open Config → Connect → **Discord (Pandora as a bot)**, or type `/discord` in the app chat.
+In the app, open Config → Connect → **Discord (Pandora as a bot)**, or type `/discord` in the app chat.
 
 1. Set Bridge URL, for example `http://192.168.1.20:8788/mcp`.
 2. Set the **bridge bearer token** printed by the bridge.
@@ -123,9 +123,9 @@ The `discord` tool provides send/reply, typing, reaction, edit/delete, read/prof
 - `notify_owner` in a Discord chat uses `/Pandora/Discord Inbox.md`, not Vector's inbox.
 - Notification settings control inbox-only versus immediate Partner notification/DM behavior; urgent requests are handled according to that policy.
 - Attachments saved to the vault use `/attachments/discord/<date>/...` by default. Image interpretation depends on a vision-capable model and image settings.
-- Jade Vault 2.9.0 limits outgoing vault file sends to **8 MiB**.
+- Outgoing vault file sends are limited to **8 MiB**.
 
-**Member-listing limitation:** the 2.9.0 bridge does not enable Server Members Intent and has no setting to turn it on. Enabling the intent in the Developer Portal alone is insufficient for member listing. Use individual user profiles instead; granting broader Discord permissions does not resolve this limitation.
+**Member-listing limitation:** the bridge does not enable Server Members Intent and has no setting to turn it on. Enabling the intent in the Developer Portal alone is insufficient for member listing. Use individual user profiles instead; granting broader Discord permissions does not resolve this limitation.
 
 ## 5. Running alongside Vector
 
@@ -166,7 +166,7 @@ This bridge uses HTTP MCP at `/mcp` (POST for requests), **not** Android's GET-o
 
 | Symptom | Check |
 | --- | --- |
-| No Discord settings | Confirm the installed app/source is 2.9.0, rebuild web assets before APK assembly |
+| No Discord settings | Confirm the installed app/source is 2.9.0 or later, rebuild web assets before APK assembly |
 | HTTP 401 | Correct bridge token, not bot token or Vector token |
 | Bridge online, bot not ready | Bot token validity, Gateway access, bridge error/log output |
 | DMs work but channel text does not | Message Content Intent, channel permissions/whitelist, trigger rules |

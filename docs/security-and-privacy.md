@@ -1,6 +1,6 @@
 # Security, privacy, and licensing
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 Read the project's [security policy](../SECURITY.md) for vulnerability reporting. Report security issues privately through GitHub's Security → Report a vulnerability rather than a public issue.
 
@@ -31,7 +31,7 @@ Provider keys and integration tokens are kept in app storage. Do not place secre
 - Shell/JavaScript/Python/SQLite execute in browser workers/WebAssembly on virtual files, not host processes.
 - A worker can still alter vault data, call permitted tools, make network requests, and access configured secrets in supported script environments.
 - Note scripts are read-only/no-network by default. Enabling tool calls from note scripts makes imported executable notes more powerful.
-- Web pages, messages, attachments, app updates, and external tool results can contain malicious instructions. Ask Jade to treat them as data; do not rely on prompting alone as an access-control boundary.
+- Web pages, messages, attachments, app updates, and external tool results can contain malicious instructions. Ask Pandora to treat them as data; do not rely on prompting alone as an access-control boundary.
 - Review destructive tools and external side effects. Back up before bulk changes and test on noncritical data.
 
 ## Exposed services
@@ -44,7 +44,7 @@ Vector and Discord callers have owner/admin/public tool restrictions checked at 
 
 ## Webxdc isolation
 
-Mini apps run in sandboxed frames with an opaque origin and restricted network CSP. They do not directly access the vault. Their updates can still cause separately authorized Jade actions; inspect protocols/code and treat payloads as untrusted content.
+Mini apps run in sandboxed frames with an opaque origin and restricted network CSP. They do not directly access the vault. Their updates can still cause separately authorized Pandora actions; inspect protocols/code and treat payloads as untrusted content.
 
 ## Android considerations
 
@@ -52,4 +52,4 @@ Keep Android and its WebView updated. Grant notification/background/battery perm
 
 ## Licenses
 
-The Jade Vault project code is [MIT](../LICENSE), but bundled components have separate terms. BusyBox is GPL-2.0, Live2D Cubism Core uses a proprietary license, and the Jade avatar model is not covered by the project's MIT license. Review [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and component licenses before redistribution or commercial packaging.
+The Jade Vault project code is [MIT](../LICENSE), but bundled components have separate terms. BusyBox is GPL-2.0, Live2D Cubism Core uses a proprietary license, and the Jade avatar model ("jadecat") is not covered by the project's MIT license. Review [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and component licenses before redistribution or commercial packaging.

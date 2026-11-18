@@ -1,6 +1,6 @@
 # Shell and scripting
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 All examples on this page run **inside Jade Vault**, not in a host terminal. The app exposes a virtual filesystem backed by device storage. It does not provide unrestricted host OS access.
 
@@ -63,7 +63,7 @@ console.log(summary);
 
 This example sends the inbox content to the selected provider. Use deterministic code instead if no model request is needed.
 
-In 2.9.0, the enabled Discord connector also exposes the `discord` tool to scripts and to a ritual's Tool step. Script tool calls are checked against both Vector and Discord role guards; `pandora.tool()` is not a way to bypass a messenger caller's permissions. See [Discord](discord.md) for allowed actions and target rules.
+The enabled Discord connector also exposes the `discord` tool to scripts and to a ritual's Tool step. Script tool calls are checked against both Vector and Discord role guards; `pandora.tool()` is not a way to bypass a messenger caller's permissions. See [Discord](discord.md) for allowed actions and target rules.
 
 Shell equivalents include (the named `Daily digest` ritual must already exist):
 

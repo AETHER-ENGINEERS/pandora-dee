@@ -1,15 +1,15 @@
 # Deployment and releases
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 ## Browser deployment
 
-From the root of the Jade Vault 2.9.0 source directory, build with `npm install` followed by `npm run build`. There are two relevant generated pages:
+From the root of the Pandora Dee source directory, build with `npm install` followed by `npm run build`. There are two relevant generated pages:
 
-- `dist/jade-vault.html`: browser/release page; some dependencies are externally loaded.
+- `dist/pandora-dee.html`: browser/release page; some dependencies are externally loaded.
 - `android/proj/assets/index.html`: core rendering dependencies inlined, also suitable as a static-hosted page.
 
-Serve the chosen page from a static host. No Jade application backend is required; model servers, MCP services, and the Vector/Discord bridges are separate systems. HTTPS is recommended, but HTTPS pages cannot generally call plain HTTP model/bridge endpoints because of mixed-content rules. Plan compatible URLs/TLS/CORS instead of weakening browser security.
+Serve the chosen page from a static host. No Pandora application backend is required; model servers, MCP services, and the Vector/Discord bridges are separate systems. HTTPS is recommended, but HTTPS pages cannot generally call plain HTTP model/bridge endpoints because of mixed-content rules. Plan compatible URLs/TLS/CORS instead of weakening browser security.
 
 ### GitHub Pages document root
 

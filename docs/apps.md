@@ -1,12 +1,12 @@
 # Apps and Jade Link
 
-**Jade Vault 2.9.0** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
 
 ## Webxdc mini apps
 
 An `.xdc` file is a ZIP archive containing `index.html` and optional assets such as `manifest.toml` and `icon.png`. Jade Vault runs these offline mini apps in sandboxed frames. Apps exchange ordered updates through `window.webxdc`, rather than directly reading your notes or making network requests.
 
-The Apps tab installs/opens apps. Jade's `apps` tool supports:
+The Apps tab installs/opens apps. Pandora's `apps` tool supports:
 
 | Action | Purpose |
 | --- | --- |
@@ -30,7 +30,7 @@ Message payload:
 {"type":"msg","id":"message-1","text":"Please review this task."}
 ```
 
-Jade can combine a reply and board action:
+Pandora can combine a reply and board action:
 
 ```json
 {
@@ -60,7 +60,7 @@ The web build runs this command for the built-in Jade Link package. For another 
 
 ## Storage and security
 
-Apps use an opaque origin and restrictive CSP, with no direct vault access. This isolates app code, but Jade responding to app updates is a separate agent action; treat app messages as untrusted input.
+Apps use an opaque origin and restrictive CSP, with no direct vault access. This isolates app code, but Pandora responding to app updates is a separate agent action; treat app messages as untrusted input.
 
 Installed app records and update streams live in the separate `jade-xdc` IndexedDB database. An exported `.xdc` is an app package, **not necessarily an archive of its update history**. The ordinary full backup does not dump this database; do not assume it preserves a board or messenger history. See [backup coverage](backup-and-storage.md).
 

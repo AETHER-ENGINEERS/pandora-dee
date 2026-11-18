@@ -2282,6 +2282,8 @@ exec(open(os.path.join(D, 'enhanced_pandora.py'), encoding='utf-8').read())
 exec(open(os.path.join(D, 'people_layer.py'), encoding='utf-8').read())   # names, not ranks: last, on the finished page
 exec(open(os.path.join(D, 'vault_tree.py'), encoding='utf-8').read())     # a new chat is a new branch
 exec(open(os.path.join(D, 'bridge_rooms.py'), encoding='utf-8').read())   # bridges keep to their rooms
+exec(open(os.path.join(D, 'chat_peek.py'), encoding='utf-8').read())      # read another chat while a turn runs
+exec(open(os.path.join(D, 'search_hint.py'), encoding='utf-8').read())    # web_search says why it failed
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

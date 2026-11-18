@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.10.6
+- **Chats can be read while a turn runs.** The chat list used to ignore clicks until a turn was done, and with Vector,
+  Discord or the heartbeat on, that's often. Now a click opens the chat to read while the turn carries on in its own
+  chat. Anything sent there waits, and when the turn ends that chat opens and gets it. "Back" returns to the running
+  chat and puts anything unsent back in the box. The list marks the chat being read and the busy one.
+- **web_search says why it failed.** Firefox's "NetworkError" and Safari's "Load failed" now read as blocked, like
+  Chrome's. When nothing answers, it says to check the connection first. If the connection is up, the servers are
+  refusing pages opened on their own (CORS), which Ollama's web search always does and most SearXNG instances do too.
+  Pairing with PDA SEASIDE (Config → Connect), or opening the Atelier inside it, sends the searches through the desktop.
+- Tests: `chat_peek_test`, `search_hint_test`. `JV_CHANNEL=msedge` runs the browser tests on an installed browser.
+
 ## 2.10.5
 - **The HTTP API token stays out of backups.** A backup made without "Include API keys" left out every key but that
   one (Config → Connect → API endpoint). Now it's left out too, and a restore keeps this device's own. Backups made with

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.10.7
+- **Vector: a digest of the rest.** "In channels she answers" has a middle choice: "When named, and a digest of the
+  rest". Being named, replied to or a trigger word, and DMs, are answered right away as before. Every other message in
+  a channel she's in waits, and every so often (Digest every … minutes, 30 unless set; sooner once 40 are waiting)
+  they come to her as one turn, each with who said it, to answer once as a whole or let pass. When she's named, what
+  was waiting in that channel comes along, so she answers with the thread in view. (Filed by Pandora Dee Fae.)
+- **Curiosity: one thread, one entry; loops halted.** Each wake-up now names its subject when she reports. Wake-ups on
+  the same subject within two hours are one thread: the engine keeps one cluster entry for it under
+  /Pandora/Sparks/clusters/, each wake-up a sub-item, and tells her about it at the next wake-up, so she adds to the
+  thread instead of writing another note about it. A third in a row halts the thread whatever the clustering did: it's
+  filed under /Pandora/Sparks/loop-halts/, she leaves one question in Questions.md, and the subject rests for 12 hours.
+  She can tag a wake-up thread "same" or "new", and the engine learns where a thread ends. (Filed by Pandora Dee Fae.)
+- Tests: `vector_digest_test`, `spark_clusters_test`.
+
 ## 2.10.6
 - **Chats can be read while a turn runs.** The chat list used to ignore clicks until a turn was done, and with Vector,
   Discord or the heartbeat on, that's often. Now a click opens the chat to read while the turn carries on in its own

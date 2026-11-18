@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.10.5
+- **The HTTP API token stays out of backups.** A backup made without "Include API keys" left out every key but that
+  one (Config → Connect → API endpoint). Now it's left out too, and a restore keeps this device's own. Backups made with
+  2.9.9.2 through 2.10.4 still carry it, so keep those files private. A new test (`backup_keys_test`) fails if a
+  key-like setting is ever missing from the list again.
+
 ## 2.10.4
 - **Bridges keep to their rooms.** Something typed in the Atelier while Pandora was answering on Vector or Discord
   went into that channel's chat, and her answer to it was posted to the channel. Now what's typed meanwhile waits and

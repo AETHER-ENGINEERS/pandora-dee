@@ -167,6 +167,7 @@ with its notification.
 | --- | --- |
 | `app/base/` | The pi-netrunner base page (Live2D Pandora Dee, BusyBox WebAssembly shell, Ollama agent loop). |
 | `app/modules/` | Pandora Dee's layers: Atelier, memory, steering, providers, MCP, Python, SQLite, context guard, trajectories, HTTP, images, webxdc, Vector … |
+| `app/modules/main.js` | A snapshot of the base page's script, kept for reference. It isn't built, so don't start reading here: the app is the base page plus the layers `app/build.py` applies. [docs/development.md](docs/development.md) has the map. |
 | `app/build.py` | Applies the layers to the base page with exact-match edits and writes `dist/pandora-dee.html`. |
 | `app/tools/` | Tailwind compile, and the Android page (CDN-free basics inlined). |
 | `apps/jade-link/` | Source of the built-in Jade Link webxdc app. |

@@ -74,15 +74,17 @@ async function buildBackup(kind, withKeys) {
 let downloadsP = null;
 const getDownloads = () => (downloadsP ||= (window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null)));
 if (window.claude?.use) getDownloads();
+// text is a string, or an array of strings (the pieces of a big file, so it never has to be one string)
 async function saveTextFile(name, text, mime = 'application/json') {
-  if (typeof window.NetrunnerAndroid?.saveFile === 'function') { try { window.NetrunnerAndroid.saveFile(name, mime, text); return; } catch (e) { console.warn(e); } }
+  const pieces = Array.isArray(text) ? text : [text];
+  if (typeof window.NetrunnerAndroid?.saveFile === 'function') { try { window.NetrunnerAndroid.saveFile(name, mime, pieces.join('')); return; } catch (e) { console.warn(e); } }
   const dl = await getDownloads();
   if (dl) {
-    try { await dl.save({ filename: name, data: new Blob([text], { type: mime }) }); toast(`Saved ${esc(name)}`, 'ok'); return; }
+    try { await dl.save({ filename: name, data: new Blob(pieces, { type: mime }) }); toast(`Saved ${esc(name)}`, 'ok'); return; }
     catch (e) { if (e?.code === 'declined') { toast('Save cancelled'); return; } if (e?.code === 'rate_limited') { toast('A save prompt is already open.', 'err'); return; } if (!/unavailable|not_granted|capability_/.test(e?.code || '')) { toast('Could not save: ' + esc(e?.message || e), 'err'); return; } }
   }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(pieces, { type: mime })); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);   // a big file needs time to be written out before its URL goes
   toast(`Downloading ${esc(name)} (if nothing happens, use Copy JSON)`, 'ok');
 }
 window.__jadeSaved = (ok, msg) => toast(ok ? `Saved ${esc(msg || 'backup')}` : `Not saved${msg ? ': ' + esc(msg) : ''}`, ok ? 'ok' : 'err');

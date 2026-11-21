@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Trajectory export no longer fails in silence.** Export JSONL (and `/traj export`) says at once that it's working,
+  can't be pressed twice, and says why when it fails, where before a failure showed nothing at all: no file, no
+  message. A big log is handed to the file in pieces, one per run, instead of one giant string plus a copy of it,
+  which could run out of memory. A trajectory log that another open copy of the app holds now says so instead of
+  waiting forever, and is tried afresh next time. Downloads keep their file link for a minute, so a big one finishes.
+
 ## 2.10.8
 - **Read-only tools run side by side.** When one reply asks for several tools, the read-only ones next to each other
   (read, notes_search, note_links, web_search, web_fetch, skill, find_skill, decide, tool_search, the MCP resource lists,

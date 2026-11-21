@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2.10.10
+- **Send and Abort side by side.** While a turn ran, the one button turned red and said Abort: with text in the box
+  it queued the message, with the box empty it stopped her, which was easy to hit while fixing a queued message. Now a
+  separate red Abort sits next to Send while she's working and only ever stops the turn; Send says Queue during a
+  turn and only ever sends (an empty box does nothing).
+- **Strict models accept the chat history.** Kimi K3 refused requests with "tool message 1 has no resolvable tool
+  name": the history held a tool call without a name (some models or streams leave it out) or a result it couldn't
+  tie to a call. Before the history goes to any provider, a call without a name is left out and its result goes in as
+  a note, every result names its tool, and OpenAI-style tool messages carry the tool's name too. The chat itself
+  isn't changed.
 - **MCP entries that can't work say why, Reconnect included.** Reconnect (the button, `/mcp reconnect <name>`)
   skipped the check that loading does, so an entry without an address tried to reach "undefined" and blamed CORS.
   It now shows the real reason, such as "stdio servers (\"command\") cannot run in a browser… use its url". The

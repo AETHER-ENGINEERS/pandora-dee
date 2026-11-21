@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **MCP entries that can't work say why, Reconnect included.** Reconnect (the button, `/mcp reconnect <name>`)
+  skipped the check that loading does, so an entry without an address tried to reach "undefined" and blamed CORS.
+  It now shows the real reason, such as "stdio servers (\"command\") cannot run in a browser… use its url". The
+  address may also be written `serverUrl` (Windsurf) or `httpUrl` (Gemini CLI), and a `command` entry that also has a
+  `url` connects through the url.
+
 ## 2.10.9
 - **Big backups work.** A backup was made as one giant JSON string of the whole vault and every chat, so with a big
   vault (thousands of chats, a large vector index) Firefox ran out of memory and the button said "Export failed:

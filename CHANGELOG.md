@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Read-only tools run side by side.** When one reply asks for several tools, the read-only ones next to each other
+  (read, notes_search, note_links, web_search, web_fetch, skill, find_skill, decide, tool_search, the MCP resource lists,
+  discord_history, chat_history list/read/search) now run at the same time. Anything that writes or acts (write, edit,
+  bash, ssh, phone, screen, browser, memory, MCP tools, …) still runs on its own, in order, and splits the groups. Cards
+  and results stay in the order she asked. Before, only a reply made entirely of web_search / web_fetch ran together.
+  The delegate sub-agent groups its calls the same way. (As in PDA SEASIDE and Jade Vault 2.20.)
+
 ## 2.10.7
 - **Vector: a digest of the rest.** "In channels she answers" has a middle choice: "When named, and a digest of the
   rest". Being named, replied to or a trigger word, and DMs, are answered right away as before. Every other message in

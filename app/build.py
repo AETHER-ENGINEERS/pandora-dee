@@ -2286,6 +2286,7 @@ exec(open(os.path.join(D, 'chat_peek.py'), encoding='utf-8').read())      # read
 exec(open(os.path.join(D, 'search_hint.py'), encoding='utf-8').read())    # web_search says why it failed
 exec(open(os.path.join(D, 'vector_digest.py'), encoding='utf-8').read())  # Vector: a digest of the rest
 exec(open(os.path.join(D, 'spark_clusters.py'), encoding='utf-8').read()) # curiosity: one thread clustered, loops halted
+exec(open(os.path.join(D, 'queue_edit.py'), encoding='utf-8').read())     # a queued message can be taken back and fixed
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

@@ -1,6 +1,6 @@
 # MCP and HTTP integrations
 
-**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
 
 External integrations can transmit notes, prompts, and credentials to another service. Configure only trusted endpoints and review what tools do before exposing them to Jade.
 

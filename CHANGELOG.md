@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Send and Abort side by side.** While a turn ran, the one button turned red and said Abort: with text in the box
+  it queued the message, with the box empty it stopped her, which was easy to hit while fixing a queued message. Now a
+  separate red Abort sits next to Send while she's working and only ever stops the turn; Send says Queue during a
+  turn and only ever sends (an empty box does nothing).
 - **Strict models accept the chat history.** Kimi K3 refused requests with "tool message 1 has no resolvable tool
   name": the history held a tool call without a name (some models or streams leave it out) or a result it couldn't
   tie to a call. Before the history goes to any provider, a call without a name is left out and its result goes in as

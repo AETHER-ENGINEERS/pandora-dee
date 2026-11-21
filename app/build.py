@@ -2291,6 +2291,7 @@ exec(open(os.path.join(D, 'queue_edit.py'), encoding='utf-8').read())     # a qu
 exec(open(os.path.join(D, 'branch_search.py'), encoding='utf-8').read())  # search the branches by what was said in them
 exec(open(os.path.join(D, 'embed_tuning.py'), encoding='utf-8').read())   # texts per request, requests at once, save interval
 exec(open(os.path.join(D, 'console_cleanup.py'), encoding='utf-8').read())  # doctype, PowerShell/batch highlighting, no stray source map
+exec(open(os.path.join(D, 'big_backups.py'), encoding='utf-8').read())     # backups written and read in pieces
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

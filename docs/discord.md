@@ -1,6 +1,6 @@
 # Discord bridge and connector
 
-**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.11** · [Documentation index](README-docs.md)
 
 Connect Pandora to Discord to answer DMs and channel messages, react, share files, and take messages for you. Discord support requires Jade Vault **2.8.0 or later** and a bridge running on a separate computer.
 

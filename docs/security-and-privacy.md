@@ -1,6 +1,6 @@
 # Security, privacy, and licensing
 
-**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.11** · [Documentation index](README-docs.md)
 
 Read the project's [security policy](../SECURITY.md) for vulnerability reporting. Report security issues privately through GitHub's Security → Report a vulnerability rather than a public issue.
 

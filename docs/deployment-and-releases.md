@@ -1,6 +1,6 @@
 # Deployment and releases
 
-**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.11** · [Documentation index](README-docs.md)
 
 ## Browser deployment
 

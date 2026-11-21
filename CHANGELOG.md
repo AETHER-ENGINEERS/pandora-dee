@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Read-only tools run side by side.** When one reply asks for several tools, the read-only ones next to each other
+  (read, notes_search, note_links, web_search, web_fetch, skill, find_skill, decide, tool_search, the MCP resource lists,
+  discord_history, chat_history list/read/search) now run at the same time. Anything that writes or acts (write, edit,
+  bash, ssh, phone, screen, browser, memory, MCP tools, …) still runs on its own, in order, and splits the groups. Cards
+  and results stay in the order she asked. Before, only a reply made entirely of web_search / web_fetch ran together.
+  The delegate sub-agent groups its calls the same way. (As in PDA SEASIDE and Jade Vault 2.20.)
 - **Fix a queued message before it's delivered.** A message sent while she's on a tool run waits in the queue; the
   note above the message box now lists each one with **Edit** and **✕**. Edit takes it out of the queue and back into
   the box (in front of anything already typed), so a half-fixed message is never delivered; send it again and it

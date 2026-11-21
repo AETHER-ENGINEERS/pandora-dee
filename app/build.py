@@ -2293,6 +2293,7 @@ exec(open(os.path.join(D, 'embed_tuning.py'), encoding='utf-8').read())   # text
 exec(open(os.path.join(D, 'console_cleanup.py'), encoding='utf-8').read())  # doctype, PowerShell/batch highlighting, no stray source map
 exec(open(os.path.join(D, 'big_backups.py'), encoding='utf-8').read())     # backups written and read in pieces
 exec(open(os.path.join(D, 'tool_names.py'), encoding='utf-8').read())     # every tool result sent names its tool
+exec(open(os.path.join(D, 'send_button.py'), encoding='utf-8').read())    # Send / Queue / Abort by what's in the box
 for bad in ['showPreview', 'schedulePreview', 'prevFrame', 'btnPrevBack', 'btnFilePreview', 'btnFileSave', 'inlineAssets']:
     if bad in s: print('WARN leftover', bad, s.count(bad))
 open(os.path.join(DIST, 'pandora-dee.html'), 'w', encoding='utf-8').write(s)

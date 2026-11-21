@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.10.10
 - **MCP entries that can't work say why, Reconnect included.** Reconnect (the button, `/mcp reconnect <name>`)
   skipped the check that loading does, so an entry without an address tried to reach "undefined" and blamed CORS.
   It now shows the real reason, such as "stdio servers (\"command\") cannot run in a browser… use its url". The

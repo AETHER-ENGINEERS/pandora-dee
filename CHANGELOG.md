@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- **Fallback models on the same provider.** One Ollama can serve cloud models (through your Ollama account) and local
+  ones, but a fallback used to have to be another *provider*. Config → Model provider now takes a list of fallback
+  models for the provider (comma-separated, in order). When the chosen model hits its usage limit (or its server
+  errors), she goes on with the next model on that same provider before trying another provider. The model that ran
+  out rests (30 minutes for a limit, 5 for an error), and your chosen model comes back by itself once it has rested.
+  Your choice stays the remembered one throughout.
+- **A second Ollama address.** "Second Ollama" is a provider of its own, with its own address and remembered model.
+  When your main Ollama is on another machine (reaching Ollama Cloud for you), the Ollama on this computer can be the
+  fallback, the heartbeat's model or the helper model. Before, both were "Ollama", with one address between them.
+
 ## 2.10.10
 - **Send and Abort side by side.** While a turn ran, the one button turned red and said Abort: with text in the box
   it queued the message, with the box empty it stopped her, which was easy to hit while fixing a queued message. Now a

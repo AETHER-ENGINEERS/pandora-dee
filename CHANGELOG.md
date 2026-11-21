@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Trajectory export no longer fails in silence.** Export JSONL (and `/traj export`) says at once that it's working,
+  can't be pressed twice, and says why when it fails, where before a failure showed nothing at all: no file, no
+  message. A big log is handed to the file in pieces, one per run, instead of one giant string plus a copy of it,
+  which could run out of memory. A trajectory log that another open copy of the app holds now says so instead of
+  waiting forever, and is tried afresh next time. Downloads keep their file link for a minute, so a big one finishes.
 - **Embedding says how far it is.** Building the vector index (Config → Memory → Test and rebuild, or the
   background catch-up after memory, journal or notes change) shows a line at the top, wherever you are in the app:
   "Embedding 400 of 2,350 · about 6 min left", then "Embedded 2,350 texts." Config's status line shows the same. A

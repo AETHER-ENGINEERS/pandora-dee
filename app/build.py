@@ -1245,7 +1245,7 @@ rep("      if (!ai) { ai = aiBlock(); chatEl.appendChild(ai); if (m.model) ai.qu
     "      if (!ai) { ai = aiBlock(); chatEl.appendChild(ai); if (m.model) ai.querySelector('[data-model]').textContent = m.model; setWhen(ai, m.ts); }")
 rep("      if (m._error) body.appendChild(errorEl(m._error));\n    }\n  }\n  scrollDown(true);",
     "      if (m._error) body.appendChild(errorEl(m._error));\n      if (m.trajId) { const w = ai.querySelector('[data-when]'); if (m.dur && w.textContent) w.textContent += ' · ' + fmtDur(m.dur); ai.appendChild(rateBar(m)); }\n    }\n  }\n  scrollDown(true);")
-rep("  if (cmd === 'context' || cmd === 'ctx') {", """  if (cmd === 'trajectories' || cmd === 'traj') { if (arg === 'export') { exportTrajectories().then(r => r && toast(`Exported ${r.count} of ${r.of} runs`, 'ok')); return; } openSettings(); setTimeout(() => $('#trajSection').scrollIntoView({ block: 'start' }), 60); return; }
+rep("  if (cmd === 'context' || cmd === 'ctx') {", """  if (cmd === 'trajectories' || cmd === 'traj') { if (arg === 'export') { toast('Exporting the trajectory log…'); exportTrajectories().then(r => r && toast(`Exported ${r.count} of ${r.of} runs`, 'ok'), e => toast(`Export failed: ${esc(e?.message || String(e))}`, 'err')); return; } openSettings(); setTimeout(() => $('#trajSection').scrollIntoView({ block: 'start' }), 60); return; }
   if (cmd === 'context' || cmd === 'ctx') {""")
 s = s.replace("['/context', 'what fills the context'],", "['/context', 'what fills the context'], ['/trajectories', 'fine-tuning log'], ['/trajectories export', 'export the log as JSONL'],", 1)
 rep("<b>/context</b> what fills the context ·", "<b>/context</b> what fills the context · <b>/trajectories</b> [export] fine-tuning log ·")

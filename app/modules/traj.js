@@ -26,7 +26,8 @@ function setWhen(el, ts, extra) { const w = el?.querySelector?.('[data-when]'); 
    ===================================================================== */
 const TrajDB = (() => {
   let dbp;
-  const open = () => dbp ??= new Promise((res, rej) => { try { const r = indexedDB.open('jade-traj', 1); r.onupgradeneeded = () => { const s = r.result.createObjectStore('runs', { keyPath: 'id' }); s.createIndex('started', 'started'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
+  // a failed or blocked open says why (it used to fail or wait in silence) and is tried afresh next time
+  const open = () => dbp ??= new Promise((res, rej) => { try { const r = indexedDB.open('jade-traj', 1); r.onupgradeneeded = () => { const s = r.result.createObjectStore('runs', { keyPath: 'id' }); s.createIndex('started', 'started'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error || new Error('the trajectory log could not be opened')); r.onblocked = () => rej(new Error('the trajectory log is held open by another copy of the app: close its other tabs or windows and try again')); } catch (e) { rej(e); } }).catch(e => { dbp = null; throw e; });
   const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('runs', mode); const st = t.objectStore('runs'); let out; const q = fn(st); if (q) q.onsuccess = () => { out = q.result; }; t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
   return {
     put: rec => tx('readwrite', st => st.put(rec)),
@@ -113,10 +114,12 @@ async function exportTrajectories({ format = S.trajFormat || 'openai', filter = 
   const all = (await TrajDB.all()).sort((a, b) => a.started - b.started); const keep = all.filter(r => trajKeep(r, filter));
   if (!keep.length) { toast(all.length ? `None of the ${all.length} logged runs match that filter.` : 'Nothing logged yet: chat with Pandora first.', 'err'); return null; }
   const line = r => { const o = format === 'sharegpt' ? trajToShareGPT(r, { thinking }) : trajToOpenAI(r, { thinking }); if (meta) o.metadata = { id: r.id, started: new Date(r.started).toISOString(), model: r.models?.join(',') || r.model, provider: r.provider, source: r.source, outcome: r.outcome, rating: r.rating, steps: r.steps }; return JSON.stringify(o); };
-  const text = keep.map(line).join('\n') + '\n';
+  // one piece per run, handed to the file as pieces: a big log is never joined into one giant string
+  // (that copy, and the file's copy of it, are what ran out of memory)
+  const parts = keep.map(r => line(r) + '\n'); const bytes = parts.reduce((a, p) => a + p.length, 0);
   const name = `jade-trajectories-${format}-${new Date().toISOString().slice(0, 10)}.jsonl`;
-  await saveTextFile(name, text, 'application/x-ndjson');
-  return { name, count: keep.length, of: all.length, bytes: text.length, text };
+  await saveTextFile(name, parts, 'application/x-ndjson');
+  return { name, count: keep.length, of: all.length, bytes, get text() { return parts.join(''); } };
 }
 async function trajStats() {
   try { const all = await TrajDB.all(); const n = all.length; const good = all.filter(r => r.rating === 1).length, bad = all.filter(r => r.rating === -1).length, err = all.filter(r => r.outcome === 'error').length;
@@ -137,7 +140,14 @@ async function renderTrajSettings() {
   $('#sTrajFilter').onchange = e => { S.trajFilter = e.target.value; saveSettings(); };
   $('#sTrajThink').onchange = e => { S.trajThinking = e.target.checked; saveSettings(); };
   $('#sStampOn').onchange = e => { S.stampOn = e.target.checked; saveSettings(); };
-  $('#btnTrajExport').onclick = async () => { const r = await exportTrajectories(); if (r) toast(`Exported ${r.count} of ${r.of} runs (${fmtKB(r.bytes)})`, 'ok'); };
+  // says at once that it's working, and says why when it fails (a failure used to show nothing at all)
+  $('#btnTrajExport').onclick = async e => {
+    const b = e.currentTarget; if (b.disabled) return; b.disabled = true; const label = b.textContent; b.textContent = 'Exporting…';
+    toast('Exporting the trajectory log…');
+    try { const r = await exportTrajectories(); if (r) toast(`Exported ${r.count} of ${r.of} runs (${fmtKB(r.bytes)})`, 'ok'); }
+    catch (err) { console.error(err); toast(`Export failed: ${esc(err?.message || String(err))}`, 'err'); }
+    finally { b.disabled = false; b.textContent = label; }
+  };
   let armed = false; $('#btnTrajClear').onclick = async e => { const b = e.currentTarget; if (!armed) { armed = true; b.textContent = 'Tap again to delete all'; setTimeout(() => { armed = false; b.textContent = 'Clear log'; }, 4000); return; } armed = false; b.textContent = 'Clear log'; await TrajDB.clear(); renderTrajSettings(); toast('Trajectory log cleared', 'ok'); };
   window.__trajSync = sync;
 })();

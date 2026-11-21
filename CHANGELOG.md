@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.10.11
 - **Fallback models on the same provider.** One Ollama can serve cloud models (through your Ollama account) and local
   ones, but a fallback used to have to be another *provider*. Config → Model provider now takes a list of fallback
   models for the provider (comma-separated, in order). When the chosen model hits its usage limit (or its server

@@ -1,6 +1,6 @@
 # Configuration and model providers
 
-**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.11** · [Documentation index](README-docs.md)
 
 Use Config's search box if a section is not visible in the selected tab. Keep credentials in the designated settings fields, not in chat or notes.
 
@@ -9,6 +9,7 @@ Use Config's search box if a section is not visible in the selected tab. Keep cr
 | Provider | Connection | Notes |
 | --- | --- | --- |
 | Ollama | Host of an Ollama server, commonly `http://localhost:11434` on the same computer | Client uses `/api/tags` and `/api/chat` |
+| Second Ollama | Host of another Ollama server, for example this computer's when the main Ollama is on another machine | Its own address and remembered model; usable as the provider, a fallback, the heartbeat's model or the helper model |
 | Ollama Cloud | Cloud configuration plus API key | Sends model requests off-device |
 | Groq | Groq API key | OpenAI-style chat API; model/tool capabilities vary |
 | llama.cpp | Running server, commonly port 8080 | Client normalizes its base to `/v1` |
@@ -30,6 +31,10 @@ Do not expose an unauthenticated model endpoint to the public internet. An HTTPS
 ## Fallbacks and model capabilities
 
 The configured primary provider is tried first, then the fallback providers in order. Pandora remembers model selections per provider and can switch after connection/run failures. It checks for recovery of the primary before later prompts.
+
+**Fallback models on the same provider.** Under "If its model can't answer, try these models on the same provider first", list models (comma-separated, in order) on the provider being set up: cloud or local models on the same Ollama, for example. When the chosen model hits its usage limit or its server errors, Pandora goes on with the next model on that list before trying another provider. The model that ran out rests (30 minutes for a limit, 5 for an error), and the chosen model comes back by itself once it has rested. A lost connection still moves to the next provider.
+
+**A second Ollama.** When the main Ollama is on another machine (reaching Ollama Cloud for you), pick **Second Ollama** as a fallback and give it this computer's address, so local models can answer if that machine is out of reach.
 
 - Configure credentials and a working model for every fallback.
 - Review data policy and cost for **every** provider in the chain: failover can send context to a different service.

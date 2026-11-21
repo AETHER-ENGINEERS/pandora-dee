@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.11** · [Documentation index](README-docs.md)
 
 Use this guide to plan your installation, understand which features need a network connection, and decide what to back up.
 

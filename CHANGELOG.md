@@ -11,6 +11,10 @@
   note above the message box now lists each one with **Edit** and **✕**. Edit takes it out of the queue and back into
   the box (in front of anything already typed), so a half-fixed message is never delivered; send it again and it
   queues again. ✕ drops it. With the box empty, the Up arrow takes back the last queued message.
+- **Search the branches.** A search box above the Branches list finds branches by what was said in them, not just
+  their names: your messages, hers, compaction summaries, and tool calls and their results (file names, repos,
+  commands). Every word must appear, in any order or case. Matching branches keep their order, each with a line around
+  the match; Esc or ✕ clears it. It reads the saved branches directly, so it works without the memory index.
 
 ## 2.10.7
 - **Vector: a digest of the rest.** "In channels she answers" has a middle choice: "When named, and a digest of the

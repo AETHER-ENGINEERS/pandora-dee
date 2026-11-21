@@ -7,6 +7,10 @@
   bash, ssh, phone, screen, browser, memory, MCP tools, …) still runs on its own, in order, and splits the groups. Cards
   and results stay in the order she asked. Before, only a reply made entirely of web_search / web_fetch ran together.
   The delegate sub-agent groups its calls the same way. (As in PDA SEASIDE and Jade Vault 2.20.)
+- **Fix a queued message before it's delivered.** A message sent while she's on a tool run waits in the queue; the
+  note above the message box now lists each one with **Edit** and **✕**. Edit takes it out of the queue and back into
+  the box (in front of anything already typed), so a half-fixed message is never delivered; send it again and it
+  queues again. ✕ drops it. With the box empty, the Up arrow takes back the last queued message.
 
 ## 2.10.7
 - **Vector: a digest of the rest.** "In channels she answers" has a middle choice: "When named, and a digest of the

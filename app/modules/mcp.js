@@ -128,13 +128,18 @@ class McpHttpClient {
 /* ---------- server manager ---------- */
 function mcpServerValidate(name, cfg) {
   if (!/^[A-Za-z0-9_-]+$/.test(name)) return 'server names may only use letters, digits, _ and -';
-  if (cfg.command) return 'stdio servers ("command") cannot run in a browser. Expose it over streamable HTTP (for example: npx -y supergateway --stdio "<command>" --outputTransport streamableHttp) and use its url';
+  // a "command" next to a "url" is fine (a desktop client's entry with its HTTP bridge added): the url is used
+  if (cfg.command && !cfg.url) return 'stdio servers ("command") cannot run in a browser. Expose it over streamable HTTP (for example: npx -y supergateway --stdio "<command>" --outputTransport streamableHttp) and use its url';
   const t = cfg.type; if (t && !['http', 'streamable-http'].includes(t)) return t === 'sse' ? 'legacy SSE servers are not supported (pi rejects them too); use the streamable HTTP endpoint' : `unknown type "${t}"`;
   if (!/^https?:\/\//.test(cfg.url || '')) return 'needs a "url" starting with http:// or https://';
   if (cfg.exposure && !MCP_EXPOSURES.includes(cfg.exposure) && cfg.exposure !== 'codemode-deferred') return `exposure must be one of ${MCP_EXPOSURES.join(', ')}`;
   return '';
 }
 async function mcpConnect(srv) {
+  // Reconnect (the button, /mcp reconnect <name>) checks the entry first: one that can't work says why, instead of
+  // trying to reach "undefined" and blaming the network or CORS
+  const bad = mcpServerValidate(srv.name, srv.cfg || {});
+  if (bad) { srv.client?.close(); srv.client = null; srv.state = 'invalid'; srv.error = bad; renderMcpPanel(); return; }
   srv.client?.close(); srv.state = 'connecting'; srv.error = ''; renderMcpPanel();
   const c = srv.client = new McpHttpClient(srv.name, srv.cfg);
   try {
@@ -150,6 +155,8 @@ async function mcpReload({ force = false } = {}) {
   const seen = new Set();
   for (const [name, cfg0] of Object.entries(servers)) {
     const cfg = { ...cfg0 }; seen.add(name);
+    // other clients' names for the address (Windsurf's serverUrl, Gemini CLI's httpUrl) work too
+    if (!cfg.url && typeof (cfg.serverUrl || cfg.httpUrl) === 'string') cfg.url = cfg.serverUrl || cfg.httpUrl;
     const key = JSON.stringify(cfg); let srv = MCP.servers.get(name);
     if (srv && srv.key === key && !force) continue;
     const onlyExposure = srv && JSON.stringify({ ...srv.cfg, exposure: 0, toolExposure: 0, description: 0 }) === JSON.stringify({ ...cfg, exposure: 0, toolExposure: 0, description: 0 });

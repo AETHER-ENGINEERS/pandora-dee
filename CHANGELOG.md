@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Big backups work.** A backup was made as one giant JSON string of the whole vault and every chat, so with a big
+  vault (thousands of chats, a large vector index) Firefox ran out of memory and the button said "Export failed:
+  undefined". Backups are now written in pieces, one line per file and one per chat: joined it's the same JSON any
+  version opens, but it's never one string (Export everything, Export config, and the scheduled backup to a server).
+  Restoring reads a big backup line by line, through gzip too; a big backup from before this version says why it
+  can't be opened. A failure shows its reason, never "undefined". Copy JSON is offered for backups up to 20 MB.
 - **A quieter, correct browser console.** The web page now has a doctype, so browsers run it in standards mode like
   the Android page (it ran in quirks mode, where KaTeX warns it doesn't work). PowerShell and Windows batch code
   blocks (` ```powershell `, ` ```cmd `, ` ```bat `, ` ```ps1 `) fetch their highlight.js language pack the first

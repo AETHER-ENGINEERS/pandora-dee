@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **A quieter, correct browser console.** The web page now has a doctype, so browsers run it in standards mode like
+  the Android page (it ran in quirks mode, where KaTeX warns it doesn't work). PowerShell and Windows batch code
+  blocks (` ```powershell `, ` ```cmd `, ` ```bat `, ` ```ps1 `) fetch their highlight.js language pack the first
+  time one appears and are coloured; any other language highlight.js doesn't know is shown as plain text instead of
+  logging a warning per block. PixiJS no longer points at a source map that isn't shipped.
 - **Tune how the embedding index builds.** Config → Memory → Embeddings has three new fields: texts per request
   (16 unless set, up to 512), requests at once (1 unless set, up to 8; Ollama runs them together when
   `OLLAMA_NUM_PARALLEL` allows), and how often progress is saved (every 30 s unless set). A faster embedding server

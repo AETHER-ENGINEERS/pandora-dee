@@ -27,6 +27,7 @@ os.makedirs(os.path.join(ROOT, 'android', 'proj', 'assets', 'ort'), exist_ok=Tru
 for f in os.listdir(os.path.join(V, 'ort')):
     shutil.copyfile(os.path.join(V, 'ort', f), os.path.join(ROOT, 'android', 'proj', 'assets', 'ort', f))
 
-s = '<!doctype html>\n<html lang="en">\n' + s + '\n</html>\n'
+if not s.lstrip().lower().startswith('<!doctype'):   # the web page has its own doctype since 2.10.9
+    s = '<!doctype html>\n<html lang="en">\n' + s + '\n</html>\n'
 os.makedirs(os.path.join(ROOT, 'android', 'proj', 'assets'), exist_ok=True)
 open(os.path.join(ROOT, 'android', 'proj', 'assets', 'index.html'), 'w', encoding='utf-8').write(s); print('index.html', len(s))

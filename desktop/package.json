@@ -1,0 +1,15 @@
+{
+  "name": "pandora-dee-desktop",
+  "version": "2.10.11",
+  "private": true,
+  "description": "Pandora Dee as a desktop app: the Atelier in its own window, her vault a real folder on the computer.",
+  "license": "MIT",
+  "main": "main.cjs",
+  "scripts": {
+    "page": "node -e \"require('fs').mkdirSync('app',{recursive:true});require('fs').copyFileSync('../dist/pandora-dee.html','app/pandora-dee.html')\"",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "45.2.3"
+  }
+}

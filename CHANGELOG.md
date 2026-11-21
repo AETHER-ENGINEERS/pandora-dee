@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her
+  vault is a folder you pick on the computer, not the browser's database: every note is an ordinary file there, so
+  bash, a file manager and MCP file tools all see the same `/Pandora/SOUL.md`. The vault's existing disk mode (the
+  Android app's) runs on it unchanged, through the same synchronous bridge. Deleted files, and files a full restore
+  replaces, go to a trash folder beside the vault instead of being removed. The browser keeps working as before.
+  It's an option for whoever wants the Atelier in a window of its own: like any Chromium-based window, its text can
+  look soft at fractional display scaling (115%, 125%…). Firefox, and the native ISLANDS window, draw it crisper.
+- **Moving a browser vault in loses nothing.** When a vault in the browser's database moves into a folder (a full
+  backup restored in the desktop app, or the first start of the Android app's folder vault), a file the folder already
+  has with different contents stays as it is, and the moved version is saved beside it, marked "from the browser".
+  Before, the moved version was dropped. In the desktop app, a full restore into a folder that already has files asks
+  whether to keep them and add the backup's, or to replace them.
+
 ## 2.10.11
 - **Fallback models on the same provider.** One Ollama can serve cloud models (through your Ollama account) and local
   ones, but a fallback used to have to be another *provider*. Config → Model provider now takes a list of fallback

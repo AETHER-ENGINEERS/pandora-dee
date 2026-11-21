@@ -2,10 +2,11 @@
    VIRTUAL FILESYSTEM
    In the Android app the vault is a real folder on the phone (JadeVault): every file is an ordinary file there, and
    the page keeps only the file list in memory. A node's contents are read from the folder when something asks for
-   them (a small cache keeps the recent ones) and writes go to the folder a moment later, in order. In a plain browser
-   there is no folder to use, so the vault stays in IndexedDB as before.
+   them (a small cache keeps the recent ones) and writes go to the folder a moment later, in order. The desktop app
+   (desktop/, Electron) offers the same bridge as window.PandoraDesk, on a folder the person picks on the computer. In a
+   plain browser there is no folder to use, so the vault stays in IndexedDB as before.
    ===================================================================== */
-const DISK = (() => { try { const A = window.NetrunnerAndroid; return A && typeof A.diskInfo === 'function' && typeof A.diskScan === 'function' ? A : null; } catch { return null; } })();
+const DISK = (() => { try { for (const A of [window.NetrunnerAndroid, window.PandoraDesk]) if (A && typeof A.diskInfo === 'function' && typeof A.diskScan === 'function') return A; return null; } catch { return null; } })();
 const fsize = n => n.dir ? 0 : (n.size != null ? n.size : n.data.length);
 const DK = (() => {
   const CH = 3 * 1048576;
@@ -184,20 +185,34 @@ class VFS {
     await this.migrate();
     return this.nodes.size > 1;
   }
-  // the vault used to be one big record in the browser database: copy it into the folder, check, then delete it
+  // the vault used to be one big record in the browser database (and a full backup restored here lands there too):
+  // copy it into the folder, check, then let it go. A file the folder already has with other contents stays as it is,
+  // and the browser's version is kept beside it as a dated copy, so nothing is lost.
   async migrate() {
     const old = await idb.get('vfs'); if (!Array.isArray(old) || !old.length) return;
-    let n = 0; const wrote = [];
+    let n = 0, kept = 0; const wrote = [];
+    const d = new Date(), t = x => String(x).padStart(2, '0'), at = `${d.getFullYear()}-${t(d.getMonth() + 1)}-${t(d.getDate())} ${t(d.getHours())}${t(d.getMinutes())}`;
+    const same = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
+    const beside = p => { const b = this.base(p), i = b.lastIndexOf('.'), stem = i > 0 ? b.slice(0, i) : b, ext = i > 0 ? b.slice(i) : ''; let q, k = 1; do q = (this.parent(p) === '/' ? '' : this.parent(p)) + `/${stem} (from the browser ${at}${k > 1 ? ' ' + k : ''})${ext}`; while (this.exists(q) && ++k); return q; };
     for (const [p, v] of old) {
       if (p === '/') continue;
-      try { if (v.dir) { if (!this.exists(p)) this.mkdirp(p); } else if (!this.exists(p) && v.data) { this.write(p, v.data instanceof Uint8Array ? v.data : new Uint8Array(v.data), { mkdirs: true }); wrote.push([p, v.data.length]); n++; } } catch (e) { console.warn('vault: migrate', p, e.message); }
+      try {
+        if (v.dir) { if (!this.exists(p)) this.mkdirp(p); continue; }
+        if (!v.data) continue;
+        const bytes = v.data instanceof Uint8Array ? v.data : new Uint8Array(v.data);
+        if (!this.exists(p)) { this.write(p, bytes, { mkdirs: true }); wrote.push([p, bytes.length]); n++; }
+        else if (this.isFile(p) && !same(this.readBytes(p), bytes)) { const q = beside(p); this.write(q, bytes, { mkdirs: true }); wrote.push([q, bytes.length]); n++; kept++; }
+        else if (this.isDir(p)) { const q = beside(p); this.write(q, bytes, { mkdirs: true }); wrote.push([q, bytes.length]); n++; kept++; }
+      } catch (e) { console.warn('vault: migrate', p, e.message); }
     }
     if (!this.flush(true)) { toast('Could not copy the vault to storage yet. Your notes are still safe in the app.', 'err'); return; }
     this.rescan(true);
     const missing = wrote.filter(([p, len]) => !this.isFile(p) || fsize(this.nodes.get(p)) !== len);
     if (missing.length) { toast(`Copied the vault but ${missing.length} files did not check out; the old copy is kept.`, 'err'); return; }
+    // on a computer the old record is kept as it was (there is room), under another name: nothing reads it again
+    if (this.info?.mode === 'desktop') await idb.set('vfs-before-folder-' + Date.now(), old);
     await idb.del('vfs'); await idb.set('vfs-migrated', Date.now());
-    if (n) setTimeout(() => toast(`Moved ${n} files out of the app database into ${esc(this.info?.root || 'storage')}.`, 'ok'), 1500);
+    if (n) setTimeout(() => toast(`Moved ${n} files out of the app database into ${esc(this.info?.root || 'storage')}.${kept ? ` ${kept} already there with other contents: the folder's stay, and the moved ones sit beside them, marked "from the browser".` : ''}`, 'ok'), 1500);
   }
   entries() { return [...this.nodes.entries()]; }
   // swap the whole vault for these entries ([path, {dir}|{data}]); wipe=true also removes everything else from the folder first

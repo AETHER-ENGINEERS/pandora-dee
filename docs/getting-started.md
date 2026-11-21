@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | Browser | Open `pandora-dee.html` from a release, or use a static-hosted copy | Browser storage is tied to the origin/profile; CORS and mixed-content rules apply |
 | Android | Install a release APK on Android 7+ | WebView storage, native file saving, TTS, background service, optional HTTP API |
+| Desktop app (optional) | From a source checkout: `cd desktop`, `npm install`, `npm run page`, `npm start` ([desktop/README.md](../desktop/README.md)) | Its own window; the vault is a real folder you pick, so other programs see the same files. Chromium-based, so text can look soft at fractional display scaling |
 | Build from source | Follow the [development guide](development.md) | Node and Python required; APK also requires Java |
 
 These guides follow **Pandora Dee 2.10.11**; use its release files or the matching source checkout. A later release may add to them. Get release files from the repository's [Releases](https://github.com/AETHER-ENGINEERS/jade-vault/releases). Only install APKs from a source you trust. To create your own, see [Build the Android APK](android-apk.md).

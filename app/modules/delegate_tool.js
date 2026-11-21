@@ -38,12 +38,17 @@ async function delegateTool(args) {
       if (!calls.length) { final = content; break; }
       const norm = calls.map(c => ({ function: { name: c.function?.name, arguments: typeof c.function?.arguments === 'string' ? safeJson(c.function.arguments) : (c.function?.arguments || {}) } }));
       messages.push({ role: 'assistant', content, tool_calls: norm });
-      for (const tc of norm) {
-        const name = tc.function.name; let res;
-        if (!allowed.has(name)) res = `Error: ${name} is not available to a sub-agent${DELEGATE_WRITE.includes(name) ? ' (it is read-only)' : ''}. Available: ${tools.map(t => t.function.name).join(', ')}`;
-        else { used.push(name); try { res = await runTool(name, tc.function.arguments); } catch (e) { res = 'Error: ' + (e.message || e); } }
-        res = String(res && res.content !== undefined ? res.content : res ?? ''); if (res.length > DELEGATE_RESULT_CAP) res = res.slice(0, DELEGATE_RESULT_CAP) + `\n…(${res.length - DELEGATE_RESULT_CAP} more characters cut)`;
-        messages.push({ role: 'tool', tool_name: name, content: res });
+      // read-only calls asked for side by side run at the same time (toolGroups, as in Pandora's own loop); results keep the asked order
+      const groups = typeof toolGroups === 'function' ? toolGroups(norm) : norm.map(tc => [tc]);
+      for (const grp of groups) {
+        const out = await Promise.all(grp.map(async tc => {
+          const name = tc.function.name; let res;
+          if (!allowed.has(name)) res = `Error: ${name} is not available to a sub-agent${DELEGATE_WRITE.includes(name) ? ' (it is read-only)' : ''}. Available: ${tools.map(t => t.function.name).join(', ')}`;
+          else { used.push(name); try { res = await runTool(name, tc.function.arguments); } catch (e) { res = 'Error: ' + (e.message || e); } }
+          res = String(res && res.content !== undefined ? res.content : res ?? ''); if (res.length > DELEGATE_RESULT_CAP) res = res.slice(0, DELEGATE_RESULT_CAP) + `\n…(${res.length - DELEGATE_RESULT_CAP} more characters cut)`;
+          return res;
+        }));
+        grp.forEach((tc, i) => messages.push({ role: 'tool', tool_name: tc.function.name, content: out[i] }));
       }
     }
     if (!final) {                                   // out of steps or time: ask once, with no tools, for the best answer so far

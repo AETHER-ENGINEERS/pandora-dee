@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.10.8
 - **Read-only tools run side by side.** When one reply asks for several tools, the read-only ones next to each other
   (read, notes_search, note_links, web_search, web_fetch, skill, find_skill, decide, tool_search, the MCP resource lists,
   discord_history, chat_history list/read/search) now run at the same time. Anything that writes or acts (write, edit,

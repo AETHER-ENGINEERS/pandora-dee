@@ -1,6 +1,6 @@
 # Deployment and releases
 
-**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
 
 ## Browser deployment
 
@@ -49,9 +49,9 @@ For APK signing, repository Actions secrets are:
 
 | Secret | Purpose |
 | --- | --- |
-| `JADE_KEYSTORE_B64` | Base64-encoded release keystore |
-| `JADE_KEYSTORE_PASSWORD` | Store/private-key password used by this build |
-| `JADE_KEY_ALIAS` | Alias, conventionally `netrunner` |
+| `PANDORA_KEYSTORE_B64` | Base64-encoded release keystore |
+| `PANDORA_KEYSTORE_PASSWORD` | Store/private-key password used by this build |
+| `PANDORA_KEY_ALIAS` | Alias, conventionally `netrunner` |
 
 Configure secrets through GitHub's secure settings; never add them to source. Base64 is transport encoding, **not encryption**. The workflow decodes the keystore to a temporary runner path, signs, removes the temporary file, creates both bridge kits/checksums, and uploads release assets. Re-running uploads with clobber, so it can replace assets on that release.
 

@@ -1,6 +1,6 @@
 # MCP and HTTP integrations
 
-**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
 
 External integrations can transmit notes, prompts, and credentials to another service. Configure only trusted endpoints and review what tools do before exposing them to Jade.
 
@@ -27,6 +27,8 @@ Configuration lives at `/Pandora/mcp.json` in the virtual vault:
 The hostname is an example; replace it with your real service. Add `WORKSPACE_TOKEN` to MCP secrets in Config, not the file. Config also supports server timeout and per-tool exposure overrides. Header values beginning with `!` can be resolved by a vault shell command: only use trusted configuration.
 
 Servers connect in the background at startup; edits to the MCP configuration apply live. Browser deployments need server CORS/transport compatibility and cannot bypass HTTPS/mixed-content restrictions.
+
+**A stdio server** (one you would start with `node server.js` or `npx …`) needs an HTTP bridge, for example `npx -y supergateway --stdio "node server.js" --outputTransport streamableHttp --cors --port 9393`; then give its address, `"url": "http://localhost:9393/mcp"`. A bridge on your own machine is usually plain `http://`, not `https://`. The address may also be written `serverUrl` or `httpUrl`, as other MCP clients do, and an entry that keeps its `command` alongside a `url` connects through the url. An entry that can't work (no address, or a `command` alone) is shown as invalid with the reason, including when you press Reconnect or type `/mcp reconnect <name>`.
 
 ### Tool exposure
 

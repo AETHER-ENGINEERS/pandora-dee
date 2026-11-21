@@ -1,6 +1,6 @@
 # Pandora, memory, and skills
 
-**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
 
 ## Working safely with the agent
 
@@ -17,7 +17,7 @@ Replies have Copy, thumbs-up/down, and Retry controls. Ratings work even with tr
 
 When one reply asks for several tools, the read-only ones next to each other run at the same time: `read`, `notes_search`, `note_links`, `web_search`, `web_fetch`, `skill`, `find_skill`, `decide`, `tool_search`, the MCP resource lists, `discord_history`, and `chat_history` when listing, reading, or searching. Anything that writes or acts (`write`, `edit`, `bash`, `ssh`, phone, screen, browser, `memory`, MCP tools, and so on) runs on its own, in order, and the read-only calls on either side of it wait for it. Tool cards and results always appear in the order Pandora asked, whatever order they finish in. A `delegate` sub-agent groups its calls the same way.
 
-A message you send while she's on a tool run waits in the queue above the message box and reaches her before her next round. Each queued message shows with **Edit** and **✕**. **Edit** takes it out of the queue and back into the box (in front of anything you've typed), so a half-fixed message is never delivered; send it again and it queues again. **✕** drops it. With the box empty, the **Up arrow** takes back the last queued message.
+A message you send while she's on a tool run waits in the queue above the message box and reaches her before her next round. Each queued message shows with **Edit** and **✕**. **Edit** takes it out of the queue and back into the box (in front of anything you've typed), so a half-fixed message is never delivered; send it again and it queues again. **✕** drops it. With the box empty, the **Up arrow** takes back the last queued message. While she's working, the button next to the box says **Queue** and only ever sends; a separate red **Abort** button beside it stops the turn.
 
 The search box above the **Branches** list finds branches by what was said in them, not just their names: your messages, hers, compaction summaries, and tool calls with their results (so file names, repositories, and commands match too). Every word must appear, in any order or case. Matching branches keep their order, each with a highlighted line around the match; **Esc** or the box's **✕** clears it. It reads the saved branches directly, so it works without the memory index that `chat_history` search uses.
 

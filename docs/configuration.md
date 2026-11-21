@@ -1,6 +1,6 @@
 # Configuration and model providers
 
-**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
 
 Use Config's search box if a section is not visible in the selected tab. Keep credentials in the designated settings fields, not in chat or notes.
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.10.10
 - **Send and Abort side by side.** While a turn ran, the one button turned red and said Abort: with text in the box
   it queued the message, with the box empty it stopped her, which was easy to hit while fixing a queued message. Now a
   separate red Abort sits next to Send while she's working and only ever stops the turn; Send says Queue during a

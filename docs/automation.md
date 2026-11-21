@@ -1,6 +1,6 @@
 # Rituals, schedules, and heartbeat
 
-**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
 
 > Automations execute while the app is running. A closed browser, suspended tab, stopped Android process, or unavailable provider can delay/prevent work. Android background mode helps but does not provide server-grade scheduling guarantees.
 

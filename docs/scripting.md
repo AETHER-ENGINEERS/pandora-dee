@@ -1,6 +1,6 @@
 # Shell and scripting
 
-**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.10** · [Documentation index](README-docs.md)
 
 All examples on this page run **inside Jade Vault**, not in a host terminal. The app exposes a virtual filesystem backed by device storage. It does not provide unrestricted host OS access.
 

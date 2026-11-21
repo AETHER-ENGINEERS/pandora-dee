@@ -1,6 +1,6 @@
 # Pandora Dee documentation
 
-Pandora Dee is a device-local Markdown Atelier with an AI companion, browser-based scripting, automations, and an Android wrapper, grown from Jade Vault. These guides follow **Pandora Dee 2.10.7**; UI labels may vary slightly between releases. Config has Model, Memory, Tools, Connect, and App tabs, plus a search box.
+Pandora Dee is a device-local Markdown Atelier with an AI companion, browser-based scripting, automations, and an Android wrapper, grown from Jade Vault. These guides follow **Pandora Dee 2.10.8**; UI labels may vary slightly between releases. Config has Model, Memory, Tools, Connect, and App tabs, plus a search box.
 
 ## Pandora Dee's words
 
@@ -24,7 +24,7 @@ Jade Vault's names keep working: `jade.*`, the `jade` and `flow` commands, `/v1/
 
 ## Version and compatibility
 
-These guides cover **Pandora Dee 2.10.7**. They began as Jade Vault 2.9.0's, and most of that still applies as written. What's newer is in the [CHANGELOG](../CHANGELOG.md); the larger pieces since 2.9.0 are the People layer and the Vault Tree, chats that can be read while a turn runs, Vector's [digest mode](vector.md#digest-mode), and curiosity's [thread clustering and loop halt](automation.md#curiosity-wake-ups). For platform requirements, network access, background operation, and backup coverage, see [Compatibility and limitations](compatibility-and-limitations.md).
+These guides cover **Pandora Dee 2.10.8**. They began as Jade Vault 2.9.0's, and most of that still applies as written. What's newer is in the [CHANGELOG](../CHANGELOG.md); the larger pieces since 2.9.0 are the People layer and the Vault Tree, chats that can be read while a turn runs, Vector's [digest mode](vector.md#digest-mode), curiosity's [thread clustering and loop halt](automation.md#curiosity-wake-ups), and (2.10.8) [read-only tools that run side by side, queued messages you can fix, and search across branches](jade-and-memory.md#tools-queued-messages-and-branches). For platform requirements, network access, background operation, and backup coverage, see [Compatibility and limitations](compatibility-and-limitations.md).
 
 ## Start here
 

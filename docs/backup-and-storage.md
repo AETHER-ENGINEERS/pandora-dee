@@ -1,6 +1,6 @@
 # Backups, storage, and migration
 
-**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
 
 ## Where data lives
 

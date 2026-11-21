@@ -1,6 +1,6 @@
 # Note scripts and templates
 
-**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
 
 Jade Vault implements Dataview- and Templater-style features. Enable **Run JavaScript in notes** in Config → Tools → Note scripts & templates to render live script blocks (enabled by default). These are compatibility features, not full installations of the Obsidian plugins; do not assume every plugin API is supported.
 

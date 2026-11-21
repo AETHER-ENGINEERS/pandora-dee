@@ -1,6 +1,6 @@
 # Troubleshooting
 
-**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
 
 Before clearing storage, reinstalling, or restoring: **export your current data**. Record app version, platform, provider/model, and the exact error without exposing tokens or private notes.
 

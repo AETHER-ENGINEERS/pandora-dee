@@ -1,6 +1,6 @@
 # Vector messenger integration
 
-**Pandora Dee 2.10.7** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
 
 Pandora's model and permissions remain in the app. A separate always-on computer runs a Python HTTP bridge and Vector's patched `vector-agent`, which maintains the messenger identity and receives events. The bridge does not independently run Pandora's brain.
 

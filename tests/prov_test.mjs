@@ -111,7 +111,7 @@ const vis = async () => page.evaluate(() => [...document.querySelectorAll('[data
 ok(await vis() === 'sCloudKey,sGroqKey', 'cloud + groq fallback fields: ' + await vis());
 await page.selectOption('#sProvider', 'local'); ok(await vis() === 'sHost,sGroqKey' && !(await page.isHidden('#sFallbackWrap')), 'local + groq fallback fields: ' + await vis());
 await page.selectOption('#sProvider', 'openai'); ok(await vis() === 'sGroqKey,sOaiHost,sOaiKey', 'openai fields: ' + await vis());
-ok(await page.locator('#fbList .fb-row').count() === 5, 'fallback list rows');
+ok(await page.locator('#fbList .fb-row').count() === 6, 'fallback list rows (the second Ollama is one of them)');
 await page.screenshot({ path: OUT + '/4_settings.png' });
 // back to local as the main provider; Mac comes back → auto switch before the next prompt
 await page.selectOption('#sProvider', 'local'); await page.tap('#btnSave'); await page.waitForTimeout(1500);

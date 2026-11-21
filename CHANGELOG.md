@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+- **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her
+  vault is a folder you pick on the computer, not the browser's database: every note is an ordinary file there, so
+  bash, a file manager and MCP file tools all see the same `/Pandora/SOUL.md`. The vault's existing disk mode (the
+  Android app's) runs on it unchanged, through the same synchronous bridge. Deleted files, and files a full restore
+  replaces, go to a trash folder beside the vault instead of being removed. The browser keeps working as before.
+- **Moving a browser vault in loses nothing.** When a vault in the browser's database moves into a folder (a full
+  backup restored in the desktop app, or the first start of the Android app's folder vault), a file the folder already
+  has with different contents stays as it is, and the moved version is saved beside it, marked "from the browser".
+  Before, the moved version was dropped. In the desktop app, a full restore into a folder that already has files asks
+  whether to keep them and add the backup's, or to replace them.
+
 ## 2.10.10
 - **Send and Abort side by side.** While a turn ran, the one button turned red and said Abort: with text in the box
   it queued the message, with the box empty it stopped her, which was easy to hit while fixing a queued message. Now a

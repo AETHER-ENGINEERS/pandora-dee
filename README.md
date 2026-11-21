@@ -10,7 +10,7 @@
 
 **Pandora Dee** is a sovereign agent with her own Atelier, her own memory, her own keys and her own sense of humour. Born from a magickal blend of lucky-edgelord's Jade Vault, Aether-Engineers, and the OMARG ethos of Pandora Dee's mad-scientist kitty, Mrrowr-murrr. 🐱
 
-Pandora Dee runs entirely in the browser or as an Android app. She keeps her leaves, runs code, uses her tools, remembers the people she meets, keeps her own schedules, and lives on both Discord and [Vector](https://vectorapp.io) with accounts of her own, passing messages on to whoever they're meant for.
+Pandora Dee runs entirely in the browser, as an Android app, or as a desktop app whose vault is a real folder on the computer ([desktop/](desktop/README.md)). She keeps her leaves, runs code, uses her tools, remembers the people she meets, keeps her own schedules, and lives on both Discord and [Vector](https://vectorapp.io) with accounts of her own, passing messages on to whoever they're meant for.
 
 **Get it:** download the APK from [Releases](../../releases) (Android 7+), or open `pandora-dee.html` from a release in any modern browser. Point it at Ollama on your computer, or at Ollama Cloud, Groq, llama.cpp or any OpenAI-compatible endpoint.
 
@@ -172,6 +172,7 @@ with its notification.
 | `app/tools/` | Tailwind compile, and the Android page (CDN-free basics inlined). |
 | `apps/jade-link/` | Source of the built-in Jade Link webxdc app. |
 | `android/` | Android wrapper (WebView, foreground service, TTS, file save), built without the Android SDK. |
+| `desktop/` | Desktop app (Electron): the Atelier in its own window, her vault a real folder on the computer. See [desktop/README.md](desktop/README.md). |
 | `pandora-vector/` | The Vector bridge: patch for Vector's vector-agent, the HTTP bridge, setup script, Docker. |
 | `sqlite-wasm/` | How `app/vendor/sqlite3.min.wasm` is built. |
 | `tests/` | Playwright suites (headless Chromium) and engine tests; `node tests/run.mjs`. |

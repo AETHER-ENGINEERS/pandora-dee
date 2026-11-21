@@ -1917,7 +1917,12 @@ rep("return { path: full, bytes: vfs.nodes.get(full)?.data.length || 0 };", "ret
 rep("const st = vfs.stat?.(p)?.size ?? vfs.nodes.get(p)?.data?.length ?? 0;", "const st = vfs.stat?.(p)?.size ?? 0;")
 # backups and restores
 rep("""    await dbRestore({ ...(data.db || {}), vfs: entries, pendingSettings: next }, true);   // settings ride along in IndexedDB (durable before reload)""",
-    """    if (vfs.diskOn) { vfs.replace(entries, true); if (!vfs.flush(true)) throw new Error('could not write the restored vault to storage'); await dbRestore({ ...(data.db || {}), pendingSettings: next }, true); }
+    """    // the desktop app, on a folder that already has files: keep them and add the backup's beside them (the move from a browser), or replace them (the old ones go to the trash folder)
+    const mergeIn = vfs.diskOn && vfs.info?.mode === 'desktop' && vfs.nodes.size > 1 && confirm(`This vault folder already has ${[...vfs.nodes.values()].filter(n => !n.dir).length} files.
+
+OK: keep them, and add the backup's files. Where a file is in both, the folder's stays and the backup's is saved beside it, marked "from the browser".
+Cancel: replace them with the backup. The folder's files go to the trash folder beside it.`);
+    if (vfs.diskOn && !mergeIn) { vfs.replace(entries, true); if (!vfs.flush(true)) throw new Error('could not write the restored vault to storage'); await dbRestore({ ...(data.db || {}), pendingSettings: next }, true); }
     else await dbRestore({ ...(data.db || {}), vfs: entries, pendingSettings: next }, true);   // settings ride along in IndexedDB (durable before reload)""")
 rep("await dbRestore({ vfs: [...vfs.nodes.entries()], pendingSettings: next }, false);", "if (vfs.diskOn) { vfs.flush(true); await dbRestore({ pendingSettings: next }, false); } else await dbRestore({ vfs: [...vfs.nodes.entries()], pendingSettings: next }, false);")
 

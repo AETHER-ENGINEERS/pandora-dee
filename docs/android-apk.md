@@ -1,6 +1,6 @@
 # Build the Android APK
 
-**Pandora Dee 2.10.8** · [Documentation index](README-docs.md) · [Development guide](development.md)
+**Pandora Dee 2.10.9** · [Documentation index](README-docs.md) · [Development guide](development.md)
 
 These instructions create Jade Vault's Android app from this repository. The current build does **not** use Gradle or require the Android SDK/Android Studio: it compiles Java against repository stubs, converts classes to dex, assembles with apktool, and signs the result.
 

@@ -1,6 +1,6 @@
 # Pandora, memory, and skills
 
-**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
 
 ## Working safely with the agent
 
@@ -84,10 +84,18 @@ description: Review active projects. Use when the user asks for a weekly review.
 
 Skills are listed by name/description and loaded on demand with the skill tool or `/skill:weekly-review`. Keep descriptions specific and steps compatible with available tools. A skill is guidance, not installed executable code or a new permission boundary.
 
+### The embedding index
+
+With **Config → Memory → Embeddings** on, memory search also matches by meaning: texts are embedded by an Ollama embedding model (`nomic-embed-text` unless set) and kept in a sqlite-vec index inside the vault, `/Pandora/.index/vectors.db`. One text is a memory line, a journal section, a skill, a piece of a note (about 1,000 characters, when **Also index all my leaves** is on), or a chat exchange (once `chat_history` search has been used). **Test and rebuild the index** embeds everything again; otherwise only new or changed texts are embedded, in the background.
+
+While embedding, a line at the top of the app shows how far it is: `Embedding 400 of 2,350 · about 6 min left`, then `Embedded 2,350 texts.` Config's status line shows the same. Progress is saved every 30 seconds, so if the page closes, the next start embeds only what's left. A failure says where it stopped and why; what was done is kept.
+
+For a faster embedding server, three fields set how a build runs: **Texts per request** (16 unless set, up to 512), **Requests at once** (1 unless set, up to 8; Ollama answers several together only when its `OLLAMA_NUM_PARALLEL` allows), and **Save progress every** (30 s unless set). A change applies to a build already running, from its next round.
+
 ## Context and trajectories
 
 Context guard compacts/trims history when needed. Use `/context` (or `/ctx`) in the app chat to inspect context usage; those slash commands are not available over the Android HTTP API. Chat prompts include device-local date/timezone information and message timestamps, so keep the device clock correct. Important durable facts belong in memory or notes, not only a long chat.
 
-The trajectory log records model-visible runs in a separate `jade-traj` IndexedDB database. In Config, export JSONL in OpenAI chat-with-tools or ShareGPT format and filter by reply ratings. Compaction can split a run into multiple records. Exports may contain private prompt content, notes, and tool results: inspect before using them for training or sharing. Export trajectories separately from normal backups.
+The trajectory log records model-visible runs in a separate `jade-traj` IndexedDB database. In Config, export JSONL in OpenAI chat-with-tools or ShareGPT format and filter by reply ratings (or type `/traj export`). The export says when it starts and, if it fails, why; a big log is saved in pieces. Compaction can split a run into multiple records. Exports may contain private prompt content, notes, and tool results: inspect before using them for training or sharing. Export trajectories separately from normal backups.
 
 Sources: [memory.js](../app/modules/memory.js), [steer.js](../app/modules/steer.js), [ctxguard.js](../app/modules/ctxguard.js), [traj.js](../app/modules/traj.js).

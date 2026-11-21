@@ -1,6 +1,6 @@
 # Development and architecture
 
-**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
 
 ## Requirements
 

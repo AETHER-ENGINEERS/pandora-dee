@@ -1,6 +1,6 @@
 # Backups, storage, and migration
 
-**Pandora Dee 2.10.8** · [Documentation index](README-docs.md)
+**Pandora Dee 2.10.9** · [Documentation index](README-docs.md)
 
 ## Where data lives
 
@@ -23,7 +23,7 @@ In Config's backup section, choose:
 - **Full backup:** virtual files/directories, settings, selected localStorage state, and the `jade-vault` database records other than the separately serialized VFS.
 - **Config export:** settings/state plus steering, memory, heartbeat, MCP configuration, and skills. Ordinary notes/chats are not included as a full vault archive.
 
-Files are JSON named `jade-vault-backup-YYYY-MM-DD.json` or `jade-vault-config-YYYY-MM-DD.json`. Text files are strings; binary files are represented with base64 objects. Android opens a native Save as dialog; browsers download the file. Use **Copy JSON** if downloading is unavailable, then save the complete text in a secure file.
+Files are JSON named `pandora-dee-backup-YYYY-MM-DD.json` or `pandora-dee-config-YYYY-MM-DD.json` (Jade Vault named them `jade-vault-…`; both restore). Text files are strings; binary files are represented with base64 objects. Android opens a native Save as dialog; browsers download the file. Use **Copy JSON** if downloading is unavailable, then save the complete text in a secure file.
 
 ### Important coverage limits
 
@@ -45,6 +45,8 @@ By default, known provider keys, MCP secrets, HTTP secrets, Vector/Discord bridg
 - Personal notes, memory, and chats remain sensitive even without credentials.
 
 Backups are ordinary JSON, not encrypted archives. Encrypt/store them appropriately, never commit them to Git, and inspect/redact before sharing. `includesKeys:false` describes the export setting, not proof that no secret exists anywhere in the file.
+
+**Big vaults (2.10.9).** A backup is written in pieces, one line per file and one per stored record (each chat is one), so a vault with thousands of chats or a large embedding index never has to fit in the browser's memory as one string. Joined, it is the same JSON any version opens. **Copy JSON** is offered for backups up to 20 MB; bigger ones are downloaded only. Restoring reads a big backup line by line, gzipped (`.json.gz`) or not. A big backup made before 2.10.9 can't be read that way: open it in the version that made it and export it again. If an export fails, the message says why (for example, the browser ran out of memory).
 
 ## Restore
 

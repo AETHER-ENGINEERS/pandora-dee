@@ -1,6 +1,6 @@
 # Pandora Dee: browser version
 
-**Pandora Dee 2.10.8.** Start with [README-docs.md](README-docs.md) for the full user, integration, development, and Android APK guides.
+**Pandora Dee 2.10.9.** Start with [README-docs.md](README-docs.md) for the full user, integration, development, and Android APK guides.
 
 `index.html` is the generated browser app, not the documentation index. Serve it from a static host; see [deployment instructions](deployment-and-releases.md). From a source checkout, rebuild with `npm install` and `npm run build`, then copy `android/proj/assets/index.html` to `docs/index.html` when updating the hosted app.
 

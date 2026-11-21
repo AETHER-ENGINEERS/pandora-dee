@@ -124,32 +124,47 @@ function embedProgress(p) {
   const st = document.getElementById('embedStatus'); if (st) st.textContent = embedProgressText(p);   // Config → Memory shows it too
 }
 const vmemPendingCount = async () => (await vmemCall('sql', { sql: 'SELECT count(*) FROM chunks WHERE emb = 0' }))[0]?.values?.[0]?.[0] || 0;
-// embed everything that has no vector yet (batches of 16; a failure keeps the text searchable by keywords).
+// how a build runs (Config → Memory → Embeddings): texts per request, requests at once, how often progress is saved
+const embedTuning = () => ({
+  batch: Math.max(1, Math.min(512, Math.round(+S.embedBatch) || 16)),
+  parallel: Math.max(1, Math.min(8, Math.round(+S.embedParallel) || 1)),
+  saveMs: +S.embedSaveMs || Math.max(5, Math.min(600, Math.round(+S.embedSaveSecs) || EMBED_SAVE_MS / 1000)) * 1000,   // (S.embedSaveMs: tests shorten it)
+});
+// embed everything that has no vector yet (a failure keeps the text searchable by keywords). Each round sends
+// `parallel` requests of `batch` texts at once; what came back is kept even when one request of the round failed.
 // One pass at a time (a second caller waits, then embeds what's left). It knows how many are waiting and how long is
-// left, shows it (embedProgress, and progress(done, total, msLeft) for the caller), and saves the index every 30 s,
+// left, shows it (embedProgress, and progress(done, total, msLeft) for the caller), and saves the index as it goes,
 // so closing the page loses at most that much: the rest is picked up on the next start.
 async function vmemEmbedPending(progress) {
   while (vmemS.embedding) await vmemS.embedding.catch(() => {});
   const run = (async () => {
     let done = 0, total = await vmemPendingCount(); if (!total) return 0;
-    const t0 = Date.now(); let saved = t0, eta = null;
+    const t0 = Date.now(); let saved = t0, eta = null, round = 0;
     embedProgress({ done, total, eta }); progress?.(done, total, eta);
     try {
       for (;;) {
-        const rows = (await vmemCall('sql', { sql: 'SELECT id, coll, text FROM chunks WHERE emb = 0 ORDER BY id LIMIT 16' }))[0]?.values || [];
+        const { batch, parallel, saveMs } = embedTuning();   // read each round, so a change applies to a build already running
+        const rows = (await vmemCall('sql', { sql: 'SELECT id, coll, text FROM chunks WHERE emb = 0 ORDER BY id LIMIT ?', params: [batch * parallel] }))[0]?.values || [];
         if (!rows.length) break;
-        const vs = await ollamaEmbed(rows.map(r => r[2]), 'document');
-        await vmemEnsureDim(vs[0].length);
-        await vmemCall('tx', { stmts: rows.flatMap((r, i) => [
-          ['DELETE FROM vec WHERE rowid = ?', [r[0]]],
-          ['INSERT INTO vec(rowid, coll, embedding) VALUES (?, ?, ?)', [r[0], r[1], vmemBlob(vs[i])]],
-          ['UPDATE chunks SET emb = 1 WHERE id = ?', [r[0]]],
-        ]) });
-        vmemS.dirty = true; done += rows.length;
-        const left = await vmemPendingCount(); total = done + left;   // texts added meanwhile count too
+        const groups = []; for (let i = 0; i < rows.length; i += batch) groups.push(rows.slice(i, i + batch));
+        const res = await Promise.allSettled(groups.map(g => ollamaEmbed(g.map(r => r[2]), 'document')));
+        const okRows = [], okVecs = []; let failed = null;
+        res.forEach((x, k) => { if (x.status === 'fulfilled') { okRows.push(...groups[k]); okVecs.push(...x.value); } else failed ??= x.reason; });
+        if (okRows.length) {
+          await vmemEnsureDim(okVecs[0].length);
+          await vmemCall('tx', { stmts: okRows.flatMap((r, i) => [
+            ['DELETE FROM vec WHERE rowid = ?', [r[0]]],
+            ['INSERT INTO vec(rowid, coll, embedding) VALUES (?, ?, ?)', [r[0], r[1], vmemBlob(okVecs[i])]],
+            ['UPDATE chunks SET emb = 1 WHERE id = ?', [r[0]]],
+          ]) });
+          vmemS.dirty = true; done += okRows.length;
+        }
+        if (failed) throw failed;
+        // counting what's waiting reads the whole table: do it every 10 rounds (texts added meanwhile count too)
+        let left = Math.max(0, total - done); if (++round % 10 === 0 || !left) { left = await vmemPendingCount(); total = done + left; }
         eta = left ? left * (Date.now() - t0) / done : 0;
         embedProgress({ done, total, eta }); progress?.(done, total, eta);
-        if (left && Date.now() - saved >= (+S.embedSaveMs || EMBED_SAVE_MS)) { await vmemPersist(); saved = Date.now(); }   // (S.embedSaveMs: tests shorten it)
+        if (left && Date.now() - saved >= saveMs) { await vmemPersist(); saved = Date.now(); }
       }
     } catch (e) { embedProgress({ done, total, eta, error: e.message || String(e) }); throw e; }
     embedProgress({ done, total, eta: 0, end: true });

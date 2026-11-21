@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Tune how the embedding index builds.** Config → Memory → Embeddings has three new fields: texts per request
+  (16 unless set, up to 512), requests at once (1 unless set, up to 8; Ollama runs them together when
+  `OLLAMA_NUM_PARALLEL` allows), and how often progress is saved (every 30 s unless set). A faster embedding server
+  across the network spends far less time waiting on round trips. A change applies to a build already running, from
+  its next round, and when one request of a round fails, what the others brought back is kept. The build also counts
+  what's left less often, so each round has less overhead.
 - **Trajectory export no longer fails in silence.** Export JSONL (and `/traj export`) says at once that it's working,
   can't be pressed twice, and says why when it fails, where before a failure showed nothing at all: no file, no
   message. A big log is handed to the file in pieces, one per run, instead of one giant string plus a copy of it,

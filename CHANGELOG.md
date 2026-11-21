@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.10.9
 - **Big backups work.** A backup was made as one giant JSON string of the whole vault and every chat, so with a big
   vault (thousands of chats, a large vector index) Firefox ran out of memory and the button said "Export failed:
   undefined". Backups are now written in pieces, one line per file and one per chat: joined it's the same JSON any

@@ -58,13 +58,21 @@ function createRuntime(opts) {
   const trace = opts.trace || (() => {});
   const pollMs = opts.pollMs ?? 2000, tickMs = opts.tickMs ?? 1000, probeMs = opts.probeMs ?? 60000;
   const writeDir = opts.writeDir || '/Pandora/Waiting Messages';
-  const noticeSent = new Set(); // chats told the person's fixed line during this outage
+  // who has had her notice while she can't answer: people (by bridge + sender) and shared channels (by bridge + chat).
+  // Once per person in a DM, once per channel in a shared channel, and never twice to the same person in different
+  // places. Re-armed when her sending is on again (she's awake and ready).
+  const noticedPeople = new Set(), noticedChannels = new Set();
   let written = null;
   let timers = [];
   let busy = Promise.resolve();
   const serial = (f) => (...a) => { const run = busy.then(() => f(...a), () => f(...a)); busy = run.catch(() => {}); return run; };
   const need = (what, ...sw) => { const why = [...new Set(sw.flatMap((s) => settings.holds(s)))]; if (why.length) { log('refused', { what, why }); throw new Off(what, why); } };
-  settings.onChange((what) => { if (what === 'model' && settings.model().attached) noticeSent.clear(); });
+  let wasSending = settings.on('send');
+  settings.onChange(() => {
+    const now = settings.on('send');
+    if (now && !wasSending) { noticedPeople.clear(); noticedChannels.clear(); log('notice.rearmed', {}); }
+    wasSending = now;
+  });
 
   // ---------- the model ----------
   async function callModel(messages, why, ...sw) {
@@ -97,7 +105,7 @@ function createRuntime(opts) {
   // ---------- bridges: out ----------
   /** Everything for a bridge's people goes through here. → true if it went out. */
   async function sendOut(bridge, tool, args, { fixedNotice = false } = {}) {
-    if (!fixedNotice) need(`${bridge.name}: ${tool}`, 'bridges');
+    if (!fixedNotice) need(`${bridge.name}: ${tool}`, 'send');
     const texts = TEXT_ARGS_OF(args);
     const bad = texts.find((t) => looksLikeProviderError(t));
     if (bad) {
@@ -118,11 +126,28 @@ function createRuntime(opts) {
   }
   const TEXT_KEYS = new Set(['content', 'text', 'message', 'caption', 'bio', 'about', 'name', 'reason']);
   const TEXT_ARGS_OF = (a) => Object.entries(a || {}).filter(([k, v]) => TEXT_KEYS.has(k) && typeof v === 'string').map(([, v]) => v);
-  async function fixedLine(bridge, m) {
-    const line = String(settings.get().offNotice || '').trim();
-    if (!line || settings.model().attached || noticeSent.has(bridge.name + '\n' + m.chat)) return;
-    noticeSent.add(bridge.name + '\n' + m.chat);
-    try { await sendOut(bridge, 'send_message', { chat_id: String(m.chat), content: line }, { fixedNotice: true }); log('bridge.notice', { bridge: bridge.name, chat: m.chat }); } catch { /* the notice is never retried */ }
+  /** Her notice to someone writing while she can't answer: her own configured words, once (see noticedPeople). */
+  async function sendNotice(bridge, m) {
+    const person = `${bridge.name}\n${m.fromId ?? m.from ?? m.chat}`;
+    const channel = `${bridge.name}\n${m.chat}`;
+    if (m.group ? noticedChannels.has(channel) : noticedPeople.has(person)) return;
+    // either way, this person has now had it (or seen it in the channel); a channel, once, for everyone in it
+    noticedPeople.add(person); if (m.group) noticedChannels.add(channel);
+    const line = settings.noticeFor(bridge.name, m.chat, m.fromId, m.from).trim();
+    if (!line) { log('notice.silent', { bridge: bridge.name, chat: m.chat }); return; }
+    if (checkNotice(line)) { log('notice.refused', { bridge: bridge.name, chat: m.chat, why: 'provider details' }); return; } // never, whatever it says
+    try {
+      await sendOut(bridge, 'send_message', { chat_id: String(m.chat), content: line, ...(m.id != null ? { replied_to: String(m.id) } : {}) }, { fixedNotice: true });
+      log('notice.sent', { bridge: bridge.name, chat: m.chat, group: !!m.group });
+    } catch { log('notice.failed', { bridge: bridge.name, chat: m.chat }); } // never retried
+  }
+  /** Whether a notice text can be used: plain words, no provider details, not too long. → why not, or null. */
+  function checkNotice(text) {
+    const t = String(text || '');
+    if (t.length > 500) return 'A notice is at most 500 characters.';
+    if (looksLikeProviderError(t)) return 'That reads like a provider or model error, which never goes to a channel or a DM.';
+    if (Object.keys(redact(t).hits).length) return 'That has an address, a key, or a hidden word in it, which a notice never carries.';
+    return null;
   }
 
   // ---------- bridges: in ----------
@@ -152,16 +177,19 @@ function createRuntime(opts) {
     return true;
   }
   async function pollOnce() {
+    // receiving is its own switch: on through naps and outages, so messages keep landing in the queue
+    if (!settings.on('receive')) return;
     for (const b of bridges) {
       let got = [];
       try { got = (await b.poll()) || []; } catch { log('bridge.poll.failed', { bridge: b.name }); continue; }
       for (const m of got) {
-        const now = settings.on('bridges') && settings.on('loop');
+        // answered now only while she's there and may send; otherwise it waits, and the sender gets her notice once
+        const now = settings.on('send') && settings.on('loop');
         const rec = queue.add(b.name, { ...m, live: now });
         if (!rec) continue;
-        trace('bridge.in', { bridge: b.name, id: rec.id, chat: rec.chat, from: rec.from, text: rec.text, answeredNow: now });
+        trace('bridge.in', { bridge: b.name, id: rec.id, chat: rec.chat, from: rec.from, group: rec.group, text: rec.text, answeredNow: now });
         if (now) await handle(rec);
-        else { log('bridge.kept', { bridge: b.name, chat: rec.chat }); await fixedLine(b, rec); }
+        else { log('bridge.kept', { bridge: b.name, chat: rec.chat }); if (!settings.on('send')) await sendNotice(b, rec); }
       }
     }
   }
@@ -182,6 +210,17 @@ function createRuntime(opts) {
     if (settings.model().attached || settings.get().afterModel !== 'auto' || !opts.probe) return;
     try { if (await opts.probe()) settings.modelBack('a check found it answering again'); } catch { /* still gone */ }
   }
+  /** "Try the model again": check it, and say so. It counts as back if it answers, but nothing is switched on: sending,
+   *  heartbeat, schedules and sparks stay as they are until the person turns them on. */
+  async function checkModel(by = 'someone') {
+    if (!opts.probe) return { ok: null, note: "The host has no model of its own yet: the Atelier's next turn will show whether hers answers. Use \"She has a model again\" when it does." };
+    let ok = false, detail = '';
+    try { ok = !!(await opts.probe()); } catch (e) { detail = String(e && e.message || e).slice(0, 2000); }
+    trace('model.check', { by, ok, detail });
+    log('model.checked', { by, ok });
+    if (ok) settings.modelBack(by + ' (a check that worked)');
+    return { ok, detail, sending: settings.on('send') };
+  }
 
   // ---------- the Atelier, reaching a bridge through the host ----------
   async function clientCall(name, tool, args = {}) {
@@ -189,16 +228,16 @@ function createRuntime(opts) {
     if (!bridge) throw Object.assign(new Error(`No bridge called ${name} on this host.`), { code: 'NONE' });
     if (tool === 'get_new_messages') {
       // only what she may answer now; anything else waits in the queue
-      if (!settings.on('bridges') || !settings.on('loop')) return { content: [{ type: 'text', text: '[]' }] };
+      if (!settings.on('send') || !settings.on('loop')) return { content: [{ type: 'text', text: '[]' }] };
       const list = bridge.forClient.splice(0);
       return { content: [{ type: 'text', text: JSON.stringify(list) }] };
     }
     if (bridge.READS && bridge.READS.has(tool)) return bridge.callTool(tool, args);
     try {
       const went = await sendOut(bridge, tool, args);
-      return went ? { content: [{ type: 'text', text: JSON.stringify({ ok: true }) }] } : { isError: true, content: [{ type: 'text', text: 'Not sent: it looked like a provider or model error, which never goes to a channel or a DM. Her model may be gone; the host has turned the bridges off.' }] };
+      return went ? { content: [{ type: 'text', text: JSON.stringify({ ok: true }) }] } : { isError: true, content: [{ type: 'text', text: 'Not sent: it looked like a provider or model error, which never goes to a channel or a DM. Her model may be gone; the host has turned sending off.' }] };
     } catch (e) {
-      if (e.code) return { isError: true, content: [{ type: 'text', text: `Not sent: Vector and Discord are off right now (${e.why.join(', ')}).` }] };
+      if (e.code) return { isError: true, content: [{ type: 'text', text: `Not sent: sending to Vector and Discord is off right now (${e.why.join(', ')}).` }] };
       throw e;
     }
   }
@@ -214,7 +253,7 @@ function createRuntime(opts) {
     return { error: 'action is list, read or handled' };
   }
   async function deliver({ count } = {}) {
-    need('give her the waiting messages', 'loop', 'bridges');
+    need('give her the waiting messages', 'loop', 'send');
     const n = Number(count) > 0 ? Number(count) : Infinity;
     let done = 0;
     log('queue.deliver', { asked: Number.isFinite(n) ? n : 'all', pending: queue.size() });
@@ -255,7 +294,14 @@ function createRuntime(opts) {
     brain,
     turn: serial((a) => turn(a)),
     pollOnce: serial(pollOnce), tickOnce: serial(tickOnce), probeOnce: serial(probeOnce),
-    clientCall, herTool, notice,
+    clientCall, herTool, notice, checkNotice,
+    checkModel: serial((by) => checkModel(by)),
+    /** Her notices (her tool and the person's page): see them, or change one. Plain words only, checked. */
+    notices(args = {}, by = 'someone') {
+      if (!args.action || args.action === 'get') return { notices: settings.get().notices };
+      if (args.action === 'set' || args.action === 'remove') return settings.setNotice({ ...args, remove: args.action === 'remove' }, by, checkNotice);
+      return { error: 'action is get, set or remove' };
+    },
     /** The bridge's own tool list, for the Atelier (the host adds nothing and hides nothing). */
     async bridgeTools(name) { const b = byName.get(name); if (!b) throw Object.assign(new Error(`No bridge called ${name} on this host.`), { code: 'NONE' }); return b.listTools ? b.listTools() : { tools: [] }; },
     deliver: serial(deliver), later, writeFile: serial(writeFile), clear: serial(clear),

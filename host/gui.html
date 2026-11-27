@@ -46,7 +46,7 @@
   <a href="/" style="margin-left:auto;color:var(--accent)">Open the Atelier</a>
 </header>
 <nav>
-  <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#waiting">Waiting</a><a href="#bridges">Bridges</a>
+  <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#waiting">Waiting</a><a href="#notices">Her notice</a><a href="#bridges">Bridges</a>
   <a href="#trace">What happened</a><a href="#devices">Devices</a><a href="#tools">Tools</a><a href="#files">Files</a><a href="#colours">Colours</a><a href="#log">Log</a>
 </nav>
 <main>
@@ -54,29 +54,31 @@
 
   <section id="switches">
     <h2>Switches</h2>
-    <p class="muted">What runs. Each is on only when you want it on <em>and</em> nothing holds it off: napping (no client connected), waiting for you after a nap, or no model. The Atelier's settings change the same switches.</p>
+    <p class="muted">What runs. A nap turns off the loop, heartbeat, schedules, sparks and sending, and a model outage turns off the heartbeat, schedules, sparks and sending. They stay off until you turn them on, each when she's ready. Receiving stays on, so messages keep landing in the queue. While napping or without a model, the ones that need a client or a model are held off as well.</p>
     <div class="sw" id="swList"></div>
     <div class="row">
-      <button id="resume" hidden>Turn them back on after the nap</button>
-      <button id="modelBack" hidden>She has a model again</button>
+      <button id="resume" hidden>Turn on everything the host turned off</button>
     </div>
-    <div id="modelWhy" class="muted"></div>
+    <div id="modelBox" hidden>
+      <div id="modelWhy" class="muted"></div>
+      <div class="row">
+        <button id="modelCheck">Try the model again</button>
+        <button id="modelBack">She has a model again</button>
+        <span class="muted">Neither turns sending, the heartbeat, schedules or sparks back on: that's yours to do when she's ready.</span>
+      </div>
+    </div>
   </section>
 
   <section id="behaviour">
     <h2>Behaviour</h2>
     <div class="grid">
-      <label class="f"><span>When a client connects after a nap</span>
-        <select data-set="afterNap"><option value="auto">Switches come back on by themselves</option><option value="ask">They stay off until I turn them on</option></select></label>
-      <label class="f"><span>When her model comes back after an outage</span>
-        <select data-set="afterModel"><option value="ask">Stay off until I say she has a model</option><option value="auto">Back on when a check finds it answering</option></select></label>
-      <label class="f"><span>Bridges while off</span>
-        <select data-set="bridgesOff"><option value="quiet">Quiet: signed in, nothing goes out, messages wait</option></select></label>
+      <label class="f"><span>A nap turns her switches off. When a client connects again…</span>
+        <select data-set="afterNap"><option value="ask">They stay off until I turn them on</option><option value="auto">They come back on by themselves (for later, with a local model)</option></select></label>
+      <label class="f"><span>Her model counts as back after an outage…</span>
+        <select data-set="afterModel"><option value="ask">When I say so, or a check I start works</option><option value="auto">When a regular check finds it answering</option></select></label>
       <label class="f"><span>Nap after the last client leaves (seconds)</span><input type="number" min="0" data-set="napGraceSec" data-num></label>
       <label class="f"><span>Say the queue is large past (messages; never trimmed)</span><input type="number" min="1" data-set="queueWarnAt" data-num></label>
     </div>
-    <label class="f" style="margin-top:10px"><span>A fixed line sent once to a chat while she has no model (empty: silence). Never an error text.</span>
-      <input data-set="offNotice" style="width:100%" placeholder="(silence)"></label>
     <label class="f" style="margin-top:10px"><span>Words hidden from anything leaving through a bridge (account names and the like; one per line). Addresses, keys and this computer's name are hidden anyway.</span>
       <textarea data-set="redactWords" data-lines></textarea></label>
   </section>
@@ -89,6 +91,19 @@
       <button data-q="later">Later</button><button data-q="write">Write them to a file</button><button data-q="clear">Clear the queue…</button>
     </div>
     <table><thead><tr><th>Arrived</th><th>Bridge</th><th>From</th><th>Where</th><th>Begins</th></tr></thead><tbody id="waitRows"></tbody></table>
+  </section>
+
+  <section id="notices">
+    <h2>Her notice while she can't answer</h2>
+    <p class="muted">While her sending is off (napping, an outage, or you turned it off), someone who writes to her gets this, once: once per person in a DM, once per shared channel, and never twice to the same person. After that, silence until her sending is on again. It's her words: she can change them with her <code>away_notices</code> tool, and so can you here. Plain text only, never made by a model; the host refuses anything with provider details. Empty means say nothing.</p>
+    <div id="noticeList"></div>
+    <form id="noticeForm" class="grid" style="margin-top:10px">
+      <label class="f"><span>Bridge</span><select name="bridge"><option>discord</option><option>vector</option></select></label>
+      <label class="f"><span>For</span><select name="scope"><option value="default">everyone (this bridge's default)</option><option value="person">one person</option><option value="chat">one chat or channel</option></select></label>
+      <label class="f"><span>Who or which chat (id or name; not for the default)</span><input name="key"></label>
+      <label class="f" style="grid-column:1/-1"><span>What it says</span><input name="text" maxlength="500"></label>
+      <div class="row"><button>Save the notice</button></div>
+    </form>
   </section>
 
   <section id="bridges">
@@ -142,7 +157,8 @@
     S = st;
     applyColours(st.settings.colors);
     $('#version').textContent = `${st.version} · ${st.platform} · shell: ${st.shell}`;
-    $('#napPill').textContent = st.napping ? 'Napping' : (st.heldAfterNap ? 'Awake, waiting for you' : 'Awake');
+    const hostOff = Object.values(st.switches).some((v) => v.offBy);
+    $('#napPill').textContent = st.napping ? 'Napping' : (hostOff ? 'Awake, switches waiting for you' : 'Awake');
     $('#napPill').className = 'pill ' + (st.napping ? 'warn' : 'ok');
     $('#modelPill').textContent = st.model.attached ? 'Model attached' : `No model (${st.model.kind})`;
     $('#modelPill').className = 'pill ' + (st.model.attached ? 'ok' : 'bad');
@@ -152,10 +168,16 @@
     $('#swList').innerHTML = Object.entries(st.switches).map(([k, v]) => `
       <label><input type="checkbox" data-sw="${k}" ${v.wanted ? 'checked' : ''}> ${esc(v.name)}</label>
       <span class="state ${v.on ? 'on' : 'off'}" data-state="${k}">${v.on ? 'On' : 'Off'}</span>
-      <span class="muted">${v.why.length ? 'Off because: ' + esc(v.why.map((w) => ({ off: 'you turned it off', napping: 'napping (no client connected)', 'after a nap': 'waiting for you after a nap', 'no model': 'no model' }[w] || w)).join('; ')) : ''}</span>`).join('');
-    $('#resume').hidden = !st.heldAfterNap;
-    $('#modelBack').hidden = st.model.attached;
+      <span class="muted">${v.why.length ? 'Off because: ' + esc(v.why.map((w) => ({ off: 'you turned it off', napping: 'napping (no client connected)', 'off since the nap': 'turned off by the nap: on when she’s ready', 'off since the model outage': 'turned off by the model outage: on when she’s ready', 'no model': 'no model' }[w] || w)).join('; ')) : ''}</span>`).join('');
+    $('#resume').hidden = !hostOff;
+    $('#modelBox').hidden = st.model.attached;
     $('#modelWhy').innerHTML = st.model.attached ? '' : `Her model went away ${esc(when(st.model.since))} (${esc(st.model.kind)}). What it said, for you only: <pre>${esc(st.model.detail)}</pre>`;
+    // her notices
+    $('#noticeList').innerHTML = Object.entries(st.settings.notices || {}).map(([b, n]) => `<details open><summary class="hi">${esc(b)}</summary>
+      <table><tbody><tr><th>Everyone</th><td>${n.default ? esc(n.default) : '<span class="muted">(says nothing)</span>'}</td><td></td></tr>
+      ${Object.entries(n.people || {}).map(([k, t]) => `<tr><th>Person: ${esc(k)}</th><td>${t ? esc(t) : '<span class="muted">(says nothing)</span>'}</td><td><button data-unnotice="${esc(b)}|person|${esc(k)}">Remove</button></td></tr>`).join('')}
+      ${Object.entries(n.chats || {}).map(([k, t]) => `<tr><th>Chat: ${esc(k)}</th><td>${t ? esc(t) : '<span class="muted">(says nothing)</span>'}</td><td><button data-unnotice="${esc(b)}|chat|${esc(k)}">Remove</button></td></tr>`).join('')}
+      </tbody></table></details>`).join('');
     // behaviour (not while you're typing in it)
     for (const el of document.querySelectorAll('[data-set]')) {
       if (el === editing) continue;
@@ -165,7 +187,7 @@
     // waiting
     $('#waitRows').innerHTML = st.waiting.messages.map((m) => `<tr><td>${esc(when(m.receivedAt))}</td><td>${esc(m.bridge)}</td><td>${esc(m.from || 'someone')}</td><td>${esc(m.chat || '')}</td><td>${esc(m.preview)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nothing is waiting.</td></tr>';
     // bridges
-    $('#bridgeRows').innerHTML = (st.bridges || []).map((b) => `<tr><td class="hi">${esc(b.name)}</td><td>${esc(b.url || '')}</td><td>${b.command ? 'yes' : 'no (already running elsewhere)'}</td><td>${b.tokenSet ? 'set' : 'not set'}</td><td>${st.switches.bridges.on ? 'answering' : 'quiet: messages wait'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No bridges set up on this host yet.</td></tr>';
+    $('#bridgeRows').innerHTML = (st.bridges || []).map((b) => `<tr><td class="hi">${esc(b.name)}</td><td>${esc(b.url || '')}</td><td>${b.command ? 'yes' : 'no (already running elsewhere)'}</td><td>${b.tokenSet ? 'set' : 'not set'}</td><td>${st.switches.receive.on ? 'receiving' : 'not receiving'}; ${st.switches.send.on ? 'sending' : 'not sending (her notice once, then quiet)'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No bridges set up on this host yet.</td></tr>';
     // devices, tools, files
     $('#devRows').innerHTML = st.devices.map((d) => `<tr><td>${esc(d.name)}${d.you ? ' <span class="hi">(this one)</span>' : ''}</td><td>${esc(when(d.created))}</td><td>${esc(when(d.seen))}</td></tr>`).join('');
     $('#toolRows').innerHTML = st.tools.map((t) => `<tr><td class="hi">${esc(t.name)}</td><td>${esc(t.description)}</td></tr>`).join('');
@@ -198,12 +220,25 @@
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'resume') { await api('/host/switches/resume', 'POST', {}); return refresh(); }
-    if (b.id === 'modelBack') { await api('/host/model/back', 'POST', {}); return refresh(); }
+    if (b.id === 'modelBack') { await api('/host/model/back', 'POST', {}); note('Marked: she has a model. Sending and the rest stay as they are until you turn them on.'); return refresh(); }
+    if (b.id === 'modelCheck') {
+      note('Checking her model…');
+      const r = await api('/host/model/check', 'POST', {});
+      note(r.ok === true ? 'Her model answered: it works. Sending and the rest stay off until you turn them on.' : r.ok === false ? `It still doesn't answer.${r.detail ? ' It said: ' + r.detail : ''}` : (r.note || 'Not checked.'));
+      return refresh();
+    }
+    if (b.dataset.unnotice) { const [bridge, scope, key] = b.dataset.unnotice.split('|'); await api('/host/notices', 'POST', { action: 'remove', bridge, scope, key }); return refresh(); }
     const q = b.dataset.q; if (!q) return;
     if (q === 'clear' && !confirm('Remove the waiting messages from the queue? Only works when a written file already holds all of them.')) return;
     const r = await api('/host/waiting/' + (q === 'next' ? 'deliver' : q), 'POST', q === 'next' ? { count: 5 } : q === 'clear' ? { confirm: true } : {});
     note(r.error ? r.error : q === 'write' ? (r.path ? `Written to ${r.path} in her vault (still queued too).` : 'Nothing to write.') : q === 'clear' ? `${r.cleared} cleared; ${r.file} keeps them.` : q === 'later' ? 'They stay queued.' : `${r.delivered} handed to her; ${r.left} still waiting.`);
     refresh();
+  });
+  $('#noticeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const r = await api('/host/notices', 'POST', { action: 'set', bridge: f.get('bridge'), scope: f.get('scope'), key: f.get('key'), text: f.get('text') });
+    note(r.error ? r.error : 'Saved her notice.'); if (!r.error) e.target.reset(); refresh();
   });
   $('#bridgeForm').addEventListener('submit', async (e) => {
     e.preventDefault();

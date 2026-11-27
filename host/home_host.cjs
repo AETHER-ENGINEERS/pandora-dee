@@ -206,6 +206,11 @@ function createHomeHost(opts) {
       description: 'Messages from Vector and Discord that came while you were away (napping, or without a model) and are waiting for you. You decide when and whether to look. action "list": who and where, without the words; "read": one (seq) or all (all: true); "handled": mark one (seq) or all (all: true) as dealt with, so they leave the queue.',
       inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list', 'read', 'handled'] }, seq: { type: 'number' }, all: { type: 'boolean' } }, required: ['action'] },
     },
+    {
+      name: 'away_notices',
+      description: "Your notice for people who write on Vector or Discord while you can't answer (napping, or your sending is off): your own plain words, sent once per person in a DM and once per shared channel, never twice to the same person, until your sending is on again. One per bridge, with your own wording for a person or a chat if you like; empty text means say nothing to them. action \"get\" shows them; \"set\" (bridge, scope: default | person | chat, key: the person's id or name, or the chat's id, text); \"remove\" takes an override away. Never put provider details in them: the host refuses those.",
+      inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['get', 'set', 'remove'] }, bridge: { type: 'string' }, scope: { type: 'string', enum: ['default', 'person', 'chat'] }, key: { type: 'string' }, text: { type: 'string' } }, required: ['action'] },
+    },
   ];
   /** The tools, with what's waiting in her tool's description, so she sees it whenever her tools are listed. */
   function toolList() {
@@ -213,6 +218,12 @@ function createHomeHost(opts) {
     return TOOLS.map((t) => (t.name === 'waiting_messages' && n ? { ...t, description: n + ' ' + t.description } : t));
   }
   async function callTool(name, args, dev) {
+    if (name === 'away_notices') {
+      if (!runtime) return { content: [{ type: 'text', text: JSON.stringify({ error: 'No bridges on this host yet.' }) }], isError: true };
+      const r = runtime.notices(args || {}, 'her');
+      event('tool', { device: dev.id, tool: name, action: args?.action || 'get' });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 1) }], isError: !!r.error };
+    }
     if (name === 'waiting_messages') {
       if (!runtime) return { content: [{ type: 'text', text: JSON.stringify({ count: 0, messages: [] }) }] };
       const r = runtime.herTool(args || {});
@@ -358,6 +369,13 @@ function createHomeHost(opts) {
         return send(res, 200, { ok: true, set: !!b.key, note: 'Restart the host for a bridge to use a new key.' });
       }
       if (p === '/host/model/back' && req.method === 'POST') { settings.modelBack(dev.name); return send(res, 200, settings.state()); }
+      if (p === '/host/model/check' && req.method === 'POST') return send(res, 200, runtime ? await runtime.checkModel(dev.name) : { ok: null, note: 'No runtime on this host.' });
+      if (p === '/host/notices' && req.method === 'POST') {
+        if (!runtime) return send(res, 404, { error: 'No bridges on this host yet.' });
+        let b = {}; try { b = JSON.parse(await readBody(req, 16384) || '{}'); } catch { b = {}; }
+        const r = runtime.notices(b, dev.name);
+        return send(res, r.error ? 400 : 200, r);
+      }
       if ((p === '/host/log' || p === '/host/trace') && req.method === 'GET') {
         const n = Math.min(2000, Math.max(1, Number(url.searchParams.get('n')) || 200));
         let lines = [];

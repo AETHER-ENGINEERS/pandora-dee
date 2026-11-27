@@ -43,7 +43,7 @@ function createQueue(file, { warnAt = WARN_AT, log = () => {} } = {}) {
     add(bridge, m) {
       const key = m.id != null ? bridge + '\n' + m.id : null;
       if (key && seen.has(key)) return null;
-      const rec = { seq: ++seq, bridge, id: m.id ?? null, chat: m.chat ?? null, from: m.from ?? null, text: String(m.text ?? ''), at: m.at ?? null, receivedAt: Date.now(), live: !!m.live, raw: m.raw ?? null };
+      const rec = { seq: ++seq, bridge, id: m.id ?? null, chat: m.chat ?? null, from: m.from ?? null, fromId: m.fromId ?? null, group: !!m.group, text: String(m.text ?? ''), at: m.at ?? null, receivedAt: Date.now(), live: !!m.live, raw: m.raw ?? null };
       append({ op: 'add', ...rec });
       pending.set(rec.seq, rec);
       if (key) seen.add(key);

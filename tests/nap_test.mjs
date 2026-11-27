@@ -61,7 +61,10 @@ const events = [];
 async function boot({ grace = 400 } = {}) {
   const host = createHomeHost({ root: HOME, napGraceMs: grace });
   await new Promise(r => host.server.listen(0, '127.0.0.1', r));
-  host.settings.set({ redactWords: ['tidepool-ollama-account'] }, 'test');
+  // this suite is about the queue: switches come back by themselves after a nap, and no away notice goes out
+  // (tests/switches_test.mjs covers the defaults: the person turns things on, and her notice)
+  host.settings.set({ redactWords: ['tidepool-ollama-account'], afterNap: 'auto', switches: { loop: true, heartbeat: true, schedules: true, sparks: true, send: true } }, 'test');
+  for (const b of ['vector', 'discord']) host.settings.setNotice({ bridge: b, scope: 'default', text: '' }, 'test');
   const logIt = (kind, f) => { events.push({ kind, ...f }); host.event(kind, f); };
   const rt = host.startRuntime({ brain: 'host', model, bridges: [vector, discord], schedules: [{ id: 'heartbeat', kind: 'heartbeat', everyMs: 60, prompt: 'heartbeat' }], log: logIt, pollMs: 25, tickMs: 15 });
   host.base = `http://127.0.0.1:${host.server.address().port}`;
@@ -216,6 +219,7 @@ ok(!sent.some(s => s.replyTo === 'f1') && queue.list().some(m => m.id === 'f1'),
 ok(host.settings.model().attached === false && host.settings.model().kind === 'unreachable', 'an unreachable model counts as gone: her switches go off');
 modelFails = false;
 await api('/host/model/back', {});
+await api('/host/switches/resume', {}); // the outage turned sending off: the person turns it back on
 await api('/host/waiting/deliver', {});
 ok(sent.some(s => s.replyTo === 'f1') && queue.size() === 0, 'delivered once the model is back');
 modelSays = () => 'I run on http://100.101.102.103:11434 as tidepool-ollama-account, key sk-abcdefghijklmnopqrstuvwx';

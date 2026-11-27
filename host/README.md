@@ -81,10 +81,11 @@ is **awake only while a client is connected**, and naps otherwise (`host/nap.cjs
 - **Grace period:** when the last client leaves, the host waits (`--nap-grace <seconds>`, default 60), so a refresh or
   a blink of the Wi-Fi doesn't send it to sleep.
 - **Napping turns her switches off** (see Switches below): the agent loop, the heartbeat, schedules, curiosity sparks
-  and the bridges all read **off, because napping**, in the host's settings page and to the client. So:
+  and sending, and they stay off after a client reconnects until the person turns them on. Receiving stays on. So:
   - agent turns don't run;
   - no scheduled, heartbeat or spark model calls (skipped, and logged once per change of reason);
-  - nothing goes out through a bridge, including an answer that was already being made when the host fell asleep.
+  - nothing goes out through a bridge, including an answer that was already being made when the host fell asleep,
+    except her notice, once (below).
 - **While napping, the host still does:** files, pairing, `host_shell` when a client calls it, and the log.
   `GET /host/presence` says which state it's in.
 - **Messages that arrive while napping wait in a queue on disk** (`host/queue.cjs`, `bridge-queue.jsonl` in the state
@@ -144,33 +145,56 @@ main protection is that provider details don't reach a bridge turn's context in 
 
 ## Switches
 
-Her **agent loop, heartbeat, schedules, curiosity sparks and bridges** are each a switch (`host/settings.cjs`). A
-switch is on only when the person wants it on **and** nothing holds it off. Wherever a switch is shown, so is why it's
-off:
+Her **agent loop, heartbeat, schedules and curiosity sparks**, and her bridges' **receiving** and **sending**, are
+each a switch (`host/settings.cjs`). A switch is on only when it's turned on **and** nothing holds it off. Wherever a
+switch is shown, so is why it's off:
 
 - **off:** the person turned it off;
-- **napping:** no client is connected;
-- **after a nap:** a client is back, but the person chose "they stay off until I turn them on" (the setting
-  "When a client connects after a nap"; for now the default is that they come back by themselves);
-- **no model:** her model went away (below).
+- **off since the nap / off since the model outage:** the host turned it off. It stays off until the person turns it
+  on, one by one or all at once ("Turn on everything the host turned off");
+- **napping:** no client is connected (holds the loop, heartbeat, schedules, sparks and sending);
+- **no model:** her model is gone (holds the same).
+
+**After a nap,** reconnecting changes nothing: the loop, heartbeat, schedules, sparks and sending stay off until the
+person turns them on. A reconnect may follow a planned model switch, and the heartbeat is often best left off while
+conversations are busy. "They come back on by themselves" is a setting, **off by default**, for later, when a local
+model can carry her.
+
+**Receiving** stays on through naps and outages, so messages keep landing in the queue. The person can turn it off;
+then the host stops reading the bridges, and their own limits apply.
 
 ## When her model goes away
 
 When a model call fails with a **usage limit**, a **refused key** or an **unreachable** server (`host/errors.cjs`),
 the host takes it as her model being gone:
 
-- **Every switch goes off,** "no model": loop, heartbeat, schedules, sparks and the bridges. The log says so, and so do
-  the settings page and the client.
-- **They come back when the person says she has a model again** (the "She has a model again" button). That's the
-  default. The setting "When her model comes back after an outage" can make it automatic instead, once a check finds
-  the model answering.
+- **It turns off the heartbeat, schedules, sparks and sending** ("off since the model outage"). The loop waits for a
+  model. Receiving stays on. The log says so, and so do the settings page and the client.
+- **"Try the model again"** checks it and shows whether it answers. **"She has a model again"** marks it back by hand.
+  (A setting can also let a regular check mark it back.) **None of these turns anything on:** sending, the heartbeat,
+  schedules and sparks wait for the person, until she's definitely ready.
 - **Provider and model error text never reaches a channel or a DM.**
   - Anything about to go out through a bridge that looks like one is stopped. That includes the Atelier's own
     "⚠ <error>" reply, and a usage-limit message naming the person's account.
   - The stop is logged (the facts) and traced (the words, for the person), and is itself taken as a sign the model is
     gone.
-  - While she has no model, the bridges are silent, unless the person writes a fixed line in the settings. That line,
-    word for word, then goes once to each chat that writes to her.
+
+## Her notice while she can't answer
+
+While her sending is off (napping, an outage, or turned off), someone who writes to her gets **her notice, once**:
+
+- **once per person in a DM,** and **once per shared channel** (for everyone in it);
+- **never twice to the same person:** someone who saw it in a channel doesn't get it again in a DM;
+- **then silence,** until her sending is on again. That re-arms it.
+
+**The words are hers.** Each bridge has a default ("Fae is napping, she'll respond to your messages as soon as she's
+able!"), and she can have her own words for one person or one chat, or say nothing (empty).
+
+- **Who changes them:** she does with her `away_notices` tool, and the person does on the settings page (and, next, in
+  the Atelier).
+- **What they can be:** plain configured text, never made by a model. A notice that reads like a provider error, or
+  carries an address, a key or a hidden word, is refused.
+- **What still happens:** every message still waits in the queue.
 
 ## The host is her bridge
 

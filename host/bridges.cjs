@@ -24,6 +24,9 @@ function normalize(item) {
     id: item.id ?? item.message_id ?? null,
     chat: item.chat_id ?? item.channel_id ?? item.chat ?? null,
     from: (a && typeof a === 'object' ? (a.name || a.display_name || a.username || a.id) : a) || item.sender_name || item.sender || item.from || null,
+    fromId: (a && typeof a === 'object' ? (a.id ?? a.npub ?? null) : null) ?? item.sender_id ?? item.author_id ?? item.sender ?? null,
+    // a shared channel (a server channel, a group, a community) rather than a DM
+    group: !!(item.is_group || item.guild_id || item.community_id || item.group_id),
     text: String(item.text ?? item.content ?? ''),
     at: item.timestamp ? Date.parse(item.timestamp) || Number(item.timestamp) || null : (item.created_at ? Date.parse(item.created_at) || null : (item.at ?? null)),
     raw: item,

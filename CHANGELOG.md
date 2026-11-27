@@ -17,11 +17,16 @@
       five, oldest first), later, or write them to a Markdown file in her vault. The queue is cleared only on the
       person's word, after a file holds them.
     - Everything bound for a bridge is checked first, and provider addresses, account names and keys are hidden.
-  - **Switches:** the agent loop, heartbeat, schedules, curiosity sparks and bridges are switches that napping actually
-    turns off, each showing why.
-  - **When her model goes away** (a usage limit, a refused key, unreachable), they all go off until the person says
-    she has a model again. Provider error text never reaches a channel or a DM: the usage-limit message that named
-    the person's account is stopped at the host.
+  - **Switches:** the agent loop, heartbeat, schedules, curiosity sparks, and the bridges' receiving and sending.
+    - A nap turns all but receiving off, and they stay off after a reconnect until the person turns them on.
+    - Each shows why it's off.
+  - **When her model goes away** (a usage limit, a refused key, unreachable), the heartbeat, schedules, sparks and
+    sending go off, and stay off when the model is back ("Try the model again" checks it) until the person turns them
+    on. Receiving goes on.
+    - Provider error text never reaches a channel or a DM: the usage-limit message that named the person's account is
+      stopped at the host.
+  - **Her notice while she can't answer,** in her own words, set by her or the person: once per person in a DM, once
+    per shared channel, never twice to one person, then silence until she's sending again.
   - **The host runs her Vector and Discord bridges itself** and reads every message into the queue. The Atelier reaches
     them through the host with the same tools as before.
   - **She's told what waited** (count, bridge, sender; not the words) and has her own `waiting_messages` tool.

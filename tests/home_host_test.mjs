@@ -177,7 +177,8 @@ const shadow = (page, sel) => page.evaluate(s => { const r = document.getElement
 const press = (page, act) => page.evaluate(a => document.getElementById('pd-host-waiting').shadowRoot.querySelector(`[data-act="${a}"]`).click(), act);
 await p.waitForFunction(() => /3 messages waiting/.test(document.getElementById('pd-host-waiting')?.shadowRoot?.querySelector('.pill')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
 ok(/3 messages waiting/.test((await shadow(p, '.pill'))?.text || '') && await p.evaluate(() => getComputedStyle(document.getElementById('pd-host-waiting')).display !== 'none'), 'the Atelier shows "3 messages waiting"');
-ok(standIn.seen.length === 0 && standIn.sent.length === 0, 'and nothing was handed to her when she woke');
+const { NOTICE } = require(path.join(ROOT, 'host', 'settings.cjs'));
+ok(standIn.seen.length === 0 && standIn.sent.length === 3 && standIn.sent.every(s => s.text === NOTICE) && new Set(standIn.sent.map(s => s.chat)).size === 3, 'nothing was handed to her when she woke; each of the three who wrote while she napped got her notice, once');
 await press(p, 'open');
 ok((await shadow(p, '.panel'))?.hidden === false && /Nothing is handed to her on its own/.test((await shadow(p, '.what')).text), 'the indicator opens to the three choices');
 await press(p, 'later'); await p.waitForTimeout(300);
@@ -192,7 +193,7 @@ await p.evaluate(() => vfs.rescan(true));
 ok(await p.evaluate(pth => vfs.isFile(pth), wpath), 'the file is in her vault, for her to read');
 await press(p, 'deliver');
 await p.waitForFunction(() => /3 handed to her/.test(document.getElementById('pd-host-waiting').shadowRoot.querySelector('.note').textContent), null, { timeout: 8000 }).catch(() => {});
-ok(standIn.seen.join('|') === 'first while she napped|second while she napped|third while she napped' && standIn.sent.map(s => s.replyTo).join() === 'w1,w2,w3', 'Give them to her now: each handed to her once, oldest first, and answered');
+ok(standIn.seen.join('|') === 'first while she napped|second while she napped|third while she napped' && standIn.sent.filter(s => s.text !== NOTICE).map(s => s.replyTo).join() === 'w1,w2,w3', 'Give them to her now: each handed to her once, oldest first, and answered');
 await p.waitForFunction(() => /0 messages waiting/.test(document.getElementById('pd-host-waiting').shadowRoot.querySelector('.pill').textContent), null, { timeout: 5000 }).catch(() => {});
 ok(rt2.waiting().count === 0 && /0 messages waiting/.test((await shadow(p, '.pill')).text), 'and the count goes to none');
 ok(await p.evaluate(() => vfs.read('/Pandora/SOUL.md')).then(t => /from the host folder/.test(t)), "the page reads her SOUL from the host's real file");

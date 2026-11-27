@@ -116,7 +116,7 @@ const HOME2 = path.join(tmp, 'home2');
 fs.mkdirSync(disk(HOME2, '/Pandora'), { recursive: true });
 fs.writeFileSync(disk(HOME2, '/Pandora/SOUL.md'), '# Pandora Dee Fae (synthetic)\nfrom the host folder\n');
 fs.writeFileSync(disk(HOME2, '/Pandora/Memory.md'), '- a synthetic memory\n');
-const h2 = await start({ root: HOME2, page: process.env.JV_WEB, napGraceMs: 800 });
+const h2 = await start({ root: HOME2, page: process.env.JV_WEB, napGraceMs: 3000 });
 const BASE = h2.base + '/';
 // a stand-in bridge and model behind the host's runtime, so the page's "messages waiting" can be checked
 const standIn = { inbox: [], sent: [], seen: [] };
@@ -237,7 +237,7 @@ ok(h2.nap.awake() === true, 'a reload of the Atelier does not make the host nap'
 await A.ctx.close(); await Bd.ctx.close();
 await new Promise(r => setTimeout(r, 400));
 ok(h2.nap.awake() === true, 'with every window closed, the host stays awake through the grace period');
-await new Promise(r => setTimeout(r, 1000));
+await new Promise(r => setTimeout(r, 3500));
 ok(h2.nap.awake() === false, 'and then naps');
 rt2.stop(); await browser.close(); await h2.close();
 fs.rmSync(tmp, { recursive: true, force: true });

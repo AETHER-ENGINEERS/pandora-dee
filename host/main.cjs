@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Start Pandora Dee's home host. See host/README.md.
 //   node host/main.cjs --root <home folder> [--state <folder>] [--port 8741] [--lan | --listen <address>]
-//                      [--page dist/pandora-dee.html] [--shell <program>]
+//                      [--page dist/pandora-dee.html] [--shell <program>] [--nap-grace <seconds, default 60>]
 // Typed into the host's window while it runs:  pin (a new PIN) · devices · revoke <name or id> · quit
 'use strict';
 const path = require('node:path');
@@ -22,6 +22,7 @@ const host = createHomeHost({
   state: opt('state'),
   page: opt('page') || path.join(__dirname, '..', 'dist', 'pandora-dee.html'),
   shell: opt('shell'),
+  napGraceMs: opt('nap-grace') !== undefined ? Number(opt('nap-grace')) * 1000 : undefined,
   log: (m) => console.log(m),
 });
 
@@ -29,6 +30,7 @@ host.server.listen(port, listen, () => {
   console.log(`Pandora Dee's home host ${host.VERSION}`);
   console.log(`  home:   ${host.root}`);
   console.log(`  shell:  ${host.shell}`);
+  console.log(`  naps:   when no client has been connected for ${host.nap.graceMs / 1000} s (no turns, schedules or bridge replies then)`);
   const where = listen === '0.0.0.0'
     ? Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4').map((i) => `http://${i.address}:${port}/`)
     : [`http://${listen}:${port}/`];

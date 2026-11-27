@@ -23,6 +23,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { createDiskHost } = require('../desktop/disk_host.cjs');
+const { createNap } = require('./nap.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -54,6 +55,7 @@ const shellArgs = (shell, command) => (/cmd(\.exe)?$/i.test(shell) ? ['/d', '/s'
  *   state  where the host keeps its own records (devices, log); default "<root> (host)", beside the home, not in it
  *   page   the built Atelier page to serve at "/" (dist/pandora-dee.html)
  *   shell  the program host_shell runs
+ *   napGraceMs  how long after the last client leaves before the host naps (host/nap.cjs; default 60 s)
  */
 function createHomeHost(opts) {
   const disk = createDiskHost(opts.root);
@@ -73,6 +75,9 @@ function createHomeHost(opts) {
   function event(kind, fields = {}) {
     try { fs.appendFileSync(logFile, JSON.stringify({ at: new Date().toISOString(), kind, ...fields }) + '\n'); } catch { /* the log never stops the work */ }
   }
+  // awake only while a client is connected (host/nap.cjs); it starts asleep
+  const nap = createNap({ graceMs: opts.napGraceMs, log: (kind, f) => { event(kind, f); if (kind === 'wake' || kind === 'nap') say(kind === 'wake' ? 'Awake: a client is connected.' : 'Napping: no client connected.'); } });
+  let runtime = null; // attached with attach(): its waiting and held messages are shown at /host/waiting
   let pin = null; // { code, until }
   let wrong = 0, lockedUntil = 0;
   function newPin() {
@@ -167,7 +172,8 @@ function createHomeHost(opts) {
     }
     if (name === 'host_info') {
       event('tool', { device: dev.id, tool: name });
-      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, shell, home: root, platform: process.platform }) }] };
+      // (no full path: what a tool returns can end up in a model's context, and from there in a message)
+      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, shell: path.basename(shell), home: '/ (her home folder; $PANDORA_HOME in host_shell)', platform: process.platform, awake: nap.awake() }) }] };
     }
     event('tool.unknown', { device: dev.id, tool: name });
     return { content: [{ type: 'text', text: `No tool named ${name} on this host.` }], isError: true };
@@ -240,6 +246,18 @@ function createHomeHost(opts) {
         if (name === 'info') { const i = JSON.parse(disk.call('info')); i.host = { version: VERSION, device: dev.name, writer: !writer || writer.page === page || now() - writer.at > writerMs }; return send(res, 200, JSON.stringify(i)); }
         return send(res, 200, String(disk.call(name, Array.isArray(call.args) ? call.args : [])));
       }
+      // presence: a client is connected while it holds this stream open (the page's bridge does); see host/nap.cjs
+      if (p === '/host/presence/stream' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+        const release = nap.connect({ device: dev.id, page: String(req.headers['x-page'] || '') });
+        res.write(JSON.stringify(nap.state()) + '\n');
+        const beat = setInterval(() => res.write(JSON.stringify(nap.state()) + '\n'), 15000);
+        const end = () => { clearInterval(beat); release(); };
+        req.on('close', end); res.on('close', end);
+        return;
+      }
+      if (p === '/host/presence' && req.method === 'GET') return send(res, 200, nap.state());
+      if (p === '/host/waiting' && req.method === 'GET') return send(res, 200, { waiting: runtime ? runtime.waiting() : [], held: runtime ? runtime.held() : [] });
       if (p === '/host/client/settings') {
         if (req.method === 'GET') return send(res, 200, dev.settings || {});
         if (req.method === 'PUT') {
@@ -265,9 +283,10 @@ function createHomeHost(opts) {
 
   const server = http.createServer((req, res) => { handle(req, res); });
   return {
-    root, stateDir, shell, server, newPin, revoke, VERSION,
+    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event,
+    attach(rt) { runtime = rt; },
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => new Promise((r) => server.close(() => r())),
+    close: () => new Promise((r) => { nap.close(); if (server.closeAllConnections) server.closeAllConnections(); server.close(() => r()); }),
   };
 }
 

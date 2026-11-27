@@ -8,6 +8,12 @@
   - The vault's disk mode runs unchanged over the network, through the same synchronous calls the desktop app uses.
   - One window at a time writes; the others read.
   - The host's real shell is offered as a tool server (`host_shell` at `/mcp`), working on the same files.
+  - **Nap mode:** the host is awake only while a client (the Atelier open somewhere) is connected. With none
+    connected, after a grace period (`--nap-grace`, default 60 s), it runs no turns, makes no scheduled or heartbeat
+    model calls and sends nothing through the bridges.
+    - Messages that arrive meanwhile are kept. On waking, recent ones are answered; older ones are held for her and
+      the person.
+    - Everything bound for a bridge is checked first, and provider addresses, account names and keys are hidden.
   - Chats, schedules and settings still live in each browser for now. See `host/README.md`.
 - **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her
   vault is a folder you pick on the computer, not the browser's database: every note is an ordinary file there, so

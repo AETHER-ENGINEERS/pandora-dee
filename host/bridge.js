@@ -55,6 +55,24 @@
     diskDel: call('del'), diskMove: call('move'), diskTouch: call('touch'), diskClear: call('clear'), diskUseShared: call('useShared')
   };
 
+  // presence: while this page holds the stream open, the host is awake (host/nap.cjs). If it drops (the host restarted,
+  // the Wi-Fi blinked), it's reopened; the host's grace period covers the gap. Closing the page closes it.
+  var removed = false;
+  function presence() {
+    if (removed || !window.fetch) return;
+    window.fetch('/host/presence/stream', { headers: { 'Authorization': 'Bearer ' + token, 'X-Page': page }, cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 401) { removed = true; return; }
+        if (!r.ok || !r.body) throw new Error('no stream');
+        var rd = r.body.getReader();
+        var pump = function () { return rd.read().then(function (x) { if (!x.done) return pump(); }); };
+        return pump();
+      })
+      .catch(function () { /* reopened below */ })
+      .then(function () { if (!removed) setTimeout(presence, 2000); });
+  }
+  presence();
+
   // the host's tool server: same address only, with this device's token
   var own = location.origin + '/mcp';
   var f = window.fetch && window.fetch.bind(window);

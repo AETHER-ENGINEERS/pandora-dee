@@ -116,7 +116,7 @@ const HOME2 = path.join(tmp, 'home2');
 fs.mkdirSync(disk(HOME2, '/Pandora'), { recursive: true });
 fs.writeFileSync(disk(HOME2, '/Pandora/SOUL.md'), '# Pandora Dee Fae (synthetic)\nfrom the host folder\n');
 fs.writeFileSync(disk(HOME2, '/Pandora/Memory.md'), '- a synthetic memory\n');
-const h2 = await start({ root: HOME2, page: process.env.JV_WEB });
+const h2 = await start({ root: HOME2, page: process.env.JV_WEB, napGraceMs: 800 });
 const BASE = h2.base + '/';
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const route = async r => {
@@ -155,9 +155,11 @@ await A.page.waitForURL(/\/pair$/, { timeout: 15000 }).catch(() => {});
 ok(/\/pair$/.test(A.page.url()) && await A.page.evaluate(() => typeof vfs === 'undefined'), 'an unpaired browser is sent to pairing, and the Atelier never starts on its own storage');
 await A.page.fill('#pin', '123456' === h2.newPin() ? '654321' : '123456'); await A.page.click('#go'); await A.page.waitForTimeout(400);
 ok(/\/pair$/.test(A.page.url()) && /not the one/.test(await A.page.textContent('#msg')), 'a wrong PIN on the pairing page says so');
+ok(h2.nap.awake() === false, 'the pairing page alone does not wake the host');
 await pairIn(A.page, 'Browser A');
 const p = A.page;
 ok(await p.evaluate(() => vfs.diskOn && vfs.info?.mode === 'desktop' && !!vfs.info?.host), 'paired, the page runs its vault on the host');
+ok(h2.nap.awake() === true && h2.nap.state().clients === 1, 'the open Atelier is a connected client: the host is awake');
 ok(await p.evaluate(() => vfs.read('/Pandora/SOUL.md')).then(t => /from the host folder/.test(t)), "the page reads her SOUL from the host's real file");
 ok(!(await p.evaluate(() => vfs.isFile('/Welcome.md'))), 'a home that already has files is not filled with the sample vault');
 await p.evaluate(() => vfs.write('/Pandora/Journal/2026-11-27.md', 'written in the page', { mkdirs: true }));
@@ -195,6 +197,13 @@ ok(/^ERR:.*no longer paired/.test(afterRevoke), 'a removed device gets no more o
 await Bd.page.reload(); await Bd.page.waitForURL(/\/pair$/, { timeout: 15000 }).catch(() => {});
 ok(/\/pair$/.test(Bd.page.url()), 'and is sent back to pairing');
 
+await A.page.reload(); await ready(A.page); await new Promise(r => setTimeout(r, 300));
+ok(h2.nap.awake() === true, 'a reload of the Atelier does not make the host nap');
+await A.ctx.close(); await Bd.ctx.close();
+await new Promise(r => setTimeout(r, 400));
+ok(h2.nap.awake() === true, 'with every window closed, the host stays awake through the grace period');
+await new Promise(r => setTimeout(r, 1000));
+ok(h2.nap.awake() === false, 'and then naps');
 await browser.close(); await h2.close();
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(log.join('\n')); console.log('\n' + (fail.length ? fail.join('\n') : 'ALL PASS'));

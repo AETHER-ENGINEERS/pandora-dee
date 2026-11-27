@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **A home host: her vault on one computer, her Atelier from any device.** `node host/main.cjs --root <folder>` keeps
+  the vault as real files on the host and serves the Atelier to browsers on the same computer, the home network or the
+  tailnet. A device pairs once with a six-digit PIN the host shows, and gets its own key. Without one it gets nothing
+  but the pairing page, and the Atelier never starts on that browser's own storage.
+  - The vault's disk mode runs unchanged over the network, through the same synchronous calls the desktop app uses.
+  - One window at a time writes; the others read.
+  - The host's real shell is offered as a tool server (`host_shell` at `/mcp`), working on the same files.
+  - Chats, schedules and settings still live in each browser for now. See `host/README.md`.
 - **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her
   vault is a folder you pick on the computer, not the browser's database: every note is an ordinary file there, so
   bash, a file manager and MCP file tools all see the same `/Pandora/SOUL.md`. The vault's existing disk mode (the

@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pair with the home host</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 17px/1.5 system-ui, sans-serif; background: #0b0912; color: #eee; margin: 0; padding: 24px; }
+  main { max-width: 420px; margin: 8vh auto; }
+  label { display: block; margin: 16px 0 6px; }
+  input { font: inherit; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #555; background: #1a1624; color: #eee; }
+  #pin { font-size: 28px; letter-spacing: .3em; text-align: center; }
+  button { font: inherit; margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #b48cff; color: #111; }
+  #msg { min-height: 1.5em; margin-top: 14px; color: #ffb4b4; }
+  p.small { opacity: .7; font-size: 14px; }
+</style>
+<main>
+  <h2>Pair this device with Pandora Dee's home</h2>
+  <p>Enter the PIN the home host is showing. This device then keeps its own key, so you only do this once.</p>
+  <form id="f">
+    <label for="pin">PIN</label>
+    <input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+    <label for="name">This device's name</label>
+    <input id="name" maxlength="60" placeholder="e.g. the living-room tablet">
+    <button id="go">Pair</button>
+  </form>
+  <div id="msg" role="status"></div>
+  <p class="small">The PIN keeps little hands (and anyone else on the network) from using the host. A new one can be shown on the host at any time.</p>
+</main>
+<script>
+  document.getElementById('f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('msg'); msg.textContent = '';
+    try {
+      const r = await fetch('/host/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: document.getElementById('pin').value.trim(), name: document.getElementById('name').value.trim() || navigator.platform || 'a device' }) });
+      const j = await r.json();
+      if (!r.ok) { msg.textContent = j.error || ('The host said ' + r.status); return; }
+      localStorage.setItem('pdhost:token', j.token);
+      location.replace('/');
+    } catch (err) { msg.textContent = 'The host could not be reached: ' + err.message; }
+  });
+</script>

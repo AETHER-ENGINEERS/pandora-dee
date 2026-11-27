@@ -87,13 +87,39 @@ is **awake only while a client is connected**, and naps otherwise (`host/nap.cjs
     asleep).
 - **While napping, the host still does:** files, pairing, `host_shell` when a client calls it, and the log.
   `GET /host/presence` says which state it's in.
-- **Messages that arrive while napping are kept, not dropped.**
-  - The host still collects them from the bridges (collecting sends nothing) and keeps them.
-  - On waking, it answers the ones that arrived within the last 10 minutes, the Discord bridge's own limit for a reply
-    to still make sense.
-  - Older ones are held for her and the person to see (`GET /host/waiting`), not answered automatically into a
-    conversation that has moved on.
-  - Without the host collecting them, the Discord bridge would drop them after its 10 minutes.
+- **Messages that arrive while napping wait in a queue on disk** (`host/queue.cjs`, `bridge-queue.jsonl` in the state
+  folder):
+  - **in arrival order**: the order the host received them, with messages from different bridges arriving together
+    taken Vector-first or in whatever order the bridges are listed;
+  - **each with its source:** which bridge, who sent it, which chat, when it arrived and when it was sent;
+  - **nothing in the queue expires or is trimmed,** and **waking doesn't hand them to her:** she may only have napped
+    for a model switch. It survives a host restart.
+  - The host keeps collecting them from the bridges while napping (collecting sends nothing and calls no model).
+    That's also what keeps the Discord bridge from dropping them after its own 10 minutes. If the host isn't running
+    at all, the bridges' own limits apply again.
+- **A connected client sees "N messages waiting",** a small indicator the bridge script draws at the top of the
+  Atelier. It offers three choices:
+  1. **Give them to her now:** all, or the next five, oldest first. Each is her turn and her reply, through the bridge
+     it came from. A message leaves the queue only once her turn for it has finished. If the host stops partway
+     through, she gets it again after the restart, told that it's a retry.
+  2. **Later:** they stay queued.
+  3. **Write them to a file:** every waiting message, oldest first, with when it arrived, the bridge, the sender and the
+     chat, written as Markdown to `/Pandora/Waiting Messages/<date> <time>.md` in her vault, for her to read at her
+     own pace. A new file each time, never over an earlier one. **The queue is left as it is.** "Clear the queue" is
+     then offered: it needs the person to confirm, and it only clears messages a written file already holds, so
+     nothing is lost if the file is misplaced.
+- **Live conversations while awake** are answered straight away. They go through the same queue on disk first, so one
+  interrupted by a restart isn't lost either.
+- **A large queue:** past 1,000 waiting messages, the host says so (in the log, and in the indicator) and leaves the
+  decision to the person. It never trims the queue.
+
+| Route | What |
+|---|---|
+| `GET /host/waiting` | the count, the messages in order, and the last file written |
+| `POST /host/waiting/deliver` | `{ "count": n }` for the next n, or `{}` for all |
+| `POST /host/waiting/later` | |
+| `POST /host/waiting/write` | → `{ path, count }` |
+| `POST /host/waiting/clear` | `{ "confirm": true }`; refused unless a written file holds every waiting message |
 
 `host/runtime.cjs` is the one place the host's turns, schedules and bridge traffic pass through, so these rules can't
 be stepped around. The Atelier's agent loop moves in behind it in the next step. Until then, turns still run in the

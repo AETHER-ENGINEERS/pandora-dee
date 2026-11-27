@@ -11,8 +11,11 @@
   - **Nap mode:** the host is awake only while a client (the Atelier open somewhere) is connected. With none
     connected, after a grace period (`--nap-grace`, default 60 s), it runs no turns, makes no scheduled or heartbeat
     model calls and sends nothing through the bridges.
-    - Messages that arrive meanwhile are kept. On waking, recent ones are answered; older ones are held for her and
-      the person.
+    - Messages that arrive meanwhile wait in a queue on disk, in arrival order, with their sources. They never
+      expire, survive a restart, and aren't handed to her on waking.
+    - A connected Atelier shows "N messages waiting", with three choices: give them to her now (all, or the next
+      five, oldest first), later, or write them to a Markdown file in her vault. The queue is cleared only on the
+      person's word, after a file holds them.
     - Everything bound for a bridge is checked first, and provider addresses, account names and keys are hidden.
   - Chats, schedules and settings still live in each browser for now. See `host/README.md`.
 - **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her

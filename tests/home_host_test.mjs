@@ -118,6 +118,21 @@ fs.writeFileSync(disk(HOME2, '/Pandora/SOUL.md'), '# Pandora Dee Fae (synthetic)
 fs.writeFileSync(disk(HOME2, '/Pandora/Memory.md'), '- a synthetic memory\n');
 const h2 = await start({ root: HOME2, page: process.env.JV_WEB, napGraceMs: 800 });
 const BASE = h2.base + '/';
+// a stand-in bridge and model behind the host's runtime, so the page's "messages waiting" can be checked
+const { createRuntime } = require(path.join(ROOT, 'host', 'runtime.cjs'));
+const { createQueue } = require(path.join(ROOT, 'host', 'queue.cjs'));
+const { createRedactor } = require(path.join(ROOT, 'host', 'redact.cjs'));
+const standIn = { inbox: [], sent: [], seen: [] };
+const rt2 = createRuntime({
+  nap: h2.nap, queue: createQueue(path.join(h2.stateDir, 'bridge-queue.jsonl')), home: HOME2,
+  model: async (m) => { const t = m.messages[m.messages.length - 1].content; standIn.seen.push(t); return 'answer to: ' + t; },
+  bridges: [{ name: 'vector', poll: async () => standIn.inbox.splice(0), send: async (x) => { standIn.sent.push(x); } }],
+  redact: createRedactor({ hostDetails: false }), pollMs: 30, tickMs: 50,
+}).start();
+h2.attach(rt2);
+for (const [id, from, text] of [['w1', 'Ana', 'first while she napped'], ['w2', 'Bo', 'second while she napped'], ['w3', 'Cy', 'third while she napped']]) {
+  standIn.inbox.push({ id, chat: 'dm-' + from, from, text, at: Date.now() }); await new Promise(r => setTimeout(r, 80));
+}
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const route = async r => {
   const rq = r.request(); const url = rq.url();
@@ -160,6 +175,30 @@ await pairIn(A.page, 'Browser A');
 const p = A.page;
 ok(await p.evaluate(() => vfs.diskOn && vfs.info?.mode === 'desktop' && !!vfs.info?.host), 'paired, the page runs its vault on the host');
 ok(h2.nap.awake() === true && h2.nap.state().clients === 1, 'the open Atelier is a connected client: the host is awake');
+
+// what waited while she napped: shown to the person, handed over only when they choose
+const shadow = (page, sel) => page.evaluate(s => { const r = document.getElementById('pd-host-waiting')?.shadowRoot; const e = r && r.querySelector(s); return e ? { text: e.textContent, hidden: e.hidden } : null; }, sel);
+const press = (page, act) => page.evaluate(a => document.getElementById('pd-host-waiting').shadowRoot.querySelector(`[data-act="${a}"]`).click(), act);
+await p.waitForFunction(() => /3 messages waiting/.test(document.getElementById('pd-host-waiting')?.shadowRoot?.querySelector('.pill')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
+ok(/3 messages waiting/.test((await shadow(p, '.pill'))?.text || '') && await p.evaluate(() => getComputedStyle(document.getElementById('pd-host-waiting')).display !== 'none'), 'the Atelier shows "3 messages waiting"');
+ok(standIn.seen.length === 0 && standIn.sent.length === 0, 'and nothing was handed to her when she woke');
+await press(p, 'open');
+ok((await shadow(p, '.panel'))?.hidden === false && /Nothing is handed to her on its own/.test((await shadow(p, '.what')).text), 'the indicator opens to the three choices');
+await press(p, 'later'); await p.waitForTimeout(300);
+ok(rt2.waiting().count === 3 && standIn.seen.length === 0, 'Later: all three stay queued');
+await press(p, 'open'); await press(p, 'write');
+await p.waitForFunction(() => /Written to/.test(document.getElementById('pd-host-waiting').shadowRoot.querySelector('.note').textContent), null, { timeout: 5000 }).catch(() => {});
+const wnote = (await shadow(p, '.note')).text;
+const wpath = (/Written to (\/Pandora\/Waiting Messages\/[^ ]+ [^ ]+\.md)/.exec(wnote) || [])[1];
+ok(wpath && /first while she napped[\s\S]*second[\s\S]*third/.test(fs.readFileSync(disk(HOME2, wpath), 'utf8')), 'Write them to a file: all three, oldest first, in ' + wpath);
+ok(rt2.waiting().count === 3 && (await shadow(p, '[data-act="clear"]')).hidden === false, 'they stay queued, and "Clear the queue" is offered now that a file holds them');
+await p.evaluate(() => vfs.rescan(true));
+ok(await p.evaluate(pth => vfs.isFile(pth), wpath), 'the file is in her vault, for her to read');
+await press(p, 'deliver');
+await p.waitForFunction(() => /3 handed to her/.test(document.getElementById('pd-host-waiting').shadowRoot.querySelector('.note').textContent), null, { timeout: 8000 }).catch(() => {});
+ok(standIn.seen.join('|') === 'first while she napped|second while she napped|third while she napped' && standIn.sent.map(s => s.replyTo).join() === 'w1,w2,w3', 'Give them to her now: each handed to her once, oldest first, and answered');
+await p.waitForFunction(() => /0 messages waiting/.test(document.getElementById('pd-host-waiting').shadowRoot.querySelector('.pill').textContent), null, { timeout: 5000 }).catch(() => {});
+ok(rt2.waiting().count === 0 && /0 messages waiting/.test((await shadow(p, '.pill')).text), 'and the count goes to none');
 ok(await p.evaluate(() => vfs.read('/Pandora/SOUL.md')).then(t => /from the host folder/.test(t)), "the page reads her SOUL from the host's real file");
 ok(!(await p.evaluate(() => vfs.isFile('/Welcome.md'))), 'a home that already has files is not filled with the sample vault');
 await p.evaluate(() => vfs.write('/Pandora/Journal/2026-11-27.md', 'written in the page', { mkdirs: true }));
@@ -204,7 +243,7 @@ await new Promise(r => setTimeout(r, 400));
 ok(h2.nap.awake() === true, 'with every window closed, the host stays awake through the grace period');
 await new Promise(r => setTimeout(r, 1000));
 ok(h2.nap.awake() === false, 'and then naps');
-await browser.close(); await h2.close();
+rt2.stop(); await browser.close(); await h2.close();
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(log.join('\n')); console.log('\n' + (fail.length ? fail.join('\n') : 'ALL PASS'));
 process.exit(fail.length ? 1 : 0);

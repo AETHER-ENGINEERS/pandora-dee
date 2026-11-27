@@ -250,14 +250,29 @@ function createHomeHost(opts) {
       if (p === '/host/presence/stream' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
         const release = nap.connect({ device: dev.id, page: String(req.headers['x-page'] || '') });
-        res.write(JSON.stringify(nap.state()) + '\n');
-        const beat = setInterval(() => res.write(JSON.stringify(nap.state()) + '\n'), 15000);
+        const status = () => JSON.stringify({ ...nap.state(), waiting: runtime ? runtime.waiting().count : 0, waitingLarge: runtime ? runtime.waiting().large : false }) + '\n';
+        res.write(status());
+        const beat = setInterval(() => res.write(status()), 3000); // also keeps the "N waiting" count fresh
         const end = () => { clearInterval(beat); release(); };
         req.on('close', end); res.on('close', end);
         return;
       }
       if (p === '/host/presence' && req.method === 'GET') return send(res, 200, nap.state());
-      if (p === '/host/waiting' && req.method === 'GET') return send(res, 200, { waiting: runtime ? runtime.waiting() : [], held: runtime ? runtime.held() : [] });
+      // what waited while she napped (host/queue.cjs), and the person's three choices for it (host/runtime.cjs)
+      if (p === '/host/waiting' && req.method === 'GET') return send(res, 200, runtime ? runtime.waiting() : { count: 0, messages: [], large: false, written: null });
+      if (p.startsWith('/host/waiting/') && req.method === 'POST') {
+        if (!runtime) return send(res, 404, { error: 'Nothing is connected to the bridges on this host yet.' });
+        let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
+        const what = p.slice('/host/waiting/'.length);
+        event('queue.choice', { device: dev.id, choice: what });
+        try {
+          if (what === 'deliver') return send(res, 200, await runtime.deliver({ count: b.count }));
+          if (what === 'later') return send(res, 200, runtime.later());
+          if (what === 'write') return send(res, 200, await runtime.writeFile());
+          if (what === 'clear') { const r = await runtime.clear({ confirm: b.confirm === true }); return send(res, r.error ? 409 : 200, r); }
+        } catch (e) { return send(res, e.code === 'NAPPING' ? 409 : 500, { error: e.message }); }
+        return send(res, 404, { error: 'The choices are deliver, later, write and clear.' });
+      }
       if (p === '/host/client/settings') {
         if (req.method === 'GET') return send(res, 200, dev.settings || {});
         if (req.method === 'PUT') {

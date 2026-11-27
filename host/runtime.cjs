@@ -1,44 +1,53 @@
 // The host's runtime: the one place its turns, schedules and bridge traffic pass through, so the nap rule
-// (host/nap.cjs) and the outbound check (host/redact.cjs) can't be stepped around.
+// (host/nap.cjs), the queue (host/queue.cjs) and the outbound check (host/redact.cjs) can't be stepped around.
 //
 // Today the model and the bridges are given to it (tests give stand-ins); the Atelier's own agent loop moves in behind
 // `model` in the next step. What it guarantees already:
 //   - while napping: no model call of any kind (a turn is refused, a due schedule is skipped and logged), and nothing is
 //     sent through a bridge (a send is refused, even one already on its way when the host fell asleep);
-//   - messages arriving on a bridge while napping are kept, not answered: the host still collects them (collecting
-//     sends nothing), and on waking it answers the ones that are still fresh and holds the older ones for her and the
-//     person to see (GET /host/waiting), instead of answering a conversation that has moved on;
+//   - every message that arrives on a bridge is written to the queue on disk first, in arrival order. While she's
+//     awake it's answered straight away, as a live conversation. While she naps it waits, and it keeps waiting after
+//     she wakes: nothing in the queue expires, is trimmed or is handed to a model on its own. The person (or she)
+//     chooses: deliver them now (all, or the next few, oldest first), later (they stay), or write them to a Markdown
+//     file in her home to read at her own pace (they stay queued until the person clears them);
 //   - every message for a bridge passes the redactor first, and the log notes what was hidden (never the values).
 
 'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
 
 class Napping extends Error {
   constructor(what) { super(`The host is napping (no client is connected), so it won't ${what}.`); this.code = 'NAPPING'; }
 }
 
+const pad = (n) => String(n).padStart(2, '0');
+const stamp = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())}`; };
+const when = (t) => (t == null ? 'unknown' : new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
 /**
  * opts:
  *   nap        from createNap()
+ *   queue      from createQueue()
  *   model      async ({ messages, why }) → reply text: the only way the runtime reaches a model
  *   bridges    [{ name, poll: async () → [{ id, chat, from, text, at }], send: async ({ chat, text, replyTo }) }]
  *   schedules  [{ id, everyMs, prompt }]   (heartbeats included)
  *   redact     from createRedactor()
+ *   home       her home folder (where "write them to a file" writes), and writeDir, the vault folder inside it
  *   log        (kind, fields)
- *   freshMs    how old a waiting message may be and still be answered on waking (default 10 minutes, the same as the
- *              Discord bridge's own limit)
  *   pollMs, tickMs
  */
 function createRuntime(opts) {
-  const { nap, model, redact } = opts;
+  const { nap, model, redact, queue } = opts;
   const bridges = opts.bridges || [];
+  const byName = new Map(bridges.map((b) => [b.name, b]));
   const schedules = (opts.schedules || []).map((s) => ({ ...s, next: Date.now() + s.everyMs }));
   const log = opts.log || (() => {});
-  const freshMs = opts.freshMs ?? 10 * 60 * 1000;
   const pollMs = opts.pollMs ?? 2000, tickMs = opts.tickMs ?? 1000;
-  const waiting = []; // { bridge, msg, keptAt }
-  const held = [];    // waited too long: for her and the person, not answered automatically
+  const writeDir = opts.writeDir || '/Pandora/Waiting Messages';
+  let written = null; // { path, upTo (seq), count, at }: the last file written, so clearing never loses anything
   let timers = [];
   let busy = Promise.resolve();
+  const serial = (f) => (...a) => { const run = busy.then(() => f(...a), () => f(...a)); busy = run.catch(() => {}); return run; };
 
   async function callModel(messages, why) {
     if (!nap.awake()) { log('model.refused', { why }); throw new Napping('call a model'); }
@@ -58,25 +67,28 @@ function createRuntime(opts) {
     return callModel([...history, { role: 'user', content: String(text) }], `turn:${from}`);
   }
 
-  async function answer(bridge, msg) {
+  /** Her turn for one queued message, and its reply. → true once it's handled (and has left the queue). */
+  async function handle(m) {
+    const bridge = byName.get(m.bridge);
+    if (!bridge) { log('queue.no-bridge', { seq: m.seq, bridge: m.bridge }); return false; }
+    queue.trying(m.seq);
     let reply;
-    try { reply = await turn({ text: msg.text, from: `${bridge.name}:${msg.chat}` }); }
-    catch (e) {
+    try {
+      const note = m.tries > 1 ? ' (handed to her again: the host stopped during her last turn for it)' : '';
+      reply = await turn({ text: m.text, from: `${m.bridge}:${m.chat}${note}` });
+    } catch (e) {
       // the error itself never goes to the bridge: it's where provider addresses turn up
-      if (e.code === 'NAPPING') return keep(bridge, msg);
-      log('turn.failed', { bridge: bridge.name, chat: msg.chat });
-      return;
+      log(e.code === 'NAPPING' ? 'queue.kept' : 'turn.failed', { seq: m.seq, bridge: m.bridge, chat: m.chat });
+      return false;
     }
-    try { await send(bridge, { chat: msg.chat, text: reply, replyTo: msg.id }); }
+    try { await send(bridge, { chat: m.chat, text: reply, replyTo: m.id }); }
     catch (e) {
-      // fell asleep while the answer was being made: it isn't sent; the message waits to be answered on waking
-      if (e.code === 'NAPPING') return keep(bridge, msg);
-      log('bridge.send.failed', { bridge: bridge.name, chat: msg.chat });
+      // fell asleep while the answer was being made: it isn't sent, and the message stays in the queue
+      log(e.code === 'NAPPING' ? 'queue.kept' : 'bridge.send.failed', { seq: m.seq, bridge: m.bridge, chat: m.chat });
+      return false;
     }
-  }
-  function keep(bridge, msg) {
-    waiting.push({ bridge, msg, keptAt: Date.now() });
-    log('bridge.kept', { bridge: bridge.name, chat: msg.chat, id: msg.id });
+    queue.done(m.seq);
+    return true;
   }
 
   async function pollOnce() {
@@ -84,8 +96,12 @@ function createRuntime(opts) {
       let got = [];
       try { got = (await b.poll()) || []; } catch { log('bridge.poll.failed', { bridge: b.name }); continue; }
       for (const m of got) {
-        if (!nap.awake()) keep(b, m);
-        else await answer(b, m);
+        const awake = nap.awake();
+        const rec = queue.add(b.name, { ...m, live: awake });
+        if (!rec) continue;
+        // awake: a live conversation, answered now. Napping: it waits in the queue for a choice.
+        if (awake) await handle(rec);
+        else log('bridge.kept', { bridge: b.name, chat: m.chat ?? null });
       }
     }
   }
@@ -99,28 +115,76 @@ function createRuntime(opts) {
       catch (e) { if (e.code !== 'NAPPING') log('schedule.failed', { id: s.id }); }
     }
   }
-  async function wakeUp() {
-    const now = Date.now();
-    const list = waiting.splice(0);
-    for (const w of list) {
-      const age = now - (Number(w.msg.at) || w.keptAt);
-      if (age <= freshMs) await answer(w.bridge, w.msg);
-      else { held.push({ bridge: w.bridge.name, ...w.msg }); log('bridge.held', { bridge: w.bridge.name, chat: w.msg.chat, id: w.msg.id }); }
+
+  // ---------- the three choices for what waited ----------
+  /** 1. Send queued messages now: hand them to her, oldest first, all or the next `count`. Stops at the first that
+   *  can't be handled (so the order holds), leaving it and the rest queued. */
+  async function deliver({ count } = {}) {
+    if (!nap.awake()) throw new Napping('hand her the waiting messages');
+    const n = Number(count) > 0 ? Number(count) : Infinity;
+    let done = 0;
+    log('queue.deliver', { asked: Number.isFinite(n) ? n : 'all', pending: queue.size() });
+    while (done < n) {
+      const m = queue.first();
+      if (!m) break;
+      if (!(await handle(m))) break;
+      done++;
     }
+    return { delivered: done, left: queue.size() };
   }
-  // one thing at a time: polls, ticks and the waking catch-up never overlap
-  const serial = (f) => () => (busy = busy.then(f, f).catch(() => {}));
-  const offWake = nap.onWake(serial(wakeUp));
+  /** 2. Later: nothing moves; they stay queued, without expiring. */
+  function later() { log('queue.later', { pending: queue.size() }); return { left: queue.size() }; }
+  /** 3. Write them to a Markdown file in her home. The queue is left as it is until the person clears it. */
+  function writeFile() {
+    const list = queue.list();
+    if (!list.length) return { count: 0, path: null };
+    const t = Date.now();
+    let vp = `${writeDir}/${stamp(t)}.md`;
+    const real = (p) => path.join(opts.home, ...p.split('/').filter(Boolean));
+    for (let i = 2; fs.existsSync(real(vp)); i++) vp = `${writeDir}/${stamp(t)} (${i}).md`; // never over an earlier one
+    const lines = [
+      `# Messages that waited while she napped`,
+      '',
+      `${list.length} message${list.length === 1 ? '' : 's'}, oldest first, written ${when(t)}. They're still in the host's queue too, until the person clears it.`,
+      '',
+    ];
+    for (const m of list) {
+      lines.push(`## ${when(m.receivedAt)} · ${m.bridge} · ${m.from || 'someone'}`, '');
+      lines.push(`- Where: ${m.chat || 'unknown'}${m.id != null ? ` · message ${m.id}` : ''}`);
+      if (m.at != null && Math.abs(m.at - m.receivedAt) > 60_000) lines.push(`- Sent: ${when(m.at)}`);
+      if (m.tries) lines.push(`- Handed to her ${m.tries} time${m.tries === 1 ? '' : 's'} before without finishing`);
+      lines.push('', String(m.text).split('\n').map((l) => '> ' + l).join('\n'), '');
+    }
+    fs.mkdirSync(path.dirname(real(vp)), { recursive: true });
+    const tmp = real(vp) + '.jvtmp';
+    fs.writeFileSync(tmp, lines.join('\n'));
+    fs.renameSync(tmp, real(vp));
+    written = { path: vp, upTo: list[list.length - 1].seq, count: list.length, at: t };
+    log('queue.written', { path: vp, count: list.length });
+    return { count: list.length, path: vp };
+  }
+  /** Clearing, only on the person's word, and only what a written file already holds. */
+  function clear({ confirm } = {}) {
+    if (confirm !== true) return { cleared: 0, error: 'Clearing needs the person to confirm it.' };
+    const list = queue.list();
+    if (!written || list.some((m) => m.seq > written.upTo)) return { cleared: 0, error: 'Write them to a file first: clearing only removes messages a written file already holds.' };
+    for (const m of list) queue.done(m.seq);
+    log('queue.cleared', { count: list.length, file: written.path });
+    return { cleared: list.length, file: written.path };
+  }
 
   return {
-    turn: (a) => (busy = busy.then(() => turn(a), () => turn(a))),
+    turn: serial((a) => turn(a)),
     pollOnce: serial(pollOnce),
     tickOnce: serial(tickOnce),
+    deliver: serial(deliver),
+    later,
+    writeFile: serial(writeFile),
+    clear: serial(clear),
     idle: () => busy,
-    waiting: () => waiting.map((w) => ({ bridge: w.bridge.name, ...w.msg })),
-    held: () => held.slice(),
+    waiting: () => ({ count: queue.size(), large: queue.large(), warnAt: queue.warnAt, messages: queue.list(), written }),
     start() { timers = [setInterval(serial(pollOnce), pollMs), setInterval(serial(tickOnce), tickMs)]; return this; },
-    stop() { for (const t of timers) clearInterval(t); timers = []; offWake(); },
+    stop() { for (const t of timers) clearInterval(t); timers = []; },
   };
 }
 

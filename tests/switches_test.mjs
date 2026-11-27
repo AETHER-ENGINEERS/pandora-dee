@@ -3,7 +3,7 @@
 // Synthetic homes, a stand-in model, and a stand-in bridge the host starts itself (tests/fixtures/fake_bridge.mjs,
 // shaped like pandora-discord).
 //
-// The rules (Mrrowr-murrr, 2026-11-27):
+// The rules (the person's decisions, 2026-11-27):
 //   - a nap turns the loop, heartbeat, schedules, sparks and sending off, and reconnecting changes nothing: they stay
 //     off until the person turns them on ("come back by themselves" is a setting, off by default);
 //   - a model outage turns the heartbeat, schedules, sparks and sending off; a model attached again (checked, or the

@@ -5,7 +5,7 @@
 // Her switches: the agent loop, the heartbeat, schedules, curiosity sparks, and the bridges, which are two switches,
 // receiving (messages keep landing in the waiting queue) and sending (anything goes out to people).
 //
-// What turns them off, and what brings them back (Mrrowr-murrr's decisions, 2026-11-27):
+// What turns them off, and what brings them back (the person's decisions, 2026-11-27):
 //   - A nap (no client connected) turns the loop, heartbeat, schedules, sparks and sending OFF, and they stay off
 //     after a client reconnects, until the person turns each back on: reconnecting may follow a planned model switch,
 //     and the heartbeat is often best left off while conversations are busy. ("Come back by themselves" is a setting,

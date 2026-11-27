@@ -119,17 +119,13 @@ fs.writeFileSync(disk(HOME2, '/Pandora/Memory.md'), '- a synthetic memory\n');
 const h2 = await start({ root: HOME2, page: process.env.JV_WEB, napGraceMs: 800 });
 const BASE = h2.base + '/';
 // a stand-in bridge and model behind the host's runtime, so the page's "messages waiting" can be checked
-const { createRuntime } = require(path.join(ROOT, 'host', 'runtime.cjs'));
-const { createQueue } = require(path.join(ROOT, 'host', 'queue.cjs'));
-const { createRedactor } = require(path.join(ROOT, 'host', 'redact.cjs'));
 const standIn = { inbox: [], sent: [], seen: [] };
-const rt2 = createRuntime({
-  nap: h2.nap, queue: createQueue(path.join(h2.stateDir, 'bridge-queue.jsonl')), home: HOME2,
+const rt2 = h2.startRuntime({
+  brain: 'host',
   model: async (m) => { const t = m.messages[m.messages.length - 1].content; standIn.seen.push(t); return 'answer to: ' + t; },
   bridges: [{ name: 'vector', poll: async () => standIn.inbox.splice(0), send: async (x) => { standIn.sent.push(x); } }],
-  redact: createRedactor({ hostDetails: false }), pollMs: 30, tickMs: 50,
-}).start();
-h2.attach(rt2);
+  pollMs: 30, tickMs: 50,
+});
 for (const [id, from, text] of [['w1', 'Ana', 'first while she napped'], ['w2', 'Bo', 'second while she napped'], ['w3', 'Cy', 'third while she napped']]) {
   standIn.inbox.push({ id, chat: 'dm-' + from, from, text, at: Date.now() }); await new Promise(r => setTimeout(r, 80));
 }

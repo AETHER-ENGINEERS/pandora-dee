@@ -24,6 +24,10 @@ const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { createDiskHost } = require('../desktop/disk_host.cjs');
 const { createNap } = require('./nap.cjs');
+const { createSettings } = require('./settings.cjs');
+const { createQueue } = require('./queue.cjs');
+const { createRedactor } = require('./redact.cjs');
+const { createRuntime } = require('./runtime.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -75,9 +79,43 @@ function createHomeHost(opts) {
   function event(kind, fields = {}) {
     try { fs.appendFileSync(logFile, JSON.stringify({ at: new Date().toISOString(), kind, ...fields }) + '\n'); } catch { /* the log never stops the work */ }
   }
-  // awake only while a client is connected (host/nap.cjs); it starts asleep
-  const nap = createNap({ graceMs: opts.napGraceMs, log: (kind, f) => { event(kind, f); if (kind === 'wake' || kind === 'nap') say(kind === 'wake' ? 'Awake: a client is connected.' : 'Napping: no client connected.'); } });
-  let runtime = null; // attached with attach(): its waiting and held messages are shown at /host/waiting
+  // what happened, contents included: what went to which model and what came back, bridge messages in and out, what was
+  // stopped. Kept on the host, for the person to look at (the settings page shows it); never sent anywhere.
+  const traceFile = path.join(stateDir, 'trace.jsonl');
+  function trace(kind, fields = {}) {
+    try { fs.appendFileSync(traceFile, JSON.stringify({ at: new Date().toISOString(), kind, ...fields }) + '\n'); } catch { /* as above */ }
+  }
+  // the settings and switches: one source of truth for every surface (host/settings.cjs)
+  const settings = createSettings(stateDir, { log: event });
+  // the redactor follows the settings' words (and always hides the home folder's path)
+  let redactor = null;
+  const rebuildRedactor = () => { redactor = createRedactor({ known: [...(settings.get().redactWords || []), root] }); };
+  rebuildRedactor();
+  settings.onChange((w) => { if (w === 'settings') rebuildRedactor(); });
+  const redact = (t) => redactor(t);
+  // awake only while a client is connected (host/nap.cjs); it starts asleep, with its switches off
+  const graceMs = opts.napGraceMs ?? Number(settings.get().napGraceSec) * 1000;
+  const nap = createNap({ graceMs, log: (kind, f) => {
+    event(kind, f);
+    if (kind === 'wake' || kind === 'nap') { settings.setNapping(kind === 'nap'); say(kind === 'wake' ? 'Awake: a client is connected.' : 'Napping: no client connected; her switches are off.'); }
+  } });
+  // the bridges' keys: the person types them into the settings page; they're kept here, owner-only, and never shown
+  // back (sealing them as SEASIDE's resident vault does is a next step)
+  const secretsFile = path.join(stateDir, 'bridge-secrets.json');
+  const readSecrets = () => { try { return JSON.parse(fs.readFileSync(secretsFile, 'utf8')); } catch { return {}; } };
+  function setBridgeToken(name, token) {
+    const s = readSecrets(); if (token) s[name] = String(token); else delete s[name];
+    fs.writeFileSync(secretsFile + '.tmp', JSON.stringify(s), { mode: 0o600 }); fs.renameSync(secretsFile + '.tmp', secretsFile);
+    event('bridge.key.set', { bridge: name, set: !!token });
+  }
+  /** The bridges as set up in the settings: { <name>: { url, command?, args?, env? } }, with their keys. */
+  // (keyEnv: a bridge that reads its key from the environment gets it from the host under that name, so no key is ever
+  // kept in the settings. pandora-discord and pandora-vector keep their own key in their own folder instead.)
+  const bridgeConfigs = () => Object.entries(settings.get().bridges || {}).map(([name, c]) => { const token = readSecrets()[name] || ''; return { name, url: c.url, command: c.command || null, args: c.args || [], env: { ...(c.env || {}), ...(c.keyEnv && token ? { [c.keyEnv]: token } : {}) }, token }; });
+  const bridgeInfo = () => bridgeConfigs().map(({ name, url, command, token }) => ({ name, url, command: !!command, tokenSet: !!token }));
+  // what waited, on disk (host/queue.cjs)
+  const queue = createQueue(path.join(stateDir, 'bridge-queue.jsonl'), { log: event, warnAt: Number(settings.get().queueWarnAt) || undefined });
+  let runtime = null; // started with startRuntime()
   let pin = null; // { code, until }
   let wrong = 0, lockedUntil = 0;
   function newPin() {
@@ -160,11 +198,27 @@ function createHomeHost(opts) {
     },
     {
       name: 'host_info',
-      description: 'What the home host is: its version, which shell host_shell runs, and the home folder.',
+      description: 'What the home host is: its version, which shell host_shell runs, the home folder, which of your switches are on, whether a model is attached, and what is waiting for you.',
       inputSchema: { type: 'object', properties: {} },
     },
+    {
+      name: 'waiting_messages',
+      description: 'Messages from Vector and Discord that came while you were away (napping, or without a model) and are waiting for you. You decide when and whether to look. action "list": who and where, without the words; "read": one (seq) or all (all: true); "handled": mark one (seq) or all (all: true) as dealt with, so they leave the queue.',
+      inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list', 'read', 'handled'] }, seq: { type: 'number' }, all: { type: 'boolean' } }, required: ['action'] },
+    },
   ];
+  /** The tools, with what's waiting in her tool's description, so she sees it whenever her tools are listed. */
+  function toolList() {
+    const n = runtime ? runtime.notice() : '';
+    return TOOLS.map((t) => (t.name === 'waiting_messages' && n ? { ...t, description: n + ' ' + t.description } : t));
+  }
   async function callTool(name, args, dev) {
+    if (name === 'waiting_messages') {
+      if (!runtime) return { content: [{ type: 'text', text: JSON.stringify({ count: 0, messages: [] }) }] };
+      const r = runtime.herTool(args || {});
+      event('tool', { device: dev.id, tool: name, action: args?.action || 'list' });
+      return { content: [{ type: 'text', text: JSON.stringify(r, null, 1) }], isError: !!r.error };
+    }
     if (name === 'host_shell') {
       const r = await runShell(args || {});
       event('tool', { device: dev.id, tool: name, command: String(args?.command || '').slice(0, 500), cwd: args?.cwd || '/', code: r.code, ms: r.ms });
@@ -173,7 +227,8 @@ function createHomeHost(opts) {
     if (name === 'host_info') {
       event('tool', { device: dev.id, tool: name });
       // (no full path: what a tool returns can end up in a model's context, and from there in a message)
-      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, shell: path.basename(shell), home: '/ (her home folder; $PANDORA_HOME in host_shell)', platform: process.platform, awake: nap.awake() }) }] };
+      const st = settings.state();
+      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, shell: path.basename(shell), home: '/ (her home folder; $PANDORA_HOME in host_shell)', platform: process.platform, awake: nap.awake(), model: st.model.attached ? 'attached' : `gone (${st.model.kind})`, switches: Object.fromEntries(Object.entries(st.switches).map(([k, v]) => [k, v.on ? 'on' : `off: ${v.why.join(', ')}`])), waiting: runtime ? runtime.notice() || 'nothing' : 'nothing' }) }] };
     }
     event('tool.unknown', { device: dev.id, tool: name });
     return { content: [{ type: 'text', text: `No tool named ${name} on this host.` }], isError: true };
@@ -183,7 +238,7 @@ function createHomeHost(opts) {
     const reply = (result) => ({ jsonrpc: '2.0', id, result });
     if (method === 'initialize') return reply({ protocolVersion: params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'pandora-dee-host', version: VERSION } });
     if (method === 'ping') return reply({});
-    if (method === 'tools/list') return reply({ tools: TOOLS });
+    if (method === 'tools/list') return reply({ tools: toolList() });
     if (method === 'tools/call') return reply(await callTool(params?.name, params?.arguments, dev));
     if (id == null) return null; // a notification
     return { jsonrpc: '2.0', id, error: { code: -32601, message: `${method}: not offered by this host` } };
@@ -226,6 +281,8 @@ function createHomeHost(opts) {
       }
       if (p === '/host/bridge.js' && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'bridge.js'), 'utf8'), 'text/javascript; charset=utf-8');
       if (p === '/pair' && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'pair.html'), 'utf8'), 'text/html; charset=utf-8');
+      // the host's own settings and information page (it holds nothing: what it shows comes from /host/status, with a key)
+      if ((p === '/host' || p === '/host/' || p === '/host/ui') && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'gui.html'), 'utf8'), 'text/html; charset=utf-8');
       if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, paired: !!d, device: d ? { id: d.id, name: d.name } : null }); }
       if (p === '/host/pair' && req.method === 'POST') {
         let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
@@ -250,7 +307,7 @@ function createHomeHost(opts) {
       if (p === '/host/presence/stream' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
         const release = nap.connect({ device: dev.id, page: String(req.headers['x-page'] || '') });
-        const status = () => JSON.stringify({ ...nap.state(), waiting: runtime ? runtime.waiting().count : 0, waitingLarge: runtime ? runtime.waiting().large : false }) + '\n';
+        const status = () => { const st = settings.state(); return JSON.stringify({ ...nap.state(), waiting: runtime ? runtime.waiting().count : 0, waitingLarge: runtime ? runtime.waiting().large : false, model: st.model.attached, switches: Object.fromEntries(Object.entries(st.switches).map(([k, v]) => [k, v.on])), accent: st.settings.colors.accent }) + '\n'; };
         res.write(status());
         const beat = setInterval(() => res.write(status()), 3000); // also keeps the "N waiting" count fresh
         const end = () => { clearInterval(beat); release(); };
@@ -270,8 +327,67 @@ function createHomeHost(opts) {
           if (what === 'later') return send(res, 200, runtime.later());
           if (what === 'write') return send(res, 200, await runtime.writeFile());
           if (what === 'clear') { const r = await runtime.clear({ confirm: b.confirm === true }); return send(res, r.error ? 409 : 200, r); }
-        } catch (e) { return send(res, e.code === 'NAPPING' ? 409 : 500, { error: e.message }); }
+        } catch (e) { return send(res, e.code === 'NAPPING' || e.code === 'OFF' ? 409 : 500, { error: e.message }); }
         return send(res, 404, { error: 'The choices are deliver, later, write and clear.' });
+      }
+      // ---- the host's own settings page, and the state it shows (the Atelier reads and changes the same) ----
+      if (p === '/host/status' && req.method === 'GET') {
+        return send(res, 200, {
+          app: 'pandora-dee-host', version: VERSION, platform: process.platform, shell: path.basename(shell),
+          nap: nap.state(), ...settings.state(),
+          waiting: runtime ? { ...runtime.waiting(), messages: runtime.waiting().messages.map(({ raw, text, ...m }) => ({ ...m, preview: String(text).slice(0, 140) })) } : { count: 0, messages: [] },
+          brain: runtime ? runtime.brain : null,
+          bridges: bridgeInfo(),
+          devices: devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null, you: id === dev.id })),
+          tools: toolList().map((t) => ({ name: t.name, description: t.description })),
+          writer: writer ? { device: (devices.find((d) => d.id === writer.device) || {}).name || writer.device, quietFor: Math.round((now() - writer.at) / 1000) } : null,
+        });
+      }
+      if (p === '/host/settings') {
+        if (req.method === 'GET') return send(res, 200, settings.get());
+        if (req.method === 'PUT' || req.method === 'PATCH') {
+          let b; try { b = JSON.parse(await readBody(req, 65536)); } catch { return send(res, 400, { error: 'Settings are a JSON object.' }); }
+          return send(res, 200, settings.set(b, dev.name));
+        }
+      }
+      if (p === '/host/switches/resume' && req.method === 'POST') return send(res, 200, settings.resume(dev.name));
+      const bk = /^\/host\/bridges\/([a-z0-9_-]+)\/key$/.exec(p);
+      if (bk && req.method === 'PUT') {
+        let b = {}; try { b = JSON.parse(await readBody(req, 8192) || '{}'); } catch { b = {}; }
+        setBridgeToken(bk[1], typeof b.key === 'string' ? b.key.trim() : '');
+        return send(res, 200, { ok: true, set: !!b.key, note: 'Restart the host for a bridge to use a new key.' });
+      }
+      if (p === '/host/model/back' && req.method === 'POST') { settings.modelBack(dev.name); return send(res, 200, settings.state()); }
+      if ((p === '/host/log' || p === '/host/trace') && req.method === 'GET') {
+        const n = Math.min(2000, Math.max(1, Number(url.searchParams.get('n')) || 200));
+        let lines = [];
+        try { lines = fs.readFileSync(p === '/host/log' ? logFile : traceFile, 'utf8').trim().split('\n').filter(Boolean).slice(-n).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { lines = []; }
+        return send(res, 200, lines.reverse());
+      }
+      // ---- the Atelier reaching Vector and Discord: through the host, which is her bridge (host/bridges.cjs) ----
+      const bm = /^\/bridges\/([a-z0-9_-]+)\/mcp$/.exec(p);
+      if (bm) {
+        if (req.method === 'DELETE') return send(res, 200, {});
+        if (req.method !== 'POST') return send(res, 405, { error: 'POST JSON-RPC here.' });
+        let msg; try { msg = JSON.parse(await readBody(req, 50 * 1048576)); } catch { return send(res, 400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'not JSON' } }); }
+        const one = async (m) => {
+          const { id, method, params } = m || {};
+          const reply = (result) => ({ jsonrpc: '2.0', id, result });
+          if (!runtime) return { jsonrpc: '2.0', id, error: { code: -32603, message: 'The host has no bridges running.' } };
+          if (method === 'initialize') return reply({ protocolVersion: params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: `${bm[1]} bridge, through the home host`, version: VERSION } });
+          if (id == null) return null;
+          if (method === 'ping') return reply({});
+          try {
+            if (method === 'tools/list') return reply(await runtime.bridgeTools(bm[1]));
+            if (method === 'tools/call') return reply(await runtime.clientCall(bm[1], params?.name, params?.arguments || {}));
+          } catch (e) { return { jsonrpc: '2.0', id, error: { code: -32603, message: e.code === 'NONE' ? e.message : `${bm[1]} bridge: not reachable from the host` } }; }
+          return { jsonrpc: '2.0', id, error: { code: -32601, message: `${method}: not offered` } };
+        };
+        res.setHeader('Mcp-Session-Id', 'home-host-' + bm[1]);
+        if (Array.isArray(msg)) { const out = (await Promise.all(msg.map(one))).filter(Boolean); return out.length ? send(res, 200, out) : (res.writeHead(202), res.end()); }
+        const r = await one(msg);
+        if (!r) { res.writeHead(202); return res.end(); }
+        return send(res, 200, r);
       }
       if (p === '/host/client/settings') {
         if (req.method === 'GET') return send(res, 200, dev.settings || {});
@@ -298,10 +414,16 @@ function createHomeHost(opts) {
 
   const server = http.createServer((req, res) => { handle(req, res); });
   return {
-    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event,
-    attach(rt) { runtime = rt; },
+    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact,
+    /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
+    startRuntime(o = {}) {
+      runtime = createRuntime({ settings, queue, redact, log: event, trace, home: root, ...o }).start();
+      return runtime;
+    },
+    runtime: () => runtime,
+    bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => new Promise((r) => { nap.close(); if (server.closeAllConnections) server.closeAllConnections(); server.close(() => r()); }),
+    close: () => new Promise((r) => { if (runtime) runtime.stop(); nap.close(); if (server.closeAllConnections) server.closeAllConnections(); server.close(() => r()); }),
   };
 }
 

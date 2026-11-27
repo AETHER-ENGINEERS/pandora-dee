@@ -14,8 +14,6 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(process.env.JV_WEB), '..');
 const { createHomeHost } = require(path.join(ROOT, 'host', 'home_host.cjs'));
-const { createRuntime } = require(path.join(ROOT, 'host', 'runtime.cjs'));
-const { createQueue } = require(path.join(ROOT, 'host', 'queue.cjs'));
 const { createRedactor } = require(path.join(ROOT, 'host', 'redact.cjs'));
 const log = []; const fail = [];
 const ok = (c, m) => { (c ? log : fail).push((c ? 'PASS ' : 'FAIL ') + m); };
@@ -60,19 +58,14 @@ const vector = mkBridge('vector'), discord = mkBridge('discord');
 const turnCalls = () => calls.filter(c => c.why.startsWith('turn:vector') || c.why.startsWith('turn:discord'));
 const events = [];
 
-async function boot({ grace = 400, warnAt } = {}) {
+async function boot({ grace = 400 } = {}) {
   const host = createHomeHost({ root: HOME, napGraceMs: grace });
   await new Promise(r => host.server.listen(0, '127.0.0.1', r));
+  host.settings.set({ redactWords: ['tidepool-ollama-account'] }, 'test');
   const logIt = (kind, f) => { events.push({ kind, ...f }); host.event(kind, f); };
-  const queue = createQueue(path.join(host.stateDir, 'bridge-queue.jsonl'), { log: logIt, warnAt });
-  const rt = createRuntime({
-    nap: host.nap, queue, model, bridges: [vector, discord], schedules: [{ id: 'heartbeat', everyMs: 60, prompt: 'heartbeat' }],
-    redact: createRedactor({ known: ['tidepool-ollama-account'], hostDetails: false }), home: HOME,
-    log: logIt, pollMs: 25, tickMs: 15,
-  }).start();
-  host.attach(rt);
+  const rt = host.startRuntime({ brain: 'host', model, bridges: [vector, discord], schedules: [{ id: 'heartbeat', kind: 'heartbeat', everyMs: 60, prompt: 'heartbeat' }], log: logIt, pollMs: 25, tickMs: 15 });
   host.base = `http://127.0.0.1:${host.server.address().port}`;
-  return { host, rt, queue };
+  return { host, rt, queue: host.queue };
 }
 async function shutdown({ host, rt }) { rt.stop(); await rt.idle(); await host.close(); }
 let { host, rt, queue } = await boot();
@@ -95,7 +88,7 @@ const arrive = async (...list) => { for (const a of list) { msg(...a); await sle
 // ---------- asleep: nothing runs, messages wait ----------
 ok((await presence()).awake === false, 'the host starts napping (no client yet)');
 await sleep(250);
-ok(calls.length === 0 && events.some(e => e.kind === 'schedule.skipped'), 'napping: the heartbeat is skipped, no model call');
+ok(calls.length === 0 && events.some(e => e.kind === 'heartbeat.skipped'), 'napping: the heartbeat is skipped, no model call');
 let refused = ''; try { await rt.turn({ text: 'hello?' }); } catch (e) { refused = e.code; }
 ok(refused === 'NAPPING' && calls.length === 0, 'napping: a turn is refused');
 msg(vector, 'v1', 'dm-friend', 'friend', 'are you there?');
@@ -108,7 +101,7 @@ ok((await api('/host/waiting/deliver', {})).status === 409, "napping: the waitin
 let c1 = await connect();
 await sleep(200);
 ok((await presence()).awake === true, 'a client connects: the host wakes');
-ok(events.some(e => e.kind === 'schedule.ran'), 'and the heartbeat runs again');
+ok(events.some(e => e.kind === 'heartbeat.ran'), 'and the heartbeat runs again');
 ok(turnCalls().length === 0 && sent.length === 0 && queue.size() === 1, 'waking hands her nothing: the waiting message stays queued');
 await sleep(3200);
 ok(c1.last && c1.last.awake === true && c1.last.waiting === 1, 'the connected client is told "1 message waiting"');
@@ -220,7 +213,9 @@ modelFails = true;
 msg(discord, 'f1', 'general', 'curious', 'still there?');
 await sleep(200);
 ok(!sent.some(s => s.replyTo === 'f1') && queue.list().some(m => m.id === 'f1'), "a model error: nothing sent (that's where addresses turn up), and the message stays queued");
+ok(host.settings.model().attached === false && host.settings.model().kind === 'unreachable', 'an unreachable model counts as gone: her switches go off');
 modelFails = false;
+await api('/host/model/back', {});
 await api('/host/waiting/deliver', {});
 ok(sent.some(s => s.replyTo === 'f1') && queue.size() === 0, 'delivered once the model is back');
 modelSays = () => 'I run on http://100.101.102.103:11434 as tidepool-ollama-account, key sk-abcdefghijklmnopqrstuvwx';
@@ -241,16 +236,19 @@ ok((await presence()).awake === false && !sent.some(s => s.replyTo === 'z1') && 
 await shutdown({ host, rt });
 
 // ---------- a large queue: said, never trimmed ----------
-({ host, rt, queue } = await boot({ warnAt: 3 }));
+({ host, rt, queue } = await boot());
+host.settings.set({ queueWarnAt: 3 }, 'test');
+await shutdown({ host, rt });
+({ host, rt, queue } = await boot());
 for (let i = 0; i < 5; i++) msg(vector, 'big' + i, 'dm-big', 'many', 'message ' + i);
 await sleep(200);
 const c6 = await connect(); await sleep(3300);
-ok(queue.size() === 6 && events.some(e => e.kind === 'queue.large') && c6.last.waitingLarge === true, 'past the warning size the host says the queue is large (to the client and in the log), and keeps every message');
+ok(queue.size() === 6 && fs.readFileSync(path.join(host.stateDir, 'events.jsonl'), 'utf8').includes('"queue.large"') && c6.last.waitingLarge === true, 'past the warning size the host says the queue is large (to the client and in the log), and keeps every message');
 c6.close();
 
 // the log tells the story
 const kinds = fs.readFileSync(path.join(host.stateDir, 'events.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l).kind);
-ok(['client.connected', 'wake', 'client.left', 'nap', 'queue.add', 'queue.deliver', 'queue.written', 'queue.cleared', 'queue.choice', 'schedule.skipped'].every(k => kinds.includes(k)), 'the host log records connections, waking, napping, the queue and each choice');
+ok(['client.connected', 'wake', 'client.left', 'nap', 'queue.add', 'queue.deliver', 'queue.written', 'queue.cleared', 'queue.choice', 'heartbeat.skipped'].every(k => kinds.includes(k)), 'the host log records connections, waking, napping, the queue and each choice');
 
 await shutdown({ host, rt });
 fs.rmSync(tmp, { recursive: true, force: true });

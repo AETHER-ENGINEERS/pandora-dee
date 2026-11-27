@@ -9,7 +9,7 @@
   label { display: block; margin: 16px 0 6px; }
   input { font: inherit; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #555; background: #1a1624; color: #eee; }
   #pin { font-size: 28px; letter-spacing: .3em; text-align: center; }
-  button { font: inherit; margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #b48cff; color: #111; }
+  button { font: inherit; margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #BD72F3; color: #111; }
   #msg { min-height: 1.5em; margin-top: 14px; color: #ffb4b4; }
   p.small { opacity: .7; font-size: 14px; }
 </style>
@@ -35,7 +35,8 @@
       const j = await r.json();
       if (!r.ok) { msg.textContent = j.error || ('The host said ' + r.status); return; }
       localStorage.setItem('pdhost:token', j.token);
-      location.replace('/');
+      const back = new URLSearchParams(location.search).get('back') || '/';
+      location.replace(/^\/(?!\/)/.test(back) ? back : '/'); // only somewhere on this host
     } catch (err) { msg.textContent = 'The host could not be reached: ' + err.message; }
   });
 </script>

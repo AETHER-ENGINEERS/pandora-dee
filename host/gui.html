@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home host</title>
+<style>
+  :root { --accent: #BD72F3; --background: #0b0912; --panel: #15111f; --text: #eeeeee; --muted: #a59fb5; --border: #3a3350; --ok: #7ee2a8; --warn: #ffcf8a; --bad: #ff8a8a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--background); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 17px; margin: 0 8px 0 0; color: var(--accent); }
+  .pill { border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+  .pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.warn { color: var(--warn); border-color: var(--warn); }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  nav a { color: var(--accent); text-decoration: none; padding: 2px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 60px; }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; color: var(--accent); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .hi { color: var(--accent); font-weight: 600; }
+  button, select, input, textarea { font: inherit; color: var(--text); background: #0f0c18; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; }
+  button { border-color: var(--accent); cursor: pointer; } button:hover { background: #241c36; } button[disabled] { opacity: .5; cursor: default; }
+  input[type=color] { padding: 0; width: 42px; height: 28px; }
+  select, input:not([type=checkbox]):not([type=color]) { max-width: 100%; }
+  label.f select, label.f input:not([type=color]) { width: 100%; }
+  input[type=checkbox] { accent-color: var(--accent); }
+  textarea { width: 100%; min-height: 60px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 5px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .sw { display: grid; grid-template-columns: minmax(150px, 1fr) auto minmax(140px, 2fr); gap: 8px 12px; align-items: center; }
+  .state.on { color: var(--ok); } .state.off { color: var(--bad); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 16px; }
+  label.f { display: block; } label.f span { display: block; color: var(--muted); font-size: 13px; margin-bottom: 3px; }
+  details { border-top: 1px solid var(--border); padding: 4px 0; } summary { cursor: pointer; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #0f0c18; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; max-height: 360px; overflow: auto; }
+  #note { min-height: 1.4em; color: var(--warn); }
+</style>
+<header>
+  <h1>Pandora Dee's home host</h1>
+  <span class="pill" id="napPill">…</span>
+  <span class="pill" id="modelPill">…</span>
+  <span class="pill" id="waitPill">…</span>
+  <span class="muted" id="version"></span>
+  <a href="/" style="margin-left:auto;color:var(--accent)">Open the Atelier</a>
+</header>
+<nav>
+  <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#waiting">Waiting</a><a href="#bridges">Bridges</a>
+  <a href="#trace">What happened</a><a href="#devices">Devices</a><a href="#tools">Tools</a><a href="#files">Files</a><a href="#colours">Colours</a><a href="#log">Log</a>
+</nav>
+<main>
+  <div id="note" role="status"></div>
+
+  <section id="switches">
+    <h2>Switches</h2>
+    <p class="muted">What runs. Each is on only when you want it on <em>and</em> nothing holds it off: napping (no client connected), waiting for you after a nap, or no model. The Atelier's settings change the same switches.</p>
+    <div class="sw" id="swList"></div>
+    <div class="row">
+      <button id="resume" hidden>Turn them back on after the nap</button>
+      <button id="modelBack" hidden>She has a model again</button>
+    </div>
+    <div id="modelWhy" class="muted"></div>
+  </section>
+
+  <section id="behaviour">
+    <h2>Behaviour</h2>
+    <div class="grid">
+      <label class="f"><span>When a client connects after a nap</span>
+        <select data-set="afterNap"><option value="auto">Switches come back on by themselves</option><option value="ask">They stay off until I turn them on</option></select></label>
+      <label class="f"><span>When her model comes back after an outage</span>
+        <select data-set="afterModel"><option value="ask">Stay off until I say she has a model</option><option value="auto">Back on when a check finds it answering</option></select></label>
+      <label class="f"><span>Bridges while off</span>
+        <select data-set="bridgesOff"><option value="quiet">Quiet: signed in, nothing goes out, messages wait</option></select></label>
+      <label class="f"><span>Nap after the last client leaves (seconds)</span><input type="number" min="0" data-set="napGraceSec" data-num></label>
+      <label class="f"><span>Say the queue is large past (messages; never trimmed)</span><input type="number" min="1" data-set="queueWarnAt" data-num></label>
+    </div>
+    <label class="f" style="margin-top:10px"><span>A fixed line sent once to a chat while she has no model (empty: silence). Never an error text.</span>
+      <input data-set="offNotice" style="width:100%" placeholder="(silence)"></label>
+    <label class="f" style="margin-top:10px"><span>Words hidden from anything leaving through a bridge (account names and the like; one per line). Addresses, keys and this computer's name are hidden anyway.</span>
+      <textarea data-set="redactWords" data-lines></textarea></label>
+  </section>
+
+  <section id="waiting">
+    <h2>Waiting messages</h2>
+    <p class="muted">What came on Vector and Discord while she couldn't answer. Kept on disk, in order, never expiring. She's told they're there and has her own tool for them; these are your choices.</p>
+    <div class="row">
+      <button data-q="deliver">Give them to her now</button><button data-q="next">The next five</button>
+      <button data-q="later">Later</button><button data-q="write">Write them to a file</button><button data-q="clear">Clear the queue…</button>
+    </div>
+    <table><thead><tr><th>Arrived</th><th>Bridge</th><th>From</th><th>Where</th><th>Begins</th></tr></thead><tbody id="waitRows"></tbody></table>
+  </section>
+
+  <section id="bridges">
+    <h2>Bridges</h2>
+    <p class="muted">The host is her bridge to Vector and Discord: it runs them, reads every message into the queue, and checks everything that goes out (no error text ever, the hidden words, the switches). The Atelier reaches them through the host.</p>
+    <table><thead><tr><th>Bridge</th><th>Address</th><th>Run by the host</th><th>Key</th><th>Now</th></tr></thead><tbody id="bridgeRows"></tbody></table>
+    <form id="bridgeForm" class="grid" style="margin-top:12px">
+      <label class="f"><span>Bridge</span><select name="name"><option value="discord">discord</option><option value="vector">vector</option></select></label>
+      <label class="f"><span>Its address (the bridge's /mcp)</span><input name="url" placeholder="http://127.0.0.1:8788/mcp"></label>
+      <label class="f"><span>Start it with (optional: empty if it already runs)</span><input name="command" placeholder="python3"></label>
+      <label class="f"><span>Arguments (space-separated)</span><input name="args" placeholder="pandora-discord/jade_discord_bridge.py"></label>
+      <label class="f"><span>Its key (write-only; empty keeps the one set)</span><input name="key" type="password" autocomplete="off"></label>
+      <div class="row"><button>Save the bridge</button><span class="muted">The host uses it after a restart.</span></div>
+    </form>
+  </section>
+
+  <section id="trace">
+    <h2>What happened</h2>
+    <p class="muted">Everything the host did for her, newest first: what went to which model and what came back, bridge messages in and out (after hiding), what was stopped and why. It stays on this computer.</p>
+    <div id="traceList"></div>
+  </section>
+
+  <section id="devices"><h2>Paired devices</h2><table><thead><tr><th>Name</th><th>Paired</th><th>Last seen</th></tr></thead><tbody id="devRows"></tbody></table>
+    <p class="muted">Remove a device on the host itself: type <code>revoke &lt;name&gt;</code> in its window.</p></section>
+
+  <section id="tools"><h2>Her host tools</h2><table><tbody id="toolRows"></tbody></table></section>
+
+  <section id="files"><h2>Files</h2><div id="filesInfo" class="muted"></div></section>
+
+  <section id="colours">
+    <h2>Colours</h2>
+    <p class="muted">The accent is the Atelier's new colour. The rest are its current defaults. The Atelier uses the same ones.</p>
+    <div class="grid" id="colourList"></div>
+  </section>
+
+  <section id="log"><h2>Log</h2><p class="muted">Facts only, never contents.</p><pre id="logList"></pre></section>
+</main>
+<script>
+  const token = (() => { try { return localStorage.getItem('pdhost:token') || ''; } catch { return ''; } })();
+  if (!token) location.replace('/pair?back=/host/');
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const when = (t) => t ? new Date(t).toLocaleString() : '—';
+  const note = (t) => { $('#note').textContent = t; };
+  const api = async (p, method = 'GET', body) => { const r = await fetch(p, { method, headers: H, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }); if (r.status === 401) location.replace('/pair?back=/host/'); return r.json(); };
+  let S = null, editing = null;
+
+  function applyColours(c) { for (const [k, v] of Object.entries(c || {})) document.documentElement.style.setProperty('--' + k, v); }
+  function render(st) {
+    S = st;
+    applyColours(st.settings.colors);
+    $('#version').textContent = `${st.version} · ${st.platform} · shell: ${st.shell}`;
+    $('#napPill').textContent = st.napping ? 'Napping' : (st.heldAfterNap ? 'Awake, waiting for you' : 'Awake');
+    $('#napPill').className = 'pill ' + (st.napping ? 'warn' : 'ok');
+    $('#modelPill').textContent = st.model.attached ? 'Model attached' : `No model (${st.model.kind})`;
+    $('#modelPill').className = 'pill ' + (st.model.attached ? 'ok' : 'bad');
+    $('#waitPill').textContent = `${st.waiting.count} waiting`;
+    $('#waitPill').className = 'pill ' + (st.waiting.large ? 'bad' : st.waiting.count ? 'warn' : '');
+    // switches
+    $('#swList').innerHTML = Object.entries(st.switches).map(([k, v]) => `
+      <label><input type="checkbox" data-sw="${k}" ${v.wanted ? 'checked' : ''}> ${esc(v.name)}</label>
+      <span class="state ${v.on ? 'on' : 'off'}" data-state="${k}">${v.on ? 'On' : 'Off'}</span>
+      <span class="muted">${v.why.length ? 'Off because: ' + esc(v.why.map((w) => ({ off: 'you turned it off', napping: 'napping (no client connected)', 'after a nap': 'waiting for you after a nap', 'no model': 'no model' }[w] || w)).join('; ')) : ''}</span>`).join('');
+    $('#resume').hidden = !st.heldAfterNap;
+    $('#modelBack').hidden = st.model.attached;
+    $('#modelWhy').innerHTML = st.model.attached ? '' : `Her model went away ${esc(when(st.model.since))} (${esc(st.model.kind)}). What it said, for you only: <pre>${esc(st.model.detail)}</pre>`;
+    // behaviour (not while you're typing in it)
+    for (const el of document.querySelectorAll('[data-set]')) {
+      if (el === editing) continue;
+      const v = st.settings[el.dataset.set];
+      el.value = el.dataset.lines !== undefined ? (v || []).join('\n') : (v ?? '');
+    }
+    // waiting
+    $('#waitRows').innerHTML = st.waiting.messages.map((m) => `<tr><td>${esc(when(m.receivedAt))}</td><td>${esc(m.bridge)}</td><td>${esc(m.from || 'someone')}</td><td>${esc(m.chat || '')}</td><td>${esc(m.preview)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nothing is waiting.</td></tr>';
+    // bridges
+    $('#bridgeRows').innerHTML = (st.bridges || []).map((b) => `<tr><td class="hi">${esc(b.name)}</td><td>${esc(b.url || '')}</td><td>${b.command ? 'yes' : 'no (already running elsewhere)'}</td><td>${b.tokenSet ? 'set' : 'not set'}</td><td>${st.switches.bridges.on ? 'answering' : 'quiet: messages wait'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No bridges set up on this host yet.</td></tr>';
+    // devices, tools, files
+    $('#devRows').innerHTML = st.devices.map((d) => `<tr><td>${esc(d.name)}${d.you ? ' <span class="hi">(this one)</span>' : ''}</td><td>${esc(when(d.created))}</td><td>${esc(when(d.seen))}</td></tr>`).join('');
+    $('#toolRows').innerHTML = st.tools.map((t) => `<tr><td class="hi">${esc(t.name)}</td><td>${esc(t.description)}</td></tr>`).join('');
+    $('#filesInfo').innerHTML = `Her vault is real files on this computer. ${st.writer ? `Writing it now: ${esc(st.writer.device)}.` : 'No window is writing it right now.'} Chats, schedules and settings still live in each browser's Atelier for now; they move here next.`;
+    // colours
+    if (!$('#colourList').dataset.built) {
+      $('#colourList').innerHTML = Object.entries(st.settings.colors).map(([k, v]) => `<label class="f"><span>${esc(k)}</span><input type="color" data-colour="${k}" value="${esc(v)}"> <code>${esc(v)}</code></label>`).join('');
+      $('#colourList').dataset.built = '1';
+    }
+  }
+  async function refresh() {
+    try { render(await api('/host/status')); } catch (e) { note('The host could not be reached.'); }
+    try {
+      const tr = await api('/host/trace?n=100');
+      $('#traceList').innerHTML = tr.map((e) => `<details><summary><span class="muted">${esc(when(e.at))}</span> · <span class="hi">${esc(e.kind)}</span> ${esc(e.bridge || e.why || '')}</summary><pre>${esc(JSON.stringify(e, null, 1))}</pre></details>`).join('') || '<p class="muted">Nothing yet.</p>';
+      const lg = await api('/host/log?n=200');
+      $('#logList').textContent = lg.map((e) => `${e.at}  ${e.kind}  ${Object.entries(e).filter(([k]) => k !== 'at' && k !== 'kind').map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' ')}`).join('\n');
+    } catch { /* next time */ }
+  }
+  document.addEventListener('change', async (e) => {
+    const el = e.target;
+    if (el.dataset.sw) { await api('/host/settings', 'PUT', { switches: { [el.dataset.sw]: el.checked } }); return refresh(); }
+    if (el.dataset.set) {
+      const v = el.dataset.num !== undefined ? Number(el.value) : el.dataset.lines !== undefined ? el.value.split('\n') : el.value;
+      await api('/host/settings', 'PUT', { [el.dataset.set]: v }); editing = null; note('Saved.'); return refresh();
+    }
+    if (el.dataset.colour) { await api('/host/settings', 'PUT', { colors: { [el.dataset.colour]: el.value } }); $('#colourList').dataset.built = ''; return refresh(); }
+  });
+  document.addEventListener('focusin', (e) => { if (e.target.dataset && e.target.dataset.set) editing = e.target; });
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'resume') { await api('/host/switches/resume', 'POST', {}); return refresh(); }
+    if (b.id === 'modelBack') { await api('/host/model/back', 'POST', {}); return refresh(); }
+    const q = b.dataset.q; if (!q) return;
+    if (q === 'clear' && !confirm('Remove the waiting messages from the queue? Only works when a written file already holds all of them.')) return;
+    const r = await api('/host/waiting/' + (q === 'next' ? 'deliver' : q), 'POST', q === 'next' ? { count: 5 } : q === 'clear' ? { confirm: true } : {});
+    note(r.error ? r.error : q === 'write' ? (r.path ? `Written to ${r.path} in her vault (still queued too).` : 'Nothing to write.') : q === 'clear' ? `${r.cleared} cleared; ${r.file} keeps them.` : q === 'later' ? 'They stay queued.' : `${r.delivered} handed to her; ${r.left} still waiting.`);
+    refresh();
+  });
+  $('#bridgeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target); const name = f.get('name');
+    const bridges = { ...(S && S.settings.bridges || {}) };
+    bridges[name] = { url: String(f.get('url') || '').trim(), ...(String(f.get('command') || '').trim() ? { command: String(f.get('command')).trim(), args: String(f.get('args') || '').trim().split(/\s+/).filter(Boolean) } : {}) };
+    await api('/host/settings', 'PUT', { bridges });
+    if (String(f.get('key') || '')) await api(`/host/bridges/${name}/key`, 'PUT', { key: String(f.get('key')) });
+    e.target.reset(); note(`Saved the ${name} bridge. Restart the host for it to start.`); refresh();
+  });
+  refresh(); setInterval(refresh, 2000);
+</script>
+</html>

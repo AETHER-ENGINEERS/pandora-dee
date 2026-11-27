@@ -8,6 +8,7 @@ const path = require('node:path');
 const os = require('node:os');
 const readline = require('node:readline');
 const { createHomeHost } = require('./home_host.cjs');
+const { createBridgeLink } = require('./bridges.cjs');
 
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : undefined; };
@@ -26,11 +27,16 @@ const host = createHomeHost({
   log: (m) => console.log(m),
 });
 
+// her bridges to Vector and Discord: the host runs them (settings → bridges), and her Atelier reaches them through it
+const links = host.bridgeConfigs().filter((c) => c.url).map((c) => createBridgeLink(c, { log: host.event }).start());
+host.startRuntime({ brain: 'client', bridges: links });
+
 host.server.listen(port, listen, () => {
   console.log(`Pandora Dee's home host ${host.VERSION}`);
   console.log(`  home:   ${host.root}`);
   console.log(`  shell:  ${host.shell}`);
-  console.log(`  naps:   when no client has been connected for ${host.nap.graceMs / 1000} s (no turns, schedules or bridge replies then)`);
+  console.log(`  naps:   when no client has been connected for ${host.nap.graceMs / 1000} s: her switches turn off`);
+  console.log(`  bridges: ${links.length ? links.map((l) => l.name).join(', ') : 'none set up yet'}   settings: http://${listen === '0.0.0.0' ? '127.0.0.1' : listen}:${port}/host/`);
   const where = listen === '0.0.0.0'
     ? Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4').map((i) => `http://${i.address}:${port}/`)
     : [`http://${listen}:${port}/`];
@@ -45,7 +51,7 @@ rl.on('line', (line) => {
   if (cmd === 'pin') console.log(`PIN: ${host.newPin()}`);
   else if (cmd === 'devices') console.table(host.devices());
   else if (cmd === 'revoke') console.log(host.revoke(rest.join(' ')) ? 'Removed.' : 'No such device.');
-  else if (cmd === 'quit' || cmd === 'exit') host.close().then(() => process.exit(0));
+  else if (cmd === 'quit' || cmd === 'exit') { for (const l of links) l.stop(); host.close().then(() => process.exit(0)); }
   else if (cmd) console.log('pin · devices · revoke <name or id> · quit');
 });
-for (const s of ['SIGINT', 'SIGTERM']) process.once(s, () => host.close().then(() => process.exit(130)));
+for (const s of ['SIGINT', 'SIGTERM']) process.once(s, () => { for (const l of links) l.stop(); host.close().then(() => process.exit(130)); });

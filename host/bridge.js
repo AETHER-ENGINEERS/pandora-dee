@@ -101,10 +101,10 @@
       ui = badge.attachShadow({ mode: 'open' });
       ui.innerHTML = '<style>' +
         ':host{font:13px/1.4 system-ui,sans-serif;color:#eee}' +
-        '.pill{background:#2a1f44;border:1px solid #b48cff;border-radius:999px;padding:4px 12px;cursor:pointer;color:#eee;font:inherit}' +
+        '.pill{background:#2a1f44;border:1px solid #BD72F3;border-radius:999px;padding:4px 12px;cursor:pointer;color:#eee;font:inherit}' +
         '.panel{position:absolute;right:0;top:34px;width:300px;background:#15111f;border:1px solid #555;border-radius:10px;padding:12px;box-shadow:0 6px 24px #0008}' +
         '.panel[hidden]{display:none}.panel p{margin:0 0 10px}.row{display:flex;flex-wrap:wrap;gap:6px}' +
-        'button.a{flex:1 1 45%;background:#241c36;color:#eee;border:1px solid #6b5a99;border-radius:7px;padding:6px 8px;cursor:pointer;font:inherit}' +
+        'button.a{flex:1 1 45%;background:#241c36;color:#eee;border:1px solid #BD72F3;border-radius:7px;padding:6px 8px;cursor:pointer;font:inherit}' +
         '.note{margin-top:8px;opacity:.85;font-size:12px;word-break:break-word}.warn{color:#ffcf8a}</style>' +
         '<button class="pill" data-act="open"></button>' +
         '<div class="panel" hidden><p class="what"></p><div class="row">' +
@@ -143,7 +143,8 @@
   var f = window.fetch && window.fetch.bind(window);
   if (f) window.fetch = function (input, init) {
     var u = typeof input === 'string' ? input : (input && input.url) || String(input);
-    if (u === own || u === '/mcp') {
+    // (and its bridges to Vector and Discord, which the host runs: /bridges/<name>/mcp on the same address)
+    if (u === own || u === '/mcp' || u.indexOf(location.origin + '/bridges/') === 0 || u.indexOf('/bridges/') === 0) {
       init = Object.assign({}, init || {});
       var hd = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
       hd.set('Authorization', 'Bearer ' + token);

@@ -80,11 +80,11 @@ is **awake only while a client is connected**, and naps otherwise (`host/nap.cjs
 - **Waking:** when the first client connects, the host wakes at once.
 - **Grace period:** when the last client leaves, the host waits (`--nap-grace <seconds>`, default 60), so a refresh or
   a blink of the Wi-Fi doesn't send it to sleep.
-- **While napping, the host doesn't:**
-  - run agent turns (they're refused);
-  - make any scheduled or heartbeat model calls (they're skipped and logged);
-  - send anything through a bridge (a send is refused, even an answer that was already being made when the host fell
-    asleep).
+- **Napping turns her switches off** (see Switches below): the agent loop, the heartbeat, schedules, curiosity sparks
+  and the bridges all read **off, because napping**, in the host's settings page and to the client. So:
+  - agent turns don't run;
+  - no scheduled, heartbeat or spark model calls (skipped, and logged once per change of reason);
+  - nothing goes out through a bridge, including an answer that was already being made when the host fell asleep.
 - **While napping, the host still does:** files, pairing, `host_shell` when a client calls it, and the log.
   `GET /host/presence` says which state it's in.
 - **Messages that arrive while napping wait in a queue on disk** (`host/queue.cjs`, `bridge-queue.jsonl` in the state
@@ -142,6 +142,85 @@ that's where addresses turn up.
 main protection is that provider details don't reach a bridge turn's context in the first place. For example,
 `host_info` doesn't return the home's full path.
 
+## Switches
+
+Her **agent loop, heartbeat, schedules, curiosity sparks and bridges** are each a switch (`host/settings.cjs`). A
+switch is on only when the person wants it on **and** nothing holds it off. Wherever a switch is shown, so is why it's
+off:
+
+- **off:** the person turned it off;
+- **napping:** no client is connected;
+- **after a nap:** a client is back, but the person chose "they stay off until I turn them on" (the setting
+  "When a client connects after a nap"; for now the default is that they come back by themselves);
+- **no model:** her model went away (below).
+
+## When her model goes away
+
+When a model call fails with a **usage limit**, a **refused key** or an **unreachable** server (`host/errors.cjs`),
+the host takes it as her model being gone:
+
+- **Every switch goes off,** "no model": loop, heartbeat, schedules, sparks and the bridges. The log says so, and so do
+  the settings page and the client.
+- **They come back when the person says she has a model again** (the "She has a model again" button). That's the
+  default. The setting "When her model comes back after an outage" can make it automatic instead, once a check finds
+  the model answering.
+- **Provider and model error text never reaches a channel or a DM.**
+  - Anything about to go out through a bridge that looks like one is stopped. That includes the Atelier's own
+    "⚠ <error>" reply, and a usage-limit message naming the person's account.
+  - The stop is logged (the facts) and traced (the words, for the person), and is itself taken as a sign the model is
+    gone.
+  - While she has no model, the bridges are silent, unless the person writes a fixed line in the settings. That line,
+    word for word, then goes once to each chat that writes to her.
+
+## The host is her bridge
+
+The host runs her Vector and Discord bridges itself (`host/bridges.cjs`). These are the Atelier's own `pandora-vector`
+and `pandora-discord`, started as the host's children (or reached where they already run), set up in the settings
+page.
+
+- **It reads every new message into the queue, napping or not,** so nothing is lost while she can't answer.
+- **The Atelier reaches the bridges through the host** at `/bridges/<name>/mcp`, with the very same tools as today, so
+  its Vector and Discord behaviour doesn't change. Point its Discord or Vector address at
+  `http://<host>/bridges/discord/mcp` (any key: the page's bridge script sends the device's own).
+- **The host hands it the messages it may answer now,** exactly as the bridge gave them.
+- **Everything the Atelier sends goes through the host's checks:** switches, error text, hidden words. Reading tools pass
+  straight through.
+- **The bridge's own key** goes into the settings page's write-only key field (`--print-token` on the bridge shows it).
+  It's kept in `bridge-secrets.json` in the host's folder, owner-only, and never shown back. A bridge that reads its key
+  from the environment can be given it as `keyEnv`.
+
+## What waited: she's told, and has her own tool
+
+- **Her notice:** while messages wait, a turn the host runs begins with a short notice (how many, which bridge, who
+  from; never their words). Her `waiting_messages` tool's description says the same, so the Atelier's loop sees it
+  whenever it lists her tools.
+- **Her tool, `waiting_messages`:** `list` (who and where), `read` (one or all, when she chooses; reading leaves them
+  queued) and `handled` (they leave the queue).
+- **The person's three choices** stay as they are.
+
+## The host's settings page: `/host/`
+
+A detailed page for everything the host does:
+
+- the switches, each with why it's off, and the buttons to turn them back on;
+- whether a model is attached, and what it last said, for the person only;
+- the behaviour settings;
+- the waiting queue and its choices;
+- the bridges, with their setup and keys;
+- what happened (the trace);
+- paired devices, her host tools, the files, the colours and the log.
+
+It reads and changes the host's one set of settings (`/host/status`, `/host/settings`), the same ones the Atelier
+changes, and refreshes every two seconds, so a change made in either shows in both.
+
+**Colours:** buttons, borders and important text use the Atelier's new brand colour, **#BD72F3** (RGB 189, 114, 243;
+hue 183, sat 202, lum 168 on Windows' 0–240 scale). The other colours are the Atelier's current defaults. All can be
+changed.
+
+**What happened (the trace):** `trace.jsonl` in the host's folder records what went to which model and what came back,
+each bridge message in and out (after hiding), what was stopped and why, and her tool's use. It stays on the host, and
+the page shows it. The log (`events.jsonl`) keeps facts only.
+
 ## Not yet
 
 These are the next milestones, in this order:
@@ -156,5 +235,8 @@ These are the next milestones, in this order:
 3. **Plain HTTP on the network** can be read by others on the same network. Prefer the tailnet's HTTPS for anything
    beyond the home network.
 
-Tests: `tests/home_host_test.mjs` and `tests/nap_test.mjs`, in the repo's test run (synthetic homes, a stand-in model
-and a stand-in bridge only).
+4. **The Atelier's own settings pages** don't drive the host's switches yet, and the Atelier doesn't wear the new
+   colour yet. Both are page changes, next.
+
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs` and `tests/switches_test.mjs`, in the repo's test run
+(synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

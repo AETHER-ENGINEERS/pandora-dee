@@ -45,6 +45,32 @@
     background: linear-gradient(180deg, #0b0916b3 0%, #0b09168c 38%, #0b0916bf 72%, #0b0916eb 100%), url(/host/harbor/art/sky.jpg) center 30% / cover no-repeat; }
   #twinkle { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.4s var(--ease); }
   :root[data-theme="dark"] .night, :root[data-theme="dark"] #twinkle { opacity: 1; }
+  /* day: a painted clear sky over a coral sea, clouds drifting, sea creatures swimming through the shallows */
+  .day { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s var(--ease);
+    background: linear-gradient(180deg, #ffffff73 0%, #ffffff40 34%, #f6fbfc59 62%, #f6fbfca6 100%), url(/host/harbor/art/day.jpg) center 35% / cover no-repeat; }
+  :root[data-theme="light"] .day { opacity: 1; }
+  :root[data-theme="light"] .stars { display: none; }
+  :root[data-theme="light"] .waves { opacity: .3; }
+  :root[data-theme="light"] .card { background: #ffffffb8; }
+  .clouds, .shallows { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity 1.4s var(--ease); }
+  :root[data-theme="light"] .clouds, :root[data-theme="light"] .shallows { opacity: 1; }
+  .cloud { position: absolute; left: 0; width: var(--w); opacity: var(--o); animation: drift-across var(--t) linear infinite; animation-delay: var(--d); }
+  @keyframes drift-across { from { transform: translateX(-30vw); } to { transform: translateX(120vw); } }
+  /* each creature: an outer swim across the shallows, an inner gentle rise and fall */
+  .swim { position: absolute; left: 0; top: var(--y); animation: swim-across var(--t) linear infinite; animation-delay: var(--d); }
+  .swim.back { animation-name: swim-back; }
+  .swim .bob { display: block; width: var(--w); animation: bob var(--b, 6s) ease-in-out infinite; opacity: .8; }
+  .swim.back .bob { transform: scaleX(-1); }
+  .swim.back .bob img { transform: scaleX(-1); }
+  .swim .bob img { width: 100%; display: block; }
+  @keyframes swim-across { from { transform: translateX(-25vw); } to { transform: translateX(120vw); } }
+  @keyframes swim-back { from { transform: translateX(120vw); } to { transform: translateX(-25vw); } }
+  .rise { position: absolute; left: var(--x); bottom: 0; width: var(--w); animation: rise-up var(--t) ease-in-out infinite; animation-delay: var(--d); opacity: .85; }
+  @keyframes rise-up { 0% { transform: translateY(20vh); opacity: 0; } 15% { opacity: .85; } 85% { opacity: .85; } 100% { transform: translateY(-38vh); opacity: 0; } }
+  /* at night, only the jellyfish, glowing */
+  .glowing { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity 1.4s var(--ease); }
+  :root[data-theme="dark"] .glowing { opacity: 1; }
+  .glowing .rise { filter: drop-shadow(0 0 12px #bd72f3aa) brightness(1.1); opacity: .7; }
   :root[data-theme="dark"] .waves { opacity: .25; }
   :root[data-theme="dark"] .stars { display: none; }
   :root[data-theme="dark"] .card { background: #17122599; }
@@ -230,8 +256,26 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
 </svg>
 <div class="sky" aria-hidden="true">
+  <div class="day"></div>
+  <div class="clouds">
+    <img class="art cloud" src="/host/harbor/art/cloud.png" alt="" style="top:6%;--w:300px;--o:.85;--t:210s;--d:-40s">
+    <img class="art cloud" src="/host/harbor/art/cloud.png" alt="" style="top:14%;--w:190px;--o:.7;--t:260s;--d:-150s">
+    <img class="art cloud" src="/host/harbor/art/cloud.png" alt="" style="top:2%;--w:420px;--o:.55;--t:320s;--d:-260s">
+  </div>
+  <div class="shallows">
+    <div class="swim" style="--y:66%;--t:78s;--d:-12s"><span class="bob" style="--w:150px;--b:7s"><img class="art" src="/host/harbor/art/turtle.png" alt=""></span></div>
+    <div class="swim back" style="--y:80%;--t:46s;--d:-30s"><span class="bob" style="--w:170px;--b:4.5s"><img class="art" src="/host/harbor/art/fish.png" alt=""></span></div>
+    <div class="swim" style="--y:74%;--t:58s;--d:-50s"><span class="bob" style="--w:120px;--b:5s"><img class="art" src="/host/harbor/art/fish.png" alt=""></span></div>
+    <div class="swim back" style="--y:58%;--t:110s;--d:-70s"><span class="bob" style="--w:230px;--b:9s"><img class="art" src="/host/harbor/art/manta.png" alt=""></span></div>
+    <div class="swim" style="--y:60%;--t:34s;--d:-8s"><span class="bob" style="--w:170px;--b:3.2s"><img class="art" src="/host/harbor/art/dolphin.png" alt=""></span></div>
+    <div class="rise" style="--x:84%;--w:90px;--t:40s;--d:-14s"><img class="art" src="/host/harbor/art/jelly.png" alt="" style="width:100%"></div>
+  </div>
   <div class="night"></div>
   <canvas id="twinkle"></canvas>
+  <div class="glowing">
+    <div class="rise" style="--x:12%;--w:80px;--t:48s;--d:-20s"><img class="art" src="/host/harbor/art/jelly.png" alt="" style="width:100%"></div>
+    <div class="rise" style="--x:86%;--w:64px;--t:56s;--d:-41s"><img class="art" src="/host/harbor/art/jelly.png" alt="" style="width:100%"></div>
+  </div>
   <div class="stars"></div>
   <svg class="waves" viewBox="0 0 1440 320" preserveAspectRatio="none">
     <path class="w2" d="M0,224L80,213C160,203,320,181,480,186.7C640,192,800,224,960,229.3C1120,235,1280,213,1360,202.7L1440,192L1440,320L0,320Z"/>

@@ -25,11 +25,19 @@
     on. Receiving goes on.
     - Provider error text never reaches a channel or a DM: the usage-limit message that named the person's account is
       stopped at the host.
-  - **Her notice while she can't answer,** in her own words, set by her or the person: once per person in a DM, once
-    per shared channel, never twice to one person, then silence until she's sending again.
+  - **Her notice while she can't answer,** in her own words, set by her or the person: once to the first message in each
+    channel or DM, then silence there until she's sending again.
   - **The host runs her Vector and Discord bridges itself** and reads every message into the queue. The Atelier reaches
     them through the host with the same tools as before.
   - **She's told what waited** (count, bridge, sender; not the words) and has her own `waiting_messages` tool.
+  - **Settings change only from this computer, the house network or the tailnet.** A paired device elsewhere can
+    look, not change. The settings page says so, and the host refuses it.
+  - **Her models on the host, as configurable as the Atelier's or more.**
+    - The Atelier's six providers and any number more (another computer's Ollama is one more).
+    - Each job (her turns, heartbeat, schedules, sparks, compaction, vision) has its own model, fallbacks and options.
+    - A provider at its usage limit rests.
+    - Keys are write-only.
+    - Her loop can run on the host with them (`--brain host`).
   - **A settings and information page** at `/host/`, in the Atelier's new colour #BD72F3, with the trace of what went
     to which model, what came back, and what the bridges did.
   - Chats, schedules and settings still live in each browser for now. See `host/README.md`.

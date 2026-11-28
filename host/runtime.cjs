@@ -58,10 +58,10 @@ function createRuntime(opts) {
   const trace = opts.trace || (() => {});
   const pollMs = opts.pollMs ?? 2000, tickMs = opts.tickMs ?? 1000, probeMs = opts.probeMs ?? 60000;
   const writeDir = opts.writeDir || '/Pandora/Waiting Messages';
-  // who has had her notice while she can't answer: people (by bridge + sender) and shared channels (by bridge + chat).
-  // Once per person in a DM, once per channel in a shared channel, and never twice to the same person in different
-  // places. Re-armed when her sending is on again (she's awake and ready).
-  const noticedPeople = new Set(), noticedChannels = new Set();
+  // where her notice has gone while she can't answer: once per channel or DM (by bridge + chat), whoever writes there,
+  // so the same person on Discord and on Vector gets it once in each place, and a new channel gets its own (the
+  // person's decision, 2026-11-27: no identity-linking). Re-armed when her sending is on again (she's awake and ready).
+  const noticed = new Set();
   let written = null;
   let timers = [];
   let busy = Promise.resolve();
@@ -70,7 +70,7 @@ function createRuntime(opts) {
   let wasSending = settings.on('send');
   settings.onChange(() => {
     const now = settings.on('send');
-    if (now && !wasSending) { noticedPeople.clear(); noticedChannels.clear(); log('notice.rearmed', {}); }
+    if (now && !wasSending) { noticed.clear(); log('notice.rearmed', {}); }
     wasSending = now;
   });
 
@@ -126,13 +126,12 @@ function createRuntime(opts) {
   }
   const TEXT_KEYS = new Set(['content', 'text', 'message', 'caption', 'bio', 'about', 'name', 'reason']);
   const TEXT_ARGS_OF = (a) => Object.entries(a || {}).filter(([k, v]) => TEXT_KEYS.has(k) && typeof v === 'string').map(([, v]) => v);
-  /** Her notice to someone writing while she can't answer: her own configured words, once (see noticedPeople). */
+  /** Her notice to the first message in each channel or DM while she can't answer: her own configured words, once. */
   async function sendNotice(bridge, m) {
-    const person = `${bridge.name}\n${m.fromId ?? m.from ?? m.chat}`;
-    const channel = `${bridge.name}\n${m.chat}`;
-    if (m.group ? noticedChannels.has(channel) : noticedPeople.has(person)) return;
-    // either way, this person has now had it (or seen it in the channel); a channel, once, for everyone in it
-    noticedPeople.add(person); if (m.group) noticedChannels.add(channel);
+    const place = `${bridge.name}
+${m.chat}`;
+    if (noticed.has(place)) return;
+    noticed.add(place);
     const line = settings.noticeFor(bridge.name, m.chat, m.fromId, m.from).trim();
     if (!line) { log('notice.silent', { bridge: bridge.name, chat: m.chat }); return; }
     if (checkNotice(line)) { log('notice.refused', { bridge: bridge.name, chat: m.chat, why: 'provider details' }); return; } // never, whatever it says
@@ -213,7 +212,7 @@ function createRuntime(opts) {
   /** "Try the model again": check it, and say so. It counts as back if it answers, but nothing is switched on: sending,
    *  heartbeat, schedules and sparks stay as they are until the person turns them on. */
   async function checkModel(by = 'someone') {
-    if (!opts.probe) return { ok: null, note: "The host has no model of its own yet: the Atelier's next turn will show whether hers answers. Use \"She has a model again\" when it does." };
+    if (!opts.probe) return { ok: null, note: "Her loop runs in the Atelier, with the Atelier's own models, so its next turn will show whether hers answers. Use \"She has a model again\" when it does. (To have the host check, run her loop on the host: Her models → where her loop runs.)" };
     let ok = false, detail = '';
     try { ok = !!(await opts.probe()); } catch (e) { detail = String(e && e.message || e).slice(0, 2000); }
     trace('model.check', { by, ok, detail });

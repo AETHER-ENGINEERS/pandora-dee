@@ -181,11 +181,12 @@ the host takes it as her model being gone:
 
 ## Her notice while she can't answer
 
-While her sending is off (napping, an outage, or turned off), someone who writes to her gets **her notice, once**:
+While her sending is off (napping, an outage, or turned off), the first message in each channel or DM gets **her notice, once for that place**:
 
-- **once per person in a DM,** and **once per shared channel** (for everyone in it);
-- **never twice to the same person:** someone who saw it in a channel doesn't get it again in a DM;
-- **then silence,** until her sending is on again. That re-arms it.
+- **once per DM and once per shared channel,** whoever writes there;
+- **a new place gets its own,** even from someone who already had it elsewhere: the host doesn't try to tell that a
+  Discord account and a Vector account are the same person (the person's decision: no identity-linking);
+- **then silence there,** until her sending is on again. That re-arms it.
 
 **The words are hers.** Each bridge has a default ("Fae is napping, she'll respond to your messages as soon as she's
 able!"), and she can have her own words for one person or one chat, or say nothing (empty).
@@ -221,6 +222,57 @@ page.
 - **Her tool, `waiting_messages`:** `list` (who and where), `read` (one or all, when she chooses; reading leaves them
   queued) and `handled` (they leave the queue).
 - **The person's three choices** stay as they are.
+
+## Where settings can be changed from
+
+Only from **this computer, the house's own network (LAN) or the tailnet** (the person's decision). A paired device
+connecting from anywhere else can still look: the status, the settings page, the waiting list, her models. But
+nothing about her settings changes, and the settings page says "From elsewhere: look only" with its controls off.
+
+- **What counts as a change:** the settings, the switches (and "turn on everything the host turned off"), "Try the
+  model again" and "She has a model again", her notices (her `away_notices` tool too), bridge and model keys, her
+  models, and each device's Atelier settings.
+- **How the host tells (`host/places.cjs`):** only by the connection's own address, never by what a request says
+  about itself.
+  - The private ranges count as the LAN, and 100.64.0.0/10 and fd7a:115c:a1e0::/48 as the tailnet.
+  - There's one exception: a proxy on the host itself (Tailscale Serve, say) makes everything look like it comes
+    from the host. When a request comes that way, the host goes by what the proxy says. Tailscale Serve's
+    `Tailscale-User-Login` header means the tailnet: Serve sets it and strips any copy a client sends, and Funnel
+    never sends it. Otherwise only a forwarded LAN address counts.
+- **Don't put the host behind a proxy that reaches the internet without saying so** (one that sends no forwarding
+  headers). The host can't tell its requests from its own.
+- **More ranges** can count as home with `--trust 203.0.113.0/24,…`. This is only on the host's command line, so a
+  settings change can never widen it.
+- Each refusal is logged (`refused.settings-from-elsewhere`), without the address.
+
+## Her models (`host/models.cjs`)
+
+Where her loop gets its model, and which model each job uses. It covers everything the Atelier's Config → Model
+provider can set, and more (the person's decision).
+
+- **Where her loop runs:** in the connected Atelier, with the Atelier's own models, as today (the default); or on the
+  host, with these models.
+  - Set it on the settings page, or start the host with `--brain host`. It takes effect on a restart.
+  - With the loop on the host, "Try the model again" asks these models.
+- **Providers: the Atelier's six to start with, and any number more.**
+  - The six are Ollama, Ollama Cloud, Groq, llama.cpp, OpenAI-compatible and AICord.
+  - Each provider has its own kind (Ollama, OpenAI-compatible, AICord), name, address, timeout and on/off.
+  - Another computer's Ollama (the Mac's, say) is just one more provider at its own address. So is a second
+    OpenAI-compatible endpoint.
+  - A provider the person removes stays removed.
+- **Jobs:** her turns (chat and bridges), the heartbeat, schedules, curiosity sparks, compaction and journal, and
+  vision.
+  - Each job can have its own provider, model, fallbacks in order (`provider/model, …`), temperature, context size
+    and thinking.
+  - A job with no provider of its own uses her turns' chain, with its own options.
+  - An empty model means the provider's best, picked the way the Atelier picks it.
+- **A provider at its usage limit rests** (30 minutes by default, a setting), and the next one in line answers.
+  - When every provider fails, her model counts as gone, and the switches go off as above.
+- **Keys are write-only.** They're kept in `model-secrets.json` (owner-only) in the host's state folder, never in the
+  settings, the status, the log or the trace. The settings page only says whether a key is set.
+  - Each key goes to its own provider and nowhere else.
+- **What a provider says when it fails stays on the host,** in the trace (for the person). It never reaches a channel
+  or a DM. The log only says that a provider rested, or that another one answered.
 
 ## The host's settings page: `/host/`
 
@@ -261,6 +313,8 @@ These are the next milestones, in this order:
 
 4. **The Atelier's own settings pages** don't drive the host's switches yet, and the Atelier doesn't wear the new
    colour yet. Both are page changes, next.
+5. **Her models on the host** answer plain turns, the heartbeat, schedules and sparks. Tool calls in a host turn come
+   with the agent loop (milestone 1). Until then, a loop that needs her tools stays in the Atelier.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs` and `tests/switches_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs` and `tests/models_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

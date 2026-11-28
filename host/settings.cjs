@@ -103,6 +103,7 @@ function createSettings(stateDir, { log = () => {} } = {}) {
       if ('redactWords' in p) p.redactWords = (Array.isArray(p.redactWords) ? p.redactWords : String(p.redactWords).split(/[\n,]/)).map((s) => String(s).trim()).filter(Boolean);
       if ('colors' in p) p.colors = Object.fromEntries(Object.entries(p.colors || {}).filter(([, v]) => /^#[0-9a-f]{6}$/i.test(String(v))));
       if ('notices' in p) delete p.notices; // notices change through setNotice, which checks them
+      if ('models' in p) delete p.models;   // and her models through host/models.cjs, which checks them
       data = merge(data, p);
       save();
       log('settings.changed', { by, keys: Object.keys(p) });
@@ -139,6 +140,13 @@ function createSettings(stateDir, { log = () => {} } = {}) {
       log('model.back', { by }); changed('model');
     },
     model: () => ({ ...model }),
+    /** Her models (host/models.cjs has already checked them). Saved whole: a removed provider stays removed. */
+    setModels(m, by = 'someone') {
+      data.models = JSON.parse(JSON.stringify(m));
+      save();
+      log('settings.changed', { by, keys: ['models'] });
+      changed('settings');
+    },
     // ---- her notice while she can't answer ----
     noticeFor(bridge, chat, fromId, fromName) {
       const n = (data.notices || {})[bridge] || {};

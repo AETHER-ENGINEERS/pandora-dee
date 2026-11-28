@@ -36,23 +36,26 @@
   details { border-top: 1px solid var(--border); padding: 4px 0; } summary { cursor: pointer; }
   pre { white-space: pre-wrap; word-break: break-word; background: #0f0c18; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; max-height: 360px; overflow: auto; }
   #note { min-height: 1.4em; color: var(--warn); }
+  .lookonly main [data-change] :is(input, select, textarea, button) { opacity: .55; }
+  .tight td, .tight th { padding: 4px 5px; } .tight input, .tight select { padding: 3px 6px; width: 100%; min-width: 60px; }
 </style>
 <header>
   <h1>Pandora Dee's home host</h1>
   <span class="pill" id="napPill">…</span>
   <span class="pill" id="modelPill">…</span>
   <span class="pill" id="waitPill">…</span>
+  <span class="pill" id="wherePill">…</span>
   <span class="muted" id="version"></span>
   <a href="/" style="margin-left:auto;color:var(--accent)">Open the Atelier</a>
 </header>
 <nav>
-  <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#waiting">Waiting</a><a href="#notices">Her notice</a><a href="#bridges">Bridges</a>
+  <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#models">Her models</a><a href="#waiting">Waiting</a><a href="#notices">Her notice</a><a href="#bridges">Bridges</a>
   <a href="#trace">What happened</a><a href="#devices">Devices</a><a href="#tools">Tools</a><a href="#files">Files</a><a href="#colours">Colours</a><a href="#log">Log</a>
 </nav>
 <main>
   <div id="note" role="status"></div>
 
-  <section id="switches">
+  <section id="switches" data-change>
     <h2>Switches</h2>
     <p class="muted">What runs. A nap turns off the loop, heartbeat, schedules, sparks and sending, and a model outage turns off the heartbeat, schedules, sparks and sending. They stay off until you turn them on, each when she's ready. Receiving stays on, so messages keep landing in the queue. While napping or without a model, the ones that need a client or a model are held off as well.</p>
     <div class="sw" id="swList"></div>
@@ -69,7 +72,7 @@
     </div>
   </section>
 
-  <section id="behaviour">
+  <section id="behaviour" data-change>
     <h2>Behaviour</h2>
     <div class="grid">
       <label class="f"><span>A nap turns her switches off. When a client connects again…</span>
@@ -83,6 +86,32 @@
       <textarea data-set="redactWords" data-lines></textarea></label>
   </section>
 
+  <section id="models" data-change>
+    <h2>Her models</h2>
+    <p class="muted">Where her loop gets its model, and which model each job uses. Everything the Atelier's Config → Model provider can set, and more: any number of providers (another computer's Ollama is just one more, at its own address), and each job with its own model, fallbacks and options. A provider that hits its usage limit rests for a while and the next one in line answers. Keys are write-only: once set, they're never shown again. What a provider says when it fails stays here, in What happened.</p>
+    <div class="grid">
+      <label class="f"><span>Her loop runs…</span><select data-mset="brain"><option value="client">In the connected Atelier, with the Atelier's own models</option><option value="host">On the host, with these models</option></select></label>
+      <label class="f"><span>A provider at its usage limit rests for (minutes)</span><input type="number" min="0" data-mset="restMin" data-num></label>
+      <label class="f"><span>Temperature (for jobs that don't set their own)</span><input type="number" step="0.05" min="0" max="2" data-mopt="temperature" data-num></label>
+      <label class="f"><span>Context size (tokens)</span><input type="number" min="512" data-mopt="numCtx" data-num></label>
+      <label class="f"><span>Thinking</span><select data-mopt="think"><option value="false">Off</option><option value="true">On</option></select></label>
+    </div>
+    <p class="muted" id="brainNote"></p>
+    <h3 class="hi" style="font-size:14px">Jobs</h3>
+    <div style="overflow-x:auto"><table class="tight"><thead><tr><th>Job</th><th>Provider</th><th>Model</th><th>Then, in order (provider/model, …)</th><th>Temp.</th><th>Context</th><th>Thinking</th><th></th></tr></thead><tbody id="roleRows"></tbody></table></div>
+    <h3 class="hi" style="font-size:14px">Providers</h3>
+    <div style="overflow-x:auto"><table class="tight"><thead><tr><th>Id</th><th>Name</th><th>Kind</th><th>Address</th><th>On</th><th>Key</th><th>Now</th><th></th></tr></thead><tbody id="provRows"></tbody></table></div>
+    <form id="provForm" class="grid" style="margin-top:12px">
+      <label class="f"><span>Id (new, or one above to change it)</span><input name="id" pattern="[a-z0-9_-]{1,32}" placeholder="mac" required></label>
+      <label class="f"><span>Name</span><input name="label" placeholder="The Mac's Ollama"></label>
+      <label class="f"><span>Kind</span><select name="kind"><option value="ollama">Ollama</option><option value="openai">OpenAI-compatible</option><option value="aicord">AICord</option></select></label>
+      <label class="f"><span>Address</span><input name="base" placeholder="http://localhost:11434"></label>
+      <label class="f"><span>Give up after (seconds)</span><input name="timeoutSec" type="number" min="5" placeholder="300"></label>
+      <label class="f"><span>Its key (write-only; empty keeps the one set)</span><input name="key" type="password" autocomplete="off"></label>
+      <div class="row"><button>Save the provider</button></div>
+    </form>
+  </section>
+
   <section id="waiting">
     <h2>Waiting messages</h2>
     <p class="muted">What came on Vector and Discord while she couldn't answer. Kept on disk, in order, never expiring. She's told they're there and has her own tool for them; these are your choices.</p>
@@ -93,9 +122,9 @@
     <table><thead><tr><th>Arrived</th><th>Bridge</th><th>From</th><th>Where</th><th>Begins</th></tr></thead><tbody id="waitRows"></tbody></table>
   </section>
 
-  <section id="notices">
+  <section id="notices" data-change>
     <h2>Her notice while she can't answer</h2>
-    <p class="muted">While her sending is off (napping, an outage, or you turned it off), someone who writes to her gets this, once: once per person in a DM, once per shared channel, and never twice to the same person. After that, silence until her sending is on again. It's her words: she can change them with her <code>away_notices</code> tool, and so can you here. Plain text only, never made by a model; the host refuses anything with provider details. Empty means say nothing.</p>
+    <p class="muted">While her sending is off (napping, an outage, or you turned it off), the first message in each channel or DM gets this, once for that place, whoever writes there (a new channel or DM gets its own, even from someone who already had it elsewhere). After that, silence there until her sending is on again. It's her words: she can change them with her <code>away_notices</code> tool, and so can you here. Plain text only, never made by a model; the host refuses anything with provider details. Empty means say nothing.</p>
     <div id="noticeList"></div>
     <form id="noticeForm" class="grid" style="margin-top:10px">
       <label class="f"><span>Bridge</span><select name="bridge"><option>discord</option><option>vector</option></select></label>
@@ -106,7 +135,7 @@
     </form>
   </section>
 
-  <section id="bridges">
+  <section id="bridges" data-change>
     <h2>Bridges</h2>
     <p class="muted">The host is her bridge to Vector and Discord: it runs them, reads every message into the queue, and checks everything that goes out (no error text ever, the hidden words, the switches). The Atelier reaches them through the host.</p>
     <table><thead><tr><th>Bridge</th><th>Address</th><th>Run by the host</th><th>Key</th><th>Now</th></tr></thead><tbody id="bridgeRows"></tbody></table>
@@ -133,7 +162,7 @@
 
   <section id="files"><h2>Files</h2><div id="filesInfo" class="muted"></div></section>
 
-  <section id="colours">
+  <section id="colours" data-change>
     <h2>Colours</h2>
     <p class="muted">The accent is the Atelier's new colour. The rest are its current defaults. The Atelier uses the same ones.</p>
     <div class="grid" id="colourList"></div>
@@ -149,7 +178,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const when = (t) => t ? new Date(t).toLocaleString() : '—';
   const note = (t) => { $('#note').textContent = t; };
-  const api = async (p, method = 'GET', body) => { const r = await fetch(p, { method, headers: H, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }); if (r.status === 401) location.replace('/pair?back=/host/'); return r.json(); };
+  const api = async (p, method = 'GET', body) => { const r = await fetch(p, { method, headers: H, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }); if (r.status === 401) location.replace('/pair?back=/host/'); const j = await r.json(); if (r.status === 403 && j.error) note(j.error); return j; };
   let S = null, editing = null;
 
   function applyColours(c) { for (const [k, v] of Object.entries(c || {})) document.documentElement.style.setProperty('--' + k, v); }
@@ -164,6 +193,11 @@
     $('#modelPill').className = 'pill ' + (st.model.attached ? 'ok' : 'bad');
     $('#waitPill').textContent = `${st.waiting.count} waiting`;
     $('#waitPill').className = 'pill ' + (st.waiting.large ? 'bad' : st.waiting.count ? 'warn' : '');
+    // where this device is, and whether it may change anything (only from this machine, the LAN or the tailnet)
+    const may = !st.you || st.you.mayChange;
+    $('#wherePill').textContent = may ? `Here: ${({ 'this machine': 'this computer', lan: 'the house network', tailnet: 'the tailnet' })[st.you && st.you.place] || 'home'}` : 'From elsewhere: look only';
+    $('#wherePill').className = 'pill ' + (may ? '' : 'bad');
+    document.body.classList.toggle('lookonly', !may);
     // switches
     $('#swList').innerHTML = Object.entries(st.switches).map(([k, v]) => `
       <label><input type="checkbox" data-sw="${k}" ${v.wanted ? 'checked' : ''}> ${esc(v.name)}</label>
@@ -192,11 +226,42 @@
     $('#devRows').innerHTML = st.devices.map((d) => `<tr><td>${esc(d.name)}${d.you ? ' <span class="hi">(this one)</span>' : ''}</td><td>${esc(when(d.created))}</td><td>${esc(when(d.seen))}</td></tr>`).join('');
     $('#toolRows').innerHTML = st.tools.map((t) => `<tr><td class="hi">${esc(t.name)}</td><td>${esc(t.description)}</td></tr>`).join('');
     $('#filesInfo').innerHTML = `Her vault is real files on this computer. ${st.writer ? `Writing it now: ${esc(st.writer.device)}.` : 'No window is writing it right now.'} Chats, schedules and settings still live in each browser's Atelier for now; they move here next.`;
+    renderModels(st.models);
     // colours
     if (!$('#colourList').dataset.built) {
       $('#colourList').innerHTML = Object.entries(st.settings.colors).map(([k, v]) => `<label class="f"><span>${esc(k)}</span><input type="color" data-colour="${k}" value="${esc(v)}"> <code>${esc(v)}</code></label>`).join('');
       $('#colourList').dataset.built = '1';
     }
+    // from elsewhere: look only (the host refuses changes anyway; this says so before anyone tries)
+    if (!may) for (const el of document.querySelectorAll('main [data-change] :is(input, select, textarea, button)')) el.disabled = true;
+  }
+  // her models: rebuilt when they change, never while you're typing in them
+  let modelsShown = '';
+  function renderModels(m) {
+    if (!m) return;
+    const box = $('#models'); const f = document.activeElement; if (f && box.contains(f) && /^(INPUT|SELECT|TEXTAREA)$/.test(f.tagName)) return;
+    for (const el of box.querySelectorAll('[data-mset]')) el.value = String(m[el.dataset.mset] ?? '');
+    for (const el of box.querySelectorAll('[data-mopt]')) el.value = String(m.options[el.dataset.mopt] ?? '');
+    $('#brainNote').textContent = m.brain === 'host' ? 'Her loop on the host takes effect when the host restarts.' : 'While her loop runs in the Atelier, these are ready for when it moves to the host (choose "On the host", then restart the host). "Try the model again" asks these models only then.';
+    const key = JSON.stringify(m); if (key === modelsShown) return; modelsShown = key;
+    const ids = Object.keys(m.providers);
+    const opts = (sel, blank) => (blank ? `<option value="">${blank}</option>` : '') + ids.map((id) => `<option value="${esc(id)}" ${id === sel ? 'selected' : ''}>${esc(m.providers[id].label)} (${esc(id)})</option>`).join('');
+    const tri = (v) => `<option value="" ${v === null ? 'selected' : ''}>as set above</option><option value="true" ${v === true ? 'selected' : ''}>on</option><option value="false" ${v === false ? 'selected' : ''}>off</option>`;
+    $('#roleRows').innerHTML = Object.entries(m.roles).map(([r, j]) => `<tr data-role="${r}">
+      <td class="hi">${esc(m.roleNames[r] || r)}</td>
+      <td><select data-f="provider">${opts(j.provider, r === 'chat' ? null : 'same as her turns')}</select></td>
+      <td><input data-f="model" value="${esc(j.model)}" list="ml-${r}" placeholder="the provider's best"><datalist id="ml-${r}"></datalist> <button type="button" data-listfor="${r}" title="Ask the provider which models it has">⟳</button></td>
+      <td><input data-f="fallbacks" value="${esc(j.fallbacks.map((f) => f.provider + '/' + f.model).join(', '))}" placeholder="cloud/gpt-oss:120b, groq/"></td>
+      <td><input data-f="temperature" type="number" step="0.05" min="0" max="2" value="${j.temperature ?? ''}" placeholder="${m.options.temperature}"></td>
+      <td><input data-f="numCtx" type="number" min="512" value="${j.numCtx ?? ''}" placeholder="${m.options.numCtx}"></td>
+      <td><select data-f="think">${tri(j.think)}</select></td>
+      <td><button type="button" data-rolesave="${r}">Save</button></td></tr>`).join('');
+    $('#provRows').innerHTML = ids.map((id) => { const p = m.providers[id]; return `<tr>
+      <td class="hi">${esc(id)}</td><td>${esc(p.label)}</td><td>${esc(p.kind)}</td><td>${esc(p.base) || '<span class="muted">not set</span>'}</td>
+      <td><input type="checkbox" data-provon="${esc(id)}" ${p.enabled ? 'checked' : ''}></td>
+      <td>${p.keySet ? 'set' : '<span class="muted">none</span>'}</td>
+      <td>${p.restingFor ? `<span class="state off">resting ${Math.ceil(p.restingFor / 60)} min</span>` : ''}</td>
+      <td><button type="button" data-provedit="${esc(id)}">Change</button> <button type="button" data-provdel="${esc(id)}">Remove</button></td></tr>`; }).join('');
   }
   async function refresh() {
     try { render(await api('/host/status')); } catch (e) { note('The host could not be reached.'); }
@@ -214,6 +279,9 @@
       const v = el.dataset.num !== undefined ? Number(el.value) : el.dataset.lines !== undefined ? el.value.split('\n') : el.value;
       await api('/host/settings', 'PUT', { [el.dataset.set]: v }); editing = null; note('Saved.'); return refresh();
     }
+    if (el.dataset.mset) { await api('/host/models', 'PUT', { [el.dataset.mset]: el.dataset.num !== undefined ? Number(el.value) : el.value }); el.blur(); note('Saved.'); return refresh(); }
+    if (el.dataset.mopt) { await api('/host/models', 'PUT', { options: { [el.dataset.mopt]: el.dataset.mopt === 'think' ? el.value === 'true' : Number(el.value) } }); el.blur(); note('Saved.'); return refresh(); }
+    if (el.dataset.provon) { await api('/host/models', 'PUT', { providers: { [el.dataset.provon]: { enabled: el.checked } } }); return refresh(); }
     if (el.dataset.colour) { await api('/host/settings', 'PUT', { colors: { [el.dataset.colour]: el.value } }); $('#colourList').dataset.built = ''; return refresh(); }
   });
   document.addEventListener('focusin', (e) => { if (e.target.dataset && e.target.dataset.set) editing = e.target; });
@@ -227,6 +295,25 @@
       note(r.ok === true ? 'Her model answered: it works. Sending and the rest stay off until you turn them on.' : r.ok === false ? `It still doesn't answer.${r.detail ? ' It said: ' + r.detail : ''}` : (r.note || 'Not checked.'));
       return refresh();
     }
+    if (b.dataset.rolesave) {
+      const tr = b.closest('tr'); const v = (f) => tr.querySelector(`[data-f="${f}"]`).value;
+      const job = { provider: v('provider'), model: v('model').trim(), fallbacks: v('fallbacks').split(',').map((x) => x.trim()).filter(Boolean), temperature: v('temperature'), numCtx: v('numCtx'), think: v('think') === '' ? null : v('think') === 'true' };
+      await api('/host/models', 'PUT', { roles: { [b.dataset.rolesave]: job } }); b.blur(); note('Saved.'); return refresh();
+    }
+    if (b.dataset.listfor) {
+      const tr = b.closest('tr'); const prov = tr.querySelector('[data-f="provider"]').value || S.models.roles.chat.provider;
+      note('Asking it…'); const r = await api(`/host/models/${encodeURIComponent(prov)}/list`);
+      tr.querySelector('datalist').innerHTML = (r.models || []).map((x) => `<option value="${esc(x)}">`).join('');
+      note(r.error || `${(r.models || []).length} models offered: pick one in the model box.`); return;
+    }
+    if (b.dataset.provedit) {
+      const p = S.models.providers[b.dataset.provedit]; const f = $('#provForm');
+      f.elements.id.value = b.dataset.provedit; f.elements.label.value = p.label; f.elements.kind.value = p.kind; f.elements.base.value = p.base; f.elements.timeoutSec.value = p.timeoutSec; f.elements.key.value = ''; f.elements.label.focus(); return;
+    }
+    if (b.dataset.provdel) {
+      if (!confirm(`Remove the provider ${b.dataset.provdel} (and its key)? Jobs that use it move on to their next one.`)) return;
+      await api('/host/models', 'PUT', { providers: { [b.dataset.provdel]: null } }); return refresh();
+    }
     if (b.dataset.unnotice) { const [bridge, scope, key] = b.dataset.unnotice.split('|'); await api('/host/notices', 'POST', { action: 'remove', bridge, scope, key }); return refresh(); }
     const q = b.dataset.q; if (!q) return;
     if (q === 'clear' && !confirm('Remove the waiting messages from the queue? Only works when a written file already holds all of them.')) return;
@@ -239,6 +326,15 @@
     const f = new FormData(e.target);
     const r = await api('/host/notices', 'POST', { action: 'set', bridge: f.get('bridge'), scope: f.get('scope'), key: f.get('key'), text: f.get('text') });
     note(r.error ? r.error : 'Saved her notice.'); if (!r.error) e.target.reset(); refresh();
+  });
+  $('#provForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target); const id = String(f.get('id') || '').trim();
+    const r = await api('/host/models', 'PUT', { providers: { [id]: { label: String(f.get('label') || '').trim() || id, kind: f.get('kind'), base: String(f.get('base') || '').trim(), ...(f.get('timeoutSec') ? { timeoutSec: Number(f.get('timeoutSec')) } : {}) } } });
+    if (r.error) return;
+    if (!r.providers || !r.providers[id]) return note("That provider couldn't be saved: the id is lower-case letters, digits, - and _, and the address starts with http:// or https://.");
+    if (String(f.get('key') || '')) await api(`/host/models/${encodeURIComponent(id)}/key`, 'PUT', { key: String(f.get('key')) });
+    e.target.reset(); note(`Saved the provider ${id}.`); modelsShown = ''; refresh();
   });
   $('#bridgeForm').addEventListener('submit', async (e) => {
     e.preventDefault();

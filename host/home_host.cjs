@@ -28,6 +28,8 @@ const { createSettings } = require('./settings.cjs');
 const { createQueue } = require('./queue.cjs');
 const { createRedactor } = require('./redact.cjs');
 const { createRuntime } = require('./runtime.cjs');
+const { requestPlace, mayChange } = require('./places.cjs');
+const { createModels } = require('./models.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -71,6 +73,8 @@ function createHomeHost(opts) {
   const shell = findShell(opts.shell);
   const say = opts.log || (() => {});
   const writerMs = Number(opts.writerMs) > 0 ? Number(opts.writerMs) : WRITER_MS;
+  // more address ranges the person counts as the house's own network (--trust), beyond the usual private ones
+  const trustNets = Array.isArray(opts.trustNets) ? opts.trustNets.map(String) : [];
 
   // ---------- devices and pairing ----------
   let devices = [];
@@ -113,6 +117,8 @@ function createHomeHost(opts) {
   // kept in the settings. pandora-discord and pandora-vector keep their own key in their own folder instead.)
   const bridgeConfigs = () => Object.entries(settings.get().bridges || {}).map(([name, c]) => { const token = readSecrets()[name] || ''; return { name, url: c.url, command: c.command || null, args: c.args || [], env: { ...(c.env || {}), ...(c.keyEnv && token ? { [c.keyEnv]: token } : {}) }, token }; });
   const bridgeInfo = () => bridgeConfigs().map(({ name, url, command, token }) => ({ name, url, command: !!command, tokenSet: !!token }));
+  // her models, as the host reaches them (host/models.cjs); their keys are write-only, in their own owner-only file
+  const models = createModels({ settings, secretsFile: path.join(stateDir, 'model-secrets.json'), log: event });
   // what waited, on disk (host/queue.cjs)
   const queue = createQueue(path.join(stateDir, 'bridge-queue.jsonl'), { log: event, warnAt: Number(settings.get().queueWarnAt) || undefined });
   let runtime = null; // started with startRuntime()
@@ -208,7 +214,7 @@ function createHomeHost(opts) {
     },
     {
       name: 'away_notices',
-      description: "Your notice for people who write on Vector or Discord while you can't answer (napping, or your sending is off): your own plain words, sent once per person in a DM and once per shared channel, never twice to the same person, until your sending is on again. One per bridge, with your own wording for a person or a chat if you like; empty text means say nothing to them. action \"get\" shows them; \"set\" (bridge, scope: default | person | chat, key: the person's id or name, or the chat's id, text); \"remove\" takes an override away. Never put provider details in them: the host refuses those.",
+      description: "Your notice for people who write on Vector or Discord while you can't answer (napping, or your sending is off): your own plain words, sent once to the first message in each channel or DM (whoever writes there; a new place gets its own), until your sending is on again. One per bridge, with your own wording for a person or a chat if you like; empty text means say nothing to them. action \"get\" shows them; \"set\" (bridge, scope: default | person | chat, key: the person's id or name, or the chat's id, text); \"remove\" takes an override away. Never put provider details in them: the host refuses those.",
       inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['get', 'set', 'remove'] }, bridge: { type: 'string' }, scope: { type: 'string', enum: ['default', 'person', 'chat'] }, key: { type: 'string' }, text: { type: 'string' } }, required: ['action'] },
     },
   ];
@@ -217,8 +223,12 @@ function createHomeHost(opts) {
     const n = runtime ? runtime.notice() : '';
     return TOOLS.map((t) => (t.name === 'waiting_messages' && n ? { ...t, description: n + ' ' + t.description } : t));
   }
-  async function callTool(name, args, dev) {
+  async function callTool(name, args, dev, where) {
     if (name === 'away_notices') {
+      if ((args?.action === 'set' || args?.action === 'remove') && where && !mayChange(where)) {
+        event('refused.settings-from-elsewhere', { tool: name, device: dev.id, via: where.via });
+        return { content: [{ type: 'text', text: JSON.stringify({ error: "Your notices can only be changed while you're reached from the house's own network or the tailnet." }) }], isError: true };
+      }
       if (!runtime) return { content: [{ type: 'text', text: JSON.stringify({ error: 'No bridges on this host yet.' }) }], isError: true };
       const r = runtime.notices(args || {}, 'her');
       event('tool', { device: dev.id, tool: name, action: args?.action || 'get' });
@@ -244,13 +254,13 @@ function createHomeHost(opts) {
     event('tool.unknown', { device: dev.id, tool: name });
     return { content: [{ type: 'text', text: `No tool named ${name} on this host.` }], isError: true };
   }
-  async function mcp(msg, dev) {
+  async function mcp(msg, dev, where) {
     const { id, method, params } = msg || {};
     const reply = (result) => ({ jsonrpc: '2.0', id, result });
     if (method === 'initialize') return reply({ protocolVersion: params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'pandora-dee-host', version: VERSION } });
     if (method === 'ping') return reply({});
     if (method === 'tools/list') return reply({ tools: toolList() });
-    if (method === 'tools/call') return reply(await callTool(params?.name, params?.arguments, dev));
+    if (method === 'tools/call') return reply(await callTool(params?.name, params?.arguments, dev, where));
     if (id == null) return null; // a notification
     return { jsonrpc: '2.0', id, error: { code: -32601, message: `${method}: not offered by this host` } };
   }
@@ -303,6 +313,14 @@ function createHomeHost(opts) {
       // everything else: paired devices only
       const dev = deviceOf(req);
       if (!dev) { event('refused.unpaired', { path: p }); return send(res, 401, { error: 'This device is not paired with the host. Open /pair on it and enter the PIN the host shows.' }); }
+      // settings change only from this machine, the LAN or the tailnet (host/places.cjs); from elsewhere, reading only
+      const where = requestPlace(req, trustNets);
+      const homeOnly = () => {
+        if (mayChange(where)) return false;
+        event('refused.settings-from-elsewhere', { path: p, device: dev.id, via: where.via });
+        send(res, 403, { error: "Settings can only be changed from the house's own network or the tailnet. This device is connected from elsewhere, so it can look but not change.", where: where.place });
+        return true;
+      };
 
       if (p === '/host/disk' && req.method === 'POST') {
         let call; try { call = JSON.parse(await readBody(req, DISK_BODY_MAX)); } catch (e) { return send(res, e.status || 400, 'ERR:' + (e.status ? 'that piece is too big' : 'not a disk call')); }
@@ -346,6 +364,8 @@ function createHomeHost(opts) {
         return send(res, 200, {
           app: 'pandora-dee-host', version: VERSION, platform: process.platform, shell: path.basename(shell),
           nap: nap.state(), ...settings.state(),
+          you: { place: where.place, mayChange: mayChange(where) },
+          models: models.state(),
           waiting: runtime ? { ...runtime.waiting(), messages: runtime.waiting().messages.map(({ raw, text, ...m }) => ({ ...m, preview: String(text).slice(0, 140) })) } : { count: 0, messages: [] },
           brain: runtime ? runtime.brain : null,
           bridges: bridgeInfo(),
@@ -357,20 +377,42 @@ function createHomeHost(opts) {
       if (p === '/host/settings') {
         if (req.method === 'GET') return send(res, 200, settings.get());
         if (req.method === 'PUT' || req.method === 'PATCH') {
+          if (homeOnly()) return;
           let b; try { b = JSON.parse(await readBody(req, 65536)); } catch { return send(res, 400, { error: 'Settings are a JSON object.' }); }
           return send(res, 200, settings.set(b, dev.name));
         }
       }
-      if (p === '/host/switches/resume' && req.method === 'POST') return send(res, 200, settings.resume(dev.name));
+      if (p === '/host/switches/resume' && req.method === 'POST') return homeOnly() || send(res, 200, settings.resume(dev.name));
       const bk = /^\/host\/bridges\/([a-z0-9_-]+)\/key$/.exec(p);
       if (bk && req.method === 'PUT') {
+        if (homeOnly()) return;
         let b = {}; try { b = JSON.parse(await readBody(req, 8192) || '{}'); } catch { b = {}; }
         setBridgeToken(bk[1], typeof b.key === 'string' ? b.key.trim() : '');
         return send(res, 200, { ok: true, set: !!b.key, note: 'Restart the host for a bridge to use a new key.' });
       }
-      if (p === '/host/model/back' && req.method === 'POST') { settings.modelBack(dev.name); return send(res, 200, settings.state()); }
-      if (p === '/host/model/check' && req.method === 'POST') return send(res, 200, runtime ? await runtime.checkModel(dev.name) : { ok: null, note: 'No runtime on this host.' });
+      // ---- her models (host/models.cjs): providers, each job's model and fallbacks, keys (write-only) ----
+      if (p === '/host/models') {
+        if (req.method === 'GET') return send(res, 200, models.state());
+        if (req.method === 'PUT' || req.method === 'PATCH') {
+          if (homeOnly()) return;
+          let b; try { b = JSON.parse(await readBody(req, 65536)); } catch { return send(res, 400, { error: 'Models are a JSON object.' }); }
+          return send(res, 200, models.set(b, dev.name));
+        }
+      }
+      const mk = /^\/host\/models\/([a-z0-9_-]+)\/(key|list)$/.exec(p);
+      if (mk && mk[2] === 'key' && req.method === 'PUT') {
+        if (homeOnly()) return;
+        let b = {}; try { b = JSON.parse(await readBody(req, 8192) || '{}'); } catch { b = {}; }
+        return send(res, 200, models.setKey(mk[1], typeof b.key === 'string' ? b.key.trim() : ''));
+      }
+      if (mk && mk[2] === 'list' && req.method === 'GET') {
+        try { return send(res, 200, { models: await models.list(mk[1]) }); }
+        catch (e) { trace('model.list.error', { provider: mk[1], text: String(e && e.message || e) }); return send(res, 200, { models: [], error: "Couldn't list its models: the host's trace says why." }); }
+      }
+      if (p === '/host/model/back' && req.method === 'POST') { if (homeOnly()) return; settings.modelBack(dev.name); return send(res, 200, settings.state()); }
+      if (p === '/host/model/check' && req.method === 'POST') return homeOnly() || send(res, 200, runtime ? await runtime.checkModel(dev.name) : { ok: null, note: 'No runtime on this host.' });
       if (p === '/host/notices' && req.method === 'POST') {
+        if (homeOnly()) return;
         if (!runtime) return send(res, 404, { error: 'No bridges on this host yet.' });
         let b = {}; try { b = JSON.parse(await readBody(req, 16384) || '{}'); } catch { b = {}; }
         const r = runtime.notices(b, dev.name);
@@ -410,6 +452,7 @@ function createHomeHost(opts) {
       if (p === '/host/client/settings') {
         if (req.method === 'GET') return send(res, 200, dev.settings || {});
         if (req.method === 'PUT') {
+          if (homeOnly()) return;
           let b; try { b = JSON.parse(await readBody(req, 65536)); } catch (e) { return send(res, e.status || 400, { error: 'Settings are a JSON object of up to 64 KB.' }); }
           if (!b || typeof b !== 'object' || Array.isArray(b)) return send(res, 400, { error: 'Settings are a JSON object.' });
           dev.settings = b; saveDevices(); return send(res, 200, { ok: true });
@@ -419,8 +462,8 @@ function createHomeHost(opts) {
         if (req.method === 'DELETE') return send(res, 200, {});
         if (req.method !== 'POST') return send(res, 405, { error: 'POST JSON-RPC here (streamable HTTP).' });
         let msg; try { msg = JSON.parse(await readBody(req, 1048576)); } catch { return send(res, 400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'not JSON' } }); }
-        if (Array.isArray(msg)) { const out = (await Promise.all(msg.map((m) => mcp(m, dev)))).filter(Boolean); return out.length ? send(res, 200, out) : (res.writeHead(202), res.end()); }
-        const r = await mcp(msg, dev);
+        if (Array.isArray(msg)) { const out = (await Promise.all(msg.map((m) => mcp(m, dev, where)))).filter(Boolean); return out.length ? send(res, 200, out) : (res.writeHead(202), res.end()); }
+        const r = await mcp(msg, dev, where);
         if (!r) { res.writeHead(202); return res.end(); }
         return send(res, 200, r);
       }
@@ -432,10 +475,12 @@ function createHomeHost(opts) {
 
   const server = http.createServer((req, res) => { handle(req, res); });
   return {
-    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact,
+    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact, models,
     /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
     startRuntime(o = {}) {
-      runtime = createRuntime({ settings, queue, redact, log: event, trace, home: root, ...o }).start();
+      // brain 'host': her models as set up here, each job on its own chain; and "Try the model again" asks them
+      const own = o.brain === 'host' ? { model: models.runtimeModel, probe: () => models.check() } : {};
+      runtime = createRuntime({ settings, queue, redact, log: event, trace, home: root, ...own, ...o }).start();
       return runtime;
     },
     runtime: () => runtime,

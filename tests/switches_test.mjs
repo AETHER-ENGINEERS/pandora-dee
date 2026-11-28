@@ -8,8 +8,8 @@
 //     off until the person turns them on ("come back by themselves" is a setting, off by default);
 //   - a model outage turns the heartbeat, schedules, sparks and sending off; a model attached again (checked, or the
 //     person's word) brings none of them back. Receiving stays on throughout;
-//   - while she can't send, someone writing gets her notice once: once per person in a DM, once per shared channel,
-//     never twice to the same person; then silence until her sending is on again. Her words, configurable by her and
+//   - while she can't send, the first message in each channel or DM gets her notice, once for that place, whoever
+//     writes there (no identity-linking: a new channel or DM gets its own); then silence there until her sending is on again. Her words, configurable by her and
 //     the person, never a model's, never with provider details.
 import pw from 'playwright';
 import fs from 'node:fs';
@@ -147,7 +147,7 @@ ok(fs.readFileSync(path.join(host.stateDir, 'trace.jsonl'), 'utf8').includes('ti
 const r2 = await bridgeCall('send_message', { chat_id: 'general', content: 'an ordinary sentence' });
 ok(r2.isError && /off right now/.test(r2.content[0].text) && (await admin('/admin/sent')).length === 1, 'while sending is off nothing she writes goes out');
 
-// her notice: once per person in a DM, once per shared channel, never twice to one person
+// her notice: once per channel or DM, whoever writes there; a new place gets its own
 const notices = async () => (await admin('/admin/sent')).slice(1);
 const inject = async (list) => { await admin('/admin/inject', list); await sleep(250); };
 await inject([{ id: 'b1', chat_id: 'dm-bo', author: { id: 'u-bo', name: 'Bo' }, text: 'are you there?' }, { id: 'b2', chat_id: 'dm-bo', author: { id: 'u-bo', name: 'Bo' }, text: 'hello?' }]);
@@ -157,10 +157,13 @@ await inject([{ id: 'c1', chat_id: 'general', guild_id: 'g1', author: { id: 'u-c
 n = await notices();
 ok(n.length === 2 && n[1].chat_id === 'general', 'Cy and Di write in a shared channel: one notice, to the channel');
 await inject([{ id: 'c2', chat_id: 'dm-cy', author: { id: 'u-cy', name: 'Cy' }, text: 'in private now' }]);
-ok((await notices()).length === 2, "Cy, who saw it in the channel, then writes in a DM: no second notice for Cy");
+n = await notices();
+ok(n.length === 3 && n[2].chat_id === 'dm-cy', "Cy, who saw it in the channel, then writes in a DM: the DM is a new place and gets its own");
 await inject([{ id: 'a2', chat_id: 'dm-ana', author: { id: 'u-ana', name: 'Ana' }, text: 'quick one' }, { id: 'a3', chat_id: 'dev', guild_id: 'g1', author: { id: 'u-ana', name: 'Ana' }, text: 'and here' }]);
 n = await notices();
-ok(n.length === 4 && n[2].chat_id === 'dm-ana' && n[3].chat_id === 'dev', 'Ana writes in a DM (one for Ana), then in a channel that has had none (one for the channel, for everyone there)');
+ok(n.length === 5 && n[3].chat_id === 'dm-ana' && n[4].chat_id === 'dev', 'Ana writes in a DM (one there), then in a channel that has had none (one for the channel, for everyone there)');
+await inject([{ id: 'a4', chat_id: 'dev', guild_id: 'g1', author: { id: 'u-gil', name: 'Gil' }, text: 'me too' }]);
+ok((await notices()).length === 5, 'Gil then writes in that channel: it has had its notice, so nothing more');
 // her own words, per person or chat, through her tool
 const mcp = async (method, params) => (await api('/mcp', 'POST', { jsonrpc: '2.0', id: 1, method, params })).json.result;
 const herNotice = async (args) => JSON.parse((await mcp('tools/call', { name: 'away_notices', arguments: args })).content[0].text);
@@ -171,8 +174,8 @@ const refusedB = await herNotice({ action: 'set', bridge: 'discord', scope: 'def
 ok(refusedA.error && refusedB.error && (await api('/host/status')).json.settings.notices.discord.default === NOTICE, 'a notice with provider details is refused (error text, or an address); the old one stays');
 await inject([{ id: 'e1', chat_id: 'dm-eve', author: { id: 'u-eve', name: 'Eve' }, text: 'hey' }, { id: 'q1', chat_id: 'quiet-room', guild_id: 'g2', author: { id: 'u-fay', name: 'Fay' }, text: 'anyone?' }]);
 n = await notices();
-ok(n.length === 5 && n[4].content === "Eve, I'll write back tonight." && !n.some(x => x.chat_id === 'quiet-room'), "Eve gets the words she chose for Eve; the quiet room gets nothing");
-ok(host.queue.list().filter(m => !m.live).length === 9, 'every message waits in the queue all the same');
+ok(n.length === 6 && n[5].content === "Eve, I'll write back tonight." && !n.some(x => x.chat_id === 'quiet-room'), "Eve gets the words she chose for Eve; the quiet room gets nothing");
+ok(host.queue.list().filter(m => !m.live).length === 10, 'every message waits in the queue all the same');
 
 // her model again: checked, but sending stays off
 probeOk = false;
@@ -184,17 +187,17 @@ st1 = (await api('/host/status')).json;
 ok(chk.ok === true && st1.model.attached && st1.switches.loop.on && st1.switches.receive.on, '"Try the model again" when it answers: it works, the loop is free again');
 ok(['heartbeat', 'schedules', 'sparks', 'send'].every(k => !st1.switches[k].on && st1.switches[k].why.join() === 'off since the model outage'), 'and sending, heartbeat, schedules and sparks stay off until the person turns them on');
 await inject([{ id: 'b3', chat_id: 'dm-bo', author: { id: 'u-bo', name: 'Bo' }, text: 'still there?' }]);
-ok(JSON.parse((await bridgeCall('get_new_messages')).content[0].text).length === 0 && (await notices()).length === 5, "receiving goes on (Bo's message waits; no second notice), and the Atelier is handed nothing to answer");
+ok(JSON.parse((await bridgeCall('get_new_messages')).content[0].text).length === 0 && (await notices()).length === 6, "receiving goes on (Bo's message waits; no second notice), and the Atelier is handed nothing to answer");
 await api('/host/settings', 'PUT', { switches: { send: true } });
 st1 = (await api('/host/status')).json;
 ok(st1.switches.send.on && !st1.switches.heartbeat.on, 'the person turns sending on (the heartbeat stays off: that\'s a separate choice)');
 const d = await api('/host/waiting/deliver', 'POST', {});
 const handed = JSON.parse((await bridgeCall('get_new_messages')).content[0].text);
-ok(d.json.delivered === 10 && handed.map(m => m.id).join() === 'b1,b2,c1,d1,c2,a2,a3,e1,q1,b3', 'give them to her now: the Atelier gets all ten that waited, oldest first');
+ok(d.json.delivered === 11 && handed.map(m => m.id).join() === 'b1,b2,c1,d1,c2,a2,a3,a4,e1,q1,b3', 'give them to her now: the Atelier gets all eleven that waited, oldest first');
 // re-armed after she's been sending
 await api('/host/settings', 'PUT', { switches: { send: false } });
 await inject([{ id: 'b4', chat_id: 'dm-bo', author: { id: 'u-bo', name: 'Bo' }, text: 'and now?' }]);
-ok((await notices()).length === 6 && (await notices())[5].chat_id === 'dm-bo', 'once her sending has been on, the notice is re-armed: Bo gets one again the next time');
+ok((await notices()).length === 7 && (await notices())[6].chat_id === 'dm-bo', 'once her sending has been on, the notice is re-armed: Bo gets one again the next time');
 await api('/host/settings', 'PUT', { switches: { send: true } });
 await api('/host/waiting/deliver', 'POST', {}); await bridgeCall('get_new_messages');
 // "auto": a regular check marks the model back; still nothing switched on

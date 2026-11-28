@@ -521,6 +521,18 @@ computer's (the person can name one with `PDHOST_BROWSER`), driven over the DevT
 - A screenshot is kept in her vault under `/attachments/browser`, and she's told where.
 - It closes after ten quiet minutes, and when the keeper changes it.
 
+**Her visits: the boat to SEASIDE** (piece F): she visits other places as herself, never as a copy. In PDA SEASIDE a
+character can be linked to her (the Cast: "Her home is a host", with a PIN lit at her jetty); SEASIDE pairs as one of
+her ferries and keeps that key in the character's own sealed keys. When it's her turn in a SEASIDE room, SEASIDE gives
+her host the room's recent lines (`POST /r/<her name>/host/visit/turn`), and her one loop here answers, with her own
+SOUL, memory and tools.
+- What she said before in the room is hers in the conversation; only what's new is asked of her.
+- Each visit is kept as one chat every device of hers sees (for example "PDA SEASIDE · the Room").
+- The boat on her islet shows where she's been, how often and through which ferry: never what was said.
+- With her loop switched off (or the host napping), the room hears plainly that she's resting. When her model fails,
+  the room hears only that she can't answer now, never what the provider said.
+- Her bridges (Vector, Discord) stay the host's own: SEASIDE doesn't speak for her there.
+
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
 is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her
@@ -567,8 +579,9 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
     window (the devices that visit her now, and what each has);
   - **the observatory:** the telescope (her latest device calls: which tool, on which device, how it went; never what
     was asked or seen);
-  - **the misty grove and the islet** stand under scaffolding, saying which step brings them (her memory, the boat to
-    SEASIDE).
+  - **the islet:** the boat to the manor (the places she visits as herself, like PDA SEASIDE's room: where, how often,
+    through which ferry);
+  - **the misty grove** stands under scaffolding, saying which step brings it (her memory).
 
   The keeper tends her through a narrow view of the host's own settings and facts: never her vault, her chats, a key's
   value, or the words she has the redactor hide. Changes are made at the host itself; an island in her own process or

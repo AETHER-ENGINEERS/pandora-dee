@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Her visits: the boat to SEASIDE.** A place she visits as herself (PDA SEASIDE's room, linked with a PIN from her
+  jetty) asks her host for her turn, and her one loop answers with her own SOUL, memory and tools: one of her in many
+  places, never a twin. Each visit is a chat every device sees; the boat on her islet shows where she's been. Her loop
+  now always reads who she is first, even when a turn comes with its own notes (what's waiting, where she's visiting).
 - **Her own browser on the host.** An addition beside the browser in her Android app: her Atelier's own browser tool,
   driving a headless Chrome, Edge or Chromium of this computer's, listed with her devices as "this host". Off until the
   keeper turns it on at the host; its own profile in her state folder; and it doesn't visit this house's own network

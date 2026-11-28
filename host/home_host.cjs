@@ -125,7 +125,29 @@ function createHomeHost(opts) {
   const queue = createQueue(path.join(stateDir, 'bridge-queue.jsonl'), { log: event, warnAt: Number(settings.get().queueWarnAt) || undefined });
   // her Atelier's own things (settings, storage, chats, schedules), brought here from a backup (host/backup.cjs)
   const store = backup.atelierStore(path.join(stateDir, 'atelier'));
-  const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event });
+  // the person's configured keys from a backup whose box was ticked: into the host's own write-only key files, each
+  // where the host looks for it (her models, her bridges), the rest owner-only in atelier-secrets.json; never shown
+  const MODEL_KEYS = { ollamaKey: 'cloud', groqKey: 'groq', oaiKey: 'openai', lcppKey: 'llamacpp' };
+  const BRIDGE_KEYS = { dcToken: 'discord', vecToken: 'vector' };
+  const keyFiles = [path.join(stateDir, 'model-secrets.json'), secretsFile, path.join(stateDir, 'atelier-secrets.json')];
+  const keySink = {
+    apply(keys) {
+      const done = []; const rest = (() => { try { return JSON.parse(fs.readFileSync(keyFiles[2], 'utf8')); } catch { return {}; } })(); let restN = 0;
+      for (const [k, v] of Object.entries(keys)) {
+        if (MODEL_KEYS[k] && typeof v === 'string') { models.setKey(MODEL_KEYS[k], v); done.push(`${k} → her models (${MODEL_KEYS[k]})`); }
+        else if (BRIDGE_KEYS[k] && typeof v === 'string') { setBridgeToken(BRIDGE_KEYS[k], v); done.push(`${k} → the ${BRIDGE_KEYS[k]} bridge`); }
+        else { rest[k] = v; restN++; done.push(`${k} → kept for the Atelier`); }
+      }
+      if (restN) { fs.writeFileSync(keyFiles[2] + '.tmp', JSON.stringify(rest), { mode: 0o600 }); fs.renameSync(keyFiles[2] + '.tmp', keyFiles[2]); }
+      return done;
+    },
+    // what the key files held before, kept owner-only beside the import, so an undo puts them back
+    snapshot(dir) { fs.mkdirSync(dir, { recursive: true }); for (const f of keyFiles) if (fs.existsSync(f)) { const to = path.join(dir, path.basename(f)); fs.copyFileSync(f, to); try { fs.chmodSync(to, 0o600); } catch {} } },
+    restore(dir) { for (const f of keyFiles) { const from = path.join(dir, path.basename(f)); if (fs.existsSync(from)) { fs.copyFileSync(from, f); try { fs.chmodSync(f, 0o600); } catch {} } else fs.rmSync(f, { force: true }); } },
+  };
+  // her own keys on disk: never read, moved, copied, logged or overwritten (named like keys, or where the person says)
+  const isHers = () => backup.herKeys(settings.get().herKeys);
+  const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event, isHers, keySink });
   let importing = false; // while an import is written or undone, no window writes the vault
   let runtime = null; // started with startRuntime()
   let pin = null; // { code, until }
@@ -380,7 +402,7 @@ function createHomeHost(opts) {
           you: { place: where.place, mayChange: mayChange(where) },
           models: models.state(),
           atelier: (() => { const s = store.get('sessions'), c = store.get('schedules'); return { chats: Array.isArray(s) ? s.length : 0, schedules: Array.isArray(c) ? c.length : 0 }; })(),
-          imports: imports.records().slice(0, 10).map(({ id, at, by, name, kind, exportedAt, written, skipped, keysLeftOut, fromJadeVault, undone }) => ({ id, at, by, name, kind, exportedAt, written, skipped: skipped.length, keysLeftOut, fromJadeVault, undone })),
+          imports: imports.records().slice(0, 10).map(({ id, at, by, name, kind, exportedAt, written, skipped, keysSet, keysLeftOut, hersLeftAlone, fromJadeVault, undone }) => ({ id, at, by, name, kind, exportedAt, written, skipped: skipped.length, keysSet: keysSet || [], keysLeftOut, hersLeftAlone: hersLeftAlone || 0, fromJadeVault, undone })),
           waiting: runtime ? { ...runtime.waiting(), messages: runtime.waiting().messages.map(({ raw, text, ...m }) => ({ ...m, preview: String(text).slice(0, 140) })) } : { count: 0, messages: [] },
           brain: runtime ? runtime.brain : null,
           bridges: bridgeInfo(),
@@ -420,7 +442,7 @@ function createHomeHost(opts) {
       if (p === '/host/imports' && req.method === 'GET') return send(res, 200, imports.records().map(({ added, replaced, skipped, ...r }) => ({ ...r, added: added.length, replaced: replaced.length, skipped })));
       if (p === '/host/export' && req.method === 'GET') {
         const kind = url.searchParams.get('kind') === 'config' ? 'config' : 'full';
-        const data = backup.build({ root, store, kind });
+        const data = backup.build({ root, store, kind, isHers: isHers() });
         event('export', { device: dev.id, kind, files: Object.keys(data.vault.files).length });
         const name = `pandora-dee-${kind === 'full' ? 'backup' : 'config'}-${new Date().toISOString().slice(0, 10)}.json`;
         res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });

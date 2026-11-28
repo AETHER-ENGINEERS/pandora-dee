@@ -7,7 +7,10 @@
     paths by the page's own rules, and then replaces (everything) or merges (config).
   - What was there is kept, so the latest import can be undone.
   - The host exports her things in that same file, for the HTML and APK versions' own Import.
-  - A backup's keys and tokens stay out (named, never shown), and are entered on the host itself.
+  - The person's configured keys come along only when they ticked "Include API keys". They go into the host's
+    write-only key files, never shown back.
+  - Her own keys on disk (her nsec, API keys, wallets) are never read, moved, copied, logged or overwritten by an
+    import or export.
 - **A home host: her vault on one computer, her Atelier from any device.** `node host/main.cjs --root <folder>` keeps
   the vault as real files on the host and serves the Atelier to browsers on the same computer, the home network or the
   tailnet. A device pairs once with a six-digit PIN the host shows, and gets its own key. Without one it gets nothing

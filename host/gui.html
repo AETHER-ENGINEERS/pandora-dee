@@ -165,15 +165,17 @@
 
   <section id="bring">
     <h2>Her things on the host</h2>
-    <p class="muted">The same backup file the HTML and APK versions use (Config → Backup → Export everything, Export config, or a scheduled backup), with the same steps: a Jade Vault backup's paths become Pandora's, "everything" replaces, "config" merges. What was here before is kept beside her home, so an import can be undone. Keys and tokens in a backup stay out: enter them here, under Her models and Bridges.</p>
+    <p class="muted">The same backup file the HTML and APK versions use (Config → Backup → Export everything, Export config, or a scheduled backup), with the same steps: a Jade Vault backup's paths become Pandora's, "everything" replaces, "config" merges. What was here before is kept beside her home, so an import can be undone.</p>
+    <p class="muted">Keys: the ones you configured in the Atelier come along only when you ticked "Include API keys" on the export; they go into the host's own write-only key files (her models, her bridges) and are never shown back. Her own keys (her nsec, API keys, wallets) live on disk in her home: an import or export never reads, moves, copies or overwrites them. Files and folders named like keys are hers; list any other place of hers below.</p>
     <div data-change>
       <div class="row"><label class="f"><span>A backup file</span><input type="file" id="impFile" accept=".json,.gz,application/json,application/gzip"></label>
         <label class="f" id="impPassRow" hidden><span>Its passphrase</span><input type="password" id="impPass" autocomplete="off"></label>
         <button type="button" id="impRead">Read it</button></div>
       <div id="impPreview" hidden></div>
+      <label class="f"><span>Her own keys' places, besides anything named like a key (vault paths, one per line)</span><textarea data-set="herKeys" data-lines rows="2" placeholder="/Pandora/Vault Tree"></textarea></label>
     </div>
     <h3 class="hi">Imports</h3>
-    <div data-change><table><thead><tr><th>When</th><th>File</th><th>Kind</th><th>Files</th><th>Keys left out</th><th></th></tr></thead><tbody id="impRows"></tbody></table></div>
+    <div data-change><table><thead><tr><th>When</th><th>File</th><th>Kind</th><th>Files</th><th>Keys</th><th></th></tr></thead><tbody id="impRows"></tbody></table></div>
     <h3 class="hi">Back to a browser or the phone</h3>
     <p class="muted">Her things here, in that same file: the HTML and APK versions take it with their own Import button. No keys are in it.</p>
     <div class="row"><button type="button" id="expFull">Export everything</button> <button type="button" id="expCfg">Export config</button></div>
@@ -243,7 +245,7 @@
     $('#devRows').innerHTML = st.devices.map((d) => `<tr><td>${esc(d.name)}${d.you ? ' <span class="hi">(this one)</span>' : ''}</td><td>${esc(when(d.created))}</td><td>${esc(when(d.seen))}</td></tr>`).join('');
     $('#toolRows').innerHTML = st.tools.map((t) => `<tr><td class="hi">${esc(t.name)}</td><td>${esc(t.description)}</td></tr>`).join('');
     $('#filesInfo').innerHTML = `Her vault is real files on this computer. ${st.writer ? `Writing it now: ${esc(st.writer.device)}.` : 'No window is writing it right now.'} ${st.atelier && (st.atelier.chats || st.atelier.schedules) ? `Brought here from a backup: ${st.atelier.chats} chats and ${st.atelier.schedules} schedules. The Atelier still runs them from its own browser for now; reading them from here is next.` : "Chats, schedules and settings live in each browser's Atelier until a backup brings them here (Her things, below)."}`;
-    $('#impRows').innerHTML = (st.imports || []).map((r, i) => `<tr><td>${esc(when(r.at))}</td><td>${esc(r.name)}${r.fromJadeVault ? ' <span class="muted">(Jade Vault paths moved to Pandora)</span>' : ''}</td><td>${r.kind === 'full' ? 'everything' : 'config'}</td><td>${r.written}${r.skipped ? ` <span class="state off">${r.skipped} skipped</span>` : ''}</td><td>${r.keysLeftOut.length ? esc(r.keysLeftOut.join(', ')) : '<span class="muted">none</span>'}</td><td>${r.undone ? `<span class="muted">undone ${esc(when(r.undone.at))}</span>` : (st.imports.slice(0, i).some((x) => !x.undone) ? '' : `<button type="button" data-undo="${esc(r.id)}">Undo</button>`)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nothing brought here yet.</td></tr>';
+    $('#impRows').innerHTML = (st.imports || []).map((r, i) => `<tr><td>${esc(when(r.at))}</td><td>${esc(r.name)}${r.fromJadeVault ? ' <span class="muted">(Jade Vault paths moved to Pandora)</span>' : ''}</td><td>${r.kind === 'full' ? 'everything' : 'config'}</td><td>${r.written}${r.skipped ? ` <span class="state off">${r.skipped} skipped</span>` : ''}</td><td>${r.keysSet.length ? `${r.keysSet.length} of yours to the host's key files` : ''}${r.keysLeftOut.length ? `${r.keysSet.length ? '; ' : ''}left out: ${esc(r.keysLeftOut.join(', '))}` : ''}${!r.keysSet.length && !r.keysLeftOut.length ? '<span class="muted">none</span>' : ''}${r.hersLeftAlone ? ` <span class="muted">(her own: left alone)</span>` : ''}</td><td>${r.undone ? `<span class="muted">undone ${esc(when(r.undone.at))}</span>` : (st.imports.slice(0, i).some((x) => !x.undone) ? '' : `<button type="button" data-undo="${esc(r.id)}">Undo</button>`)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nothing brought here yet.</td></tr>';
     renderModels(st.models);
     // colours
     if (!$('#colourList').dataset.built) {
@@ -351,7 +353,7 @@
     staged = j; $('#impPass').value = '';
     $('#impPreview').hidden = false;
     $('#impPreview').innerHTML = `<p><span class="hi">${esc(j.name)}</span>: ${j.kind === 'full' ? 'everything' : 'config'} from ${esc(String(j.exportedAt).slice(0, 10))} · ${j.files} files${j.kind === 'full' ? `, ${j.chats} chats, ${j.schedules} schedules` : ''}${j.fromJadeVault ? ` · from Jade Vault: ${j.movedPaths} paths move to /Pandora` : ''}</p>
-      <p>${j.keysLeftOut.length ? `Left out (keys and tokens, entered here instead): ${esc(j.keysLeftOut.join(', '))}` : 'No keys in it.'}</p>
+      <p>${j.keysToHost.length ? `Your configured keys (you ticked "Include API keys"): ${esc(j.keysToHost.join(', '))}. They go into the host's write-only key files.` : 'None of your configured keys are in it (the box was not ticked).'}${j.keysLeftOut.length ? ` Left out: ${esc(j.keysLeftOut.join(', '))}.` : ''} Her own keys on disk are not touched.</p>
       <p class="hi">${esc(j.question)}</p><button type="button" id="impApply">${j.kind === 'full' ? 'Replace everything here' : 'Merge it in'}</button> <button type="button" id="impCancel">Cancel</button>`;
     note('Read. Nothing has changed yet.');
   });
@@ -363,7 +365,7 @@
       const r = await api(`/host/import/${staged.id}/apply`, 'POST', { confirm: true });
       if (r.error) return note(r.error);
       staged = null; $('#impPreview').hidden = true;
-      note(`Brought in: ${r.written} files${r.skipped.length ? `, ${r.skipped.length} skipped (names this computer can't use; see the log)` : ''}. Reload any open Atelier window. Undo is below.`); return refresh();
+      note(`Brought in: ${r.written} files${r.keysSet.length ? `, ${r.keysSet.length} of your keys into the host's key files` : ''}${r.skipped.length ? `, ${r.skipped.length} skipped (names this computer can't use; see the log)` : ''}. Reload any open Atelier window. Undo is below.`); return refresh();
     }
     if (b.dataset.undo) {
       if (!confirm('Put back what was here before this import? What it brought is kept too, beside her home.')) return;

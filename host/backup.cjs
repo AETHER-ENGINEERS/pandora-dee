@@ -10,8 +10,15 @@
 //   - The way back: before anything is written, what was there is kept beside the home (never deleted), so an import
 //     can be undone; and the host's things export in this same file, which the HTML and APK versions import as they are.
 //
-// Keys never come onto the host this way: each character's keys are entered on the host itself (her models, her
-// bridges), so a backup's keys and tokens are left out, and the person is told which ones (by name, never value).
+// Two kinds of keys, kept apart (Mrrowr-murrr, 2026-11-27):
+//   - The person's: the keys they configured in the Atelier's own settings (model providers, bridges, the backup
+//     server...). A backup carries them only when they ticked "Include API keys". Then, and only then, they go into
+//     the host's own write-only key files (her models', her bridges', and atelier-secrets.json for the rest), never
+//     shown back. Without the tick, any that are there anyway are left out, by name.
+//   - Hers: her nsec, her API keys, her wallets. They live on disk, in her home, resident to her, and are never in the
+//     Atelier's backup. An import or export never reads, moves, copies, logs or overwrites them: files and folders
+//     named like keys (herKeys() below), and any places the person lists (the host's herKeys setting), stay where
+//     they are, as they are.
 
 'use strict';
 const fs = require('node:fs');
@@ -65,6 +72,21 @@ const encrypted = (bytes) => { let b = Buffer.from(bytes); try { if (isGzip(b)) 
 // the page's SECRET_KEYS (app/modules/extras.js), the other tokens a page's settings hold, and anything named like a key
 const KEY_NAMES = new Set(['ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'apiToken', 'vecToken', 'dcToken', 'embedKey', 'abToken', 'abPass']);
 const KEYLIKE = /(?:key|keys|token|tokens|secret|secrets|pass|passphrase|password|nsec|privkey|seed)$/i;
+// ---------- her own keys, on disk: never touched ----------
+const HER_EXT = /\.(?:nsec|key|keys|pem|p12|pfx|kdbx|keystore|jks|age|gpg|asc|wallet|seed)$/i;
+const HER_NAME = /^(?:id_(?:rsa|ed25519|ecdsa|dsa)(?:\.pub)?|\.env(?:\..+)?|nsec1.*|\.ssh|\.gnupg|\.secrets?|\.keys?)$/i;
+const HER_WORD = /(?:^|[-_. ])(?:wallet|wallets|keys|keyring|keychain|secret|secrets|credential|credentials|nsec|seed ?phrase)(?:[-_. ]|$)/i;
+/** -> (vaultPath) => true for her own keys' places: named like keys, or inside a place the person listed. Names only. */
+function herKeys(places = []) {
+  const ci = process.platform === 'win32' || process.platform === 'darwin';
+  const norm = (x) => { const t = '/' + String(x || '').split('/').filter(Boolean).join('/'); return ci ? t.toLowerCase() : t; };
+  const listed = (Array.isArray(places) ? places : []).map(norm).filter((x) => x !== '/');
+  return (vp) => {
+    const v = norm(vp); if (v === '/') return false;
+    if (listed.some((l) => v === l || v.startsWith(l + '/'))) return true;
+    return v.split('/').filter(Boolean).some((seg) => HER_EXT.test(seg) || HER_NAME.test(seg) || HER_WORD.test(seg));
+  };
+}
 const isKey = (k, v) => KEY_NAMES.has(k) || (KEYLIKE.test(k) && v != null && typeof v !== 'boolean' && typeof v !== 'number' && v !== '');
 function leaveKeysOut(obj) {
   const out = {}, left = [];
@@ -72,14 +94,22 @@ function leaveKeysOut(obj) {
   return { out, left };
 }
 
-/** A decoded backup → what the host would bring in: paths moved by the page's rules, keys left out, and a summary. */
-function prepare(data) {
+/** A decoded backup → what the host would bring in: paths moved by the page's rules, the person's keys apart (only
+ *  when the box was ticked), her own keys' places left alone, and a summary (names and counts, never a key). */
+function prepare(data, { isHers = () => false } = {}) {
   const d = JSON.parse(JSON.stringify(data));
   d.settings = d.settings || {}; d.storage = d.storage || {};
   const moved = migrateRules().migrateBackup(d);
   const s = leaveKeysOut(d.settings), st = leaveKeysOut(d.storage);
+  // the person's configured keys: to the host's write-only key files, only with the tick
+  const keys = {};
+  if (d.includesKeys === true) for (const k of s.left) keys[k] = d.settings[k];
   d.settings = s.out; d.storage = st.out;
-  const keysLeftOut = [...s.left, ...st.left.map((k) => 'storage:' + k)];
+  const keysLeftOut = [...(d.includesKeys === true ? [] : s.left), ...st.left.map((k) => 'storage:' + k)];
+  // a backup never holds her own keys; if one names such a place anyway, that place is left as it is
+  let hersLeftAlone = 0;
+  for (const vp of Object.keys(d.vault.files || {})) if (isHers(vp)) { delete d.vault.files[vp]; hersLeftAlone++; }
+  d.vault.dirs = (d.vault.dirs || []).filter((x) => !isHers(x));
   if (d.db) { const db = leaveKeysOut(d.db); d.db = db.out; keysLeftOut.push(...db.left.map((k) => 'db:' + k)); }
   const kind = d.kind === 'full' ? 'full' : 'config';
   const files = Object.keys(d.vault.files || {});
@@ -88,13 +118,13 @@ function prepare(data) {
     chats: Array.isArray(d.db && d.db.sessions) ? d.db.sessions.length : 0,
     schedules: Array.isArray(d.db && d.db.schedules) ? d.db.schedules.length : 0,
     fromJadeVault: moved.length > 0, movedPaths: moved.filter((l) => / → \/Pandora/.test(l) && !/setting/.test(l)).length,
-    keysLeftOut, includedKeys: !!d.includesKeys,
+    keysToHost: Object.keys(keys), keysLeftOut, includedKeys: d.includesKeys === true, hersLeftAlone,
     question: kind === 'full'
       ? `Replace EVERYTHING on the host (her files, chats, schedules, settings) with the backup from ${String(d.exportedAt || '').slice(0, 10)}?`
       : `Merge config from ${String(d.exportedAt || '').slice(0, 10)} (settings, SOUL/AGENTS/SYSTEM, memory, skills)? Her other files and chats stay.`,
   };
   delete d.includesKeys;
-  return { data: d, moved, summary };
+  return { data: d, moved, summary, keys };
 }
 
 // ---------- the host's Atelier store: the settings, storage and database a page keeps in its browser ----------
@@ -118,13 +148,14 @@ function atelierStore(dir) {
 const isText = (b) => { if (b.length > 4e6) return false; try { new TextDecoder('utf-8', { fatal: true }).decode(b); return !/[\x00-\x08\x0e-\x1f]/.test(b.subarray(0, 4000).toString('latin1')); } catch { return false; } };
 // as the page's isConfigPath (app/modules/extras.js)
 const isConfigPath = (p) => /^\/(pandora|jade)\/(soul|system|agents|memory|heartbeat|curiosity)\.md$/i.test(p) || /^\/(pandora|jade)\/mcp\.json$/i.test(p) || /^\/(pandora|jade)\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
-function walk(root) {
+function walk(root, isHers = () => false) {
   const files = [], dirs = [];
   const go = (dir) => {
     let list; try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of list) {
       if (e.name.endsWith(TMP) || e.isSymbolicLink()) continue;
       const full = path.join(dir, e.name); const vp = '/' + path.relative(root, full).split(path.sep).join('/');
+      if (isHers(vp)) continue; // her own keys: not read, not exported
       if (e.isDirectory()) { dirs.push(vp); go(full); } else if (e.isFile()) files.push([vp, full]);
     }
   };
@@ -132,8 +163,8 @@ function walk(root) {
   return { files, dirs: dirs.sort() };
 }
 /** The host's things as the Atelier's backup file: the HTML and APK versions import it with their own Import button. */
-function build({ root, store, kind = 'full' }) {
-  const w = walk(root); const files = {};
+function build({ root, store, kind = 'full', isHers }) {
+  const w = walk(root, isHers); const files = {};
   for (const [vp, full] of w.files) {
     if (kind === 'config' && !isConfigPath(vp)) continue;
     const b = fs.readFileSync(full);
@@ -150,13 +181,41 @@ function moveAside(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   try { fs.renameSync(from, to); } catch (e) { if (e.code !== 'EXDEV') throw e; fs.cpSync(from, to, { recursive: true }); fs.rmSync(from, { recursive: true, force: true }); }
 }
-const moveChildren = (fromDir, toDir) => { fs.mkdirSync(toDir, { recursive: true }); let n = 0; for (const name of (fs.existsSync(fromDir) ? fs.readdirSync(fromDir) : [])) { moveAside(path.join(fromDir, name), path.join(toDir, name)); n++; } return n; };
+// the same, around her own keys: they stay where they are (their folders stay too, holding them); only names are looked at
+function moveChildrenExcept(fromDir, toDir, isHers, vpBase = '') {
+  let n = 0; fs.mkdirSync(toDir, { recursive: true });
+  for (const e of (fs.existsSync(fromDir) ? fs.readdirSync(fromDir, { withFileTypes: true }) : [])) {
+    const vp = vpBase + '/' + e.name, full = path.join(fromDir, e.name);
+    if (isHers(vp)) continue;
+    if (e.isDirectory() && !e.isSymbolicLink() && holdsHers(full, vp, isHers)) { n += moveChildrenExcept(full, path.join(toDir, e.name), isHers, vp); continue; }
+    moveInto(full, path.join(toDir, e.name)); n++;
+  }
+  return n;
+}
+function holdsHers(dir, vp, isHers) {
+  let list; try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return false; }
+  return list.some((e) => isHers(vp + '/' + e.name) || (e.isDirectory() && !e.isSymbolicLink() && holdsHers(path.join(dir, e.name), vp + '/' + e.name, isHers)));
+}
+// into a folder that may already be there (her keys' folders stay in place, so a folder coming back meets them):
+// folders merge, and a file never lands on another one
+function moveInto(from, to) {
+  if (fs.existsSync(to) && fs.statSync(to).isDirectory() && fs.statSync(from).isDirectory()) {
+    for (const name of fs.readdirSync(from)) moveInto(path.join(from, name), path.join(to, name));
+    try { fs.rmdirSync(from); } catch { /* not empty: something stayed, kept */ }
+    return;
+  }
+  let dest = to; for (let i = 2; fs.existsSync(dest); i++) dest = `${to} (${i})`;
+  moveAside(from, dest);
+}
+const moveChildren = (fromDir, toDir) => { fs.mkdirSync(toDir, { recursive: true }); let n = 0; for (const name of (fs.existsSync(fromDir) ? fs.readdirSync(fromDir) : [])) { moveInto(path.join(fromDir, name), path.join(toDir, name)); n++; } return n; };
 
 /**
  * Imports on the host, each kept in <state>/imports/<id>/ with what was there before, so it can be undone.
  *   file(vp)  the home folder's own rules for a vault path → a real path inside it (desktop/disk_host.cjs)
  */
-function createImports({ root, stateDir, store, file, log = () => {} }) {
+/**   isHers()  her own keys' places, read fresh each time (the person's herKeys setting can change)
+ *   keySink   where the person's configured keys go: { apply(keys) -> names, snapshot(dir), restore(dir) } */
+function createImports({ root, stateDir, store, file, log = () => {}, isHers: hersNow = () => () => false, keySink = null }) {
   const dir = path.join(stateDir, 'imports');
   const staged = new Map(); // id → { prepared, name, at }
   const recFile = (id) => path.join(dir, id, 'record.json');
@@ -167,7 +226,7 @@ function createImports({ root, stateDir, store, file, log = () => {} }) {
   /** Step one: read the file and say what it holds. Nothing is written. */
   function preview(bytes, { name = 'backup', pass = '' } = {}) {
     for (const [k, v] of staged) if (Date.now() - v.at > 30 * 60e3) staged.delete(k);
-    const prepared = prepare(decode(bytes, pass));
+    const prepared = prepare(decode(bytes, pass), { isHers: hersNow() });
     const id = stamp() + '-' + crypto.randomBytes(3).toString('hex');
     staged.set(id, { prepared, name: String(name).replace(/[\x00-\x1f]/g, '').slice(0, 120), at: Date.now() });
     return { id, name, ...prepared.summary };
@@ -178,24 +237,29 @@ function createImports({ root, stateDir, store, file, log = () => {} }) {
     const st = staged.get(id);
     if (!st) throw Object.assign(new Error('That import is no longer waiting: choose the file again.'), { status: 404 });
     staged.delete(id);
-    const { data, moved, summary } = st.prepared;
+    const { data, moved, summary, keys } = st.prepared;
+    const isHers = hersNow();
     const box = path.join(dir, id), before = path.join(box, 'before');
     const rec = { id, at: new Date().toISOString(), by, name: st.name, ...summary, written: 0, skipped: [], added: [], replaced: [], undone: null };
     const atelierBefore = path.join(before, 'atelier');
     if (fs.existsSync(store.dir)) fs.cpSync(store.dir, atelierBefore, { recursive: true });
     const migLine = (lines) => { const at = new Date().toISOString().slice(0, 19).replace('T', ' '); return lines.map((l) => `${at} ${l}\n`).join(''); };
     const { MIGRATION_LOG } = migrateRules();
+    // the person's configured keys (the box was ticked): into the host's write-only key files, what was there kept
+    rec.keysSet = [];
+    if (keySink && Object.keys(keys || {}).length) { keySink.snapshot(path.join(before, 'keys')); rec.keysSet = keySink.apply(keys); }
     if (summary.kind === 'full') {
-      rec.keptAside = moveChildren(root, path.join(before, 'home'));
+      rec.keptAside = moveChildrenExcept(root, path.join(before, 'home'), isHers);
       for (const d of data.vault.dirs || []) { try { fs.mkdirSync(file(d), { recursive: true }); } catch (e) { log('import.skipped', { path: d, why: e.message }); } }
       if (moved.length) { const prev = data.vault.files[MIGRATION_LOG]; data.vault.files[MIGRATION_LOG] = (typeof prev === 'string' ? prev : '') + migLine(moved); }
       for (const [vp, v] of Object.entries(data.vault.files)) {
-        try { const f = file(vp); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, toBytes(v)); rec.written++; } catch (e) { rec.skipped.push(vp); log('import.skipped', { path: vp, why: e.message }); }
+        try { if (isHers(vp)) throw new Error("her own keys' place"); const f = file(vp); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, toBytes(v)); rec.written++; } catch (e) { rec.skipped.push(vp); log('import.skipped', { path: vp, why: e.message }); }
       }
       fs.rmSync(store.dir, { recursive: true, force: true });
       store.setSettings(data.settings); store.setStorage(data.storage); store.setDb(data.db || {});
     } else {
       const write = (vp, bytes) => {
+        if (isHers(vp)) throw new Error("her own keys' place");
         const f = file(vp);
         if (fs.existsSync(f)) { const keep = path.join(before, 'home', ...vp.split('/').filter(Boolean)); fs.mkdirSync(path.dirname(keep), { recursive: true }); fs.copyFileSync(f, keep); rec.replaced.push(vp); } else rec.added.push(vp);
         fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, bytes);
@@ -206,7 +270,7 @@ function createImports({ root, stateDir, store, file, log = () => {} }) {
       store.setStorage({ ...store.storage(), ...data.storage });
     }
     saveRec(rec);
-    log('import.applied', { id, kind: summary.kind, files: rec.written, skipped: rec.skipped.length, by, keysLeftOut: summary.keysLeftOut.length });
+    log('import.applied', { id, kind: summary.kind, files: rec.written, skipped: rec.skipped.length, by, keysToHost: rec.keysSet.length, keysLeftOut: summary.keysLeftOut.length, hersLeftAlone: summary.hersLeftAlone });
     return rec;
   }
 
@@ -218,17 +282,20 @@ function createImports({ root, stateDir, store, file, log = () => {} }) {
     const later = all.find((r) => !r.undone && String(r.at) > String(rec.at));
     if (later) throw Object.assign(new Error('A later import came after this one: undo that one first.'), { status: 409 });
     const box = path.join(dir, id), before = path.join(box, 'before'), undone = path.join(box, 'undone');
+    const isHers = hersNow();
     if (rec.kind === 'full') {
-      moveChildren(root, path.join(undone, 'home'));
+      moveChildrenExcept(root, path.join(undone, 'home'), isHers);
       moveChildren(path.join(before, 'home'), root);
     } else {
-      for (const vp of rec.added) { try { const f = file(vp); if (fs.existsSync(f)) moveAside(f, path.join(undone, 'home', ...vp.split('/').filter(Boolean))); } catch {} }
+      for (const vp of rec.added) { if (isHers(vp)) continue; try { const f = file(vp); if (fs.existsSync(f)) moveAside(f, path.join(undone, 'home', ...vp.split('/').filter(Boolean))); } catch {} }
       for (const vp of rec.replaced) {
+        if (isHers(vp)) continue;
         try { const f = file(vp), keep = path.join(before, 'home', ...vp.split('/').filter(Boolean)); if (fs.existsSync(f)) { const u = path.join(undone, 'home', ...vp.split('/').filter(Boolean)); fs.mkdirSync(path.dirname(u), { recursive: true }); fs.copyFileSync(f, u); } fs.copyFileSync(keep, f); } catch (e) { log('import.undo.skipped', { path: vp, why: e.message }); }
       }
     }
     if (fs.existsSync(store.dir)) moveAside(store.dir, path.join(undone, 'atelier'));
     if (fs.existsSync(path.join(before, 'atelier'))) fs.cpSync(path.join(before, 'atelier'), store.dir, { recursive: true });
+    if (keySink && (rec.keysSet || []).length) keySink.restore(path.join(before, 'keys'));
     rec.undone = { at: new Date().toISOString(), by };
     saveRec(rec);
     log('import.undone', { id, kind: rec.kind, by });
@@ -238,4 +305,4 @@ function createImports({ root, stateDir, store, file, log = () => {} }) {
   return { preview, apply, undo, records, staged: () => [...staged.keys()] };
 }
 
-module.exports = { decode, encrypted, prepare, build, atelierStore, createImports, migrateRules, isKey, isConfigPath };
+module.exports = { decode, encrypted, prepare, build, atelierStore, createImports, migrateRules, isKey, isConfigPath, herKeys };

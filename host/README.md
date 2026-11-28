@@ -320,11 +320,20 @@ with the same steps, and with ways back. Nothing new to learn, and no second for
   - **Undo** (the latest import) puts it back. What the import brought is kept in `<id>/undone/`.
   - **Export everything** and **Export config** on the host's page write her things in this same file. The HTML and
     APK versions take it with their own Import button.
-- **Keys stay out.**
-  - A backup's keys and tokens (model keys, bridge tokens, the backup passphrase, MCP secrets, anything named like a
-    key) are left out.
-  - The host names which ones, never their values. Each is entered on the host itself, under Her models and Bridges.
-  - The host's exports hold no keys.
+- **Two kinds of keys, kept apart.**
+  - **The person's**, configured in the Atelier's own settings (model providers, bridges, the backup server, MCP
+    secrets), are in a backup only when they ticked "Include API keys".
+    - Then they go into the host's own write-only key files: her models' (`model-secrets.json`), her bridges'
+      (`bridge-secrets.json`), and `atelier-secrets.json` for the rest. All are owner-only, never shown back, and
+      named in the preview (never their values).
+    - Undo puts the key files back as they were.
+    - Without the tick, any that are there anyway are left out, by name. The host's exports hold none.
+  - **Hers** (her nsec, her API keys, her wallets) live on disk in her home, resident to her, and are never in the
+    Atelier's backup. An import, an undo or an export never reads, moves, copies, logs or overwrites them, even when
+    "everything" replaces the rest of her home.
+    - That covers files and folders named like keys (`.nsec`, `.key`, `.pem`, `id_ed25519`, `.env`, `wallet…`,
+      `keys/`, `secrets/` and the like).
+    - It also covers any place listed in the host's `herKeys` setting (on its page, under Her things).
 - **Safe while windows are open.**
   - An import waits while an Atelier window is writing her vault: close it, or wait half a minute.
   - While an import is written, no window writes. Reload open windows afterwards.

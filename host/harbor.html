@@ -40,6 +40,14 @@
       radial-gradient(1.5px 1.5px at 40% 30%, var(--accent) 50%, transparent 51%), radial-gradient(1px 1px at 86% 36%, var(--ink) 50%, transparent 51%),
       radial-gradient(1px 1px at 22% 44%, var(--ink) 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 8%, var(--ink) 50%, transparent 51%),
       radial-gradient(1px 1px at 92% 22%, var(--accent) 50%, transparent 51%), radial-gradient(1px 1px at 6% 32%, var(--accent) 50%, transparent 51%); }
+  /* night (the default): the painted sky, dimmed enough to read over, with live stars twinkling on it */
+  .night { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s var(--ease);
+    background: linear-gradient(180deg, #0b0916b3 0%, #0b09168c 38%, #0b0916bf 72%, #0b0916eb 100%), url(/host/harbor/art/sky.jpg) center 30% / cover no-repeat; }
+  #twinkle { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.4s var(--ease); }
+  :root[data-theme="dark"] .night, :root[data-theme="dark"] #twinkle { opacity: 1; }
+  :root[data-theme="dark"] .waves { opacity: .25; }
+  :root[data-theme="dark"] .stars { display: none; }
+  :root[data-theme="dark"] .card { background: #17122599; }
   .waves { position: absolute; left: -10%; right: -10%; bottom: -2px; height: 34vh; opacity: .55; }
   .waves path { fill: var(--accent-soft); }
   .waves .w2 { fill: #7fb8c833; animation: drift 26s ease-in-out infinite alternate; }
@@ -222,6 +230,8 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
 </svg>
 <div class="sky" aria-hidden="true">
+  <div class="night"></div>
+  <canvas id="twinkle"></canvas>
   <div class="stars"></div>
   <svg class="waves" viewBox="0 0 1440 320" preserveAspectRatio="none">
     <path class="w2" d="M0,224L80,213C160,203,320,181,480,186.7C640,192,800,224,960,229.3C1120,235,1280,213,1360,202.7L1440,192L1440,320L0,320Z"/>
@@ -343,11 +353,56 @@
 
   // ---- day and night ----
   const theme = store.get('pdhost:theme');
-  if (theme) document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark'; // night is the harbor's default
+  document.documentElement.style.colorScheme = document.documentElement.dataset.theme;
   const night = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
   const themeIcon = () => { $('#theme').innerHTML = icon(night() ? 'sun' : 'moon'); };
   themeIcon();
-  $('#theme').onclick = () => { const t = night() ? 'light' : 'dark'; document.documentElement.dataset.theme = t; store.set('pdhost:theme', t); themeIcon(); };
+  $('#theme').onclick = () => { const t = night() ? 'light' : 'dark'; document.documentElement.dataset.theme = t; document.documentElement.style.colorScheme = t; store.set('pdhost:theme', t); themeIcon(); };
+
+  // ---- the stars: a few hundred, each with its own slow twinkle; now and then one falls ----
+  (() => {
+    const c = $('#twinkle'), x = c.getContext && c.getContext('2d'); if (!x) return;
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let stars = [], falling = null, nextFall = performance.now() + 6000, dpr = 1;
+    const size = () => {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      c.width = innerWidth * dpr; c.height = innerHeight * dpr;
+      const n = Math.round(Math.min(340, innerWidth * innerHeight / 4200));
+      stars = Array.from({ length: n }, () => ({
+        x: Math.random(), y: Math.pow(Math.random(), 1.6) * .78, r: Math.random() < .08 ? 1.4 + Math.random() * .9 : .45 + Math.random() * .8,
+        p: Math.random() * Math.PI * 2, s: .4 + Math.random() * 1.4, hue: Math.random() < .25 ? 'lilac' : Math.random() < .2 ? 'sea' : 'white',
+      }));
+    };
+    const COL = { white: '255,255,255', lilac: '214,176,250', sea: '180,236,230' };
+    const draw = (t) => {
+      if (document.documentElement.dataset.theme !== 'dark' || document.hidden) { if (!still) requestAnimationFrame(draw); return; }
+      const lift = Number(getComputedStyle(document.documentElement).getPropertyValue('--stars')) || 0; // the journey brings more out
+      x.clearRect(0, 0, c.width, c.height);
+      for (const s of stars) {
+        const a = still ? .7 : (.45 + .55 * Math.sin(t / 1000 * s.s + s.p) ** 2) * (.75 + lift * .5);
+        x.beginPath(); x.fillStyle = `rgba(${COL[s.hue]},${Math.min(1, a)})`;
+        x.arc(s.x * c.width, s.y * c.height, s.r * dpr, 0, Math.PI * 2); x.fill();
+        if (s.r > 1.3) { x.beginPath(); x.fillStyle = `rgba(${COL[s.hue]},${a * .12})`; x.arc(s.x * c.width, s.y * c.height, s.r * dpr * 4, 0, Math.PI * 2); x.fill(); }
+      }
+      if (!still) {
+        if (!falling && t > nextFall) falling = { x: Math.random() * .7 + .2, y: Math.random() * .3, t0: t, len: .1 + Math.random() * .08 };
+        if (falling) {
+          const k = (t - falling.t0) / 1100;
+          if (k >= 1) { falling = null; nextFall = t + 9000 + Math.random() * 16000; }
+          else {
+            const hx = (falling.x - k * .22) * c.width, hy = (falling.y + k * .12) * c.height;
+            const g = x.createLinearGradient(hx, hy, hx + falling.len * c.width, hy - falling.len * .55 * c.width);
+            g.addColorStop(0, `rgba(255,255,255,${.9 * (1 - k)})`); g.addColorStop(1, 'rgba(214,176,250,0)');
+            x.strokeStyle = g; x.lineWidth = 1.4 * dpr; x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx + falling.len * c.width, hy - falling.len * .55 * c.width); x.stroke();
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+    };
+    size(); addEventListener('resize', () => { size(); if (still) draw(0); });
+    requestAnimationFrame(draw);
+  })();
 
   // ---- a message in a bottle ----
   let bottleT = 0;

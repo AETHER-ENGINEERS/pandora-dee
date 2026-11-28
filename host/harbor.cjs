@@ -78,11 +78,11 @@ function createHarbor(ctx) {
       return true;
     }
     // the page's paintings (host/harbor-art): open to anyone, like the page itself; they hold nothing
-    const art = /^\/host\/harbor\/art\/([a-z0-9-]+)\.png$/.exec(p);
+    const art = /^\/host\/harbor\/art\/([a-z0-9-]+)\.(png|jpg)$/.exec(p);
     if (art && req.method === 'GET') {
-      const f = path.join(__dirname, 'harbor-art', art[1] + '.png');
+      const f = path.join(__dirname, 'harbor-art', art[1] + '.' + art[2]);
       if (!fs.existsSync(f)) { send(res, 404, { error: 'No such painting.' }); return true; }
-      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+      res.writeHead(200, { 'Content-Type': art[2] === 'jpg' ? 'image/jpeg' : 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
       res.end(fs.readFileSync(f));
       return true;
     }

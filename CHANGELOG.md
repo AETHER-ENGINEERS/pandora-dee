@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Her loop on the host: steering, skills, tool servers, a helper, and the context guard.** Her SYSTEM, SOUL, AGENTS
+  and skills shape her loop on the host as in her Atelier; her MCP tool servers answer there (HTTP with her secret
+  headers, and stdio servers the host starts when her hands are on the computer), with tool search for the ones not
+  declared up front; she can delegate to a helper; and a conversation about to outgrow her context is summarised.
 - **Her loop on the host, with her tools (parity steps 2 and 3).** With her loop on the host, her turns use her tools
   there: her vault (read, write, edit, list, search), her memory, her chat history, a web page, thinking, and the host's
   own tools. Her prompt schedules run on the host too, each run a chat every device sees, and an open page leaves them

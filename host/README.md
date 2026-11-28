@@ -429,8 +429,24 @@ her heartbeat, her schedules, her sparks) can use her tools, run here on her hom
 - **The world:** `web_fetch` (a page as text, http and https only), `think`.
 - **The host's own:** `host_shell` (when it's in her hands), `waiting_messages`, `away_notices`, `host_info`.
 
-Who she is comes from her own files: her SOUL, AGENTS and the end of her Memory.md, with the time. Every tool she uses
-is in the host's trace. A turn stops after twelve rounds of tools, and says so.
+- **Her skills:** `skill` loads one of her skills (`/Pandora/skills/<name>/SKILL.md`, with the files beside it);
+  `find_skill` finds the right one when she has many. Skills she has set aside in her Atelier are left out.
+- **Her tool servers** (`/Pandora/mcp.json`, `host/mcp_client.cjs`): streamable HTTP servers as in her Atelier, with
+  `${NAME}` header values filled from her MCP secrets on the host (never shown or logged), and, on the host only,
+  servers the host starts itself (`command`, `args`: stdio). Those, and `!command` header values, need her hands on
+  this computer (host_shell). Exposure as in her Atelier: `direct` tools are declared up front; `deferred` (and
+  `codemode`, until codemode reaches the host) are found with `tool_search` and hers from her next step; `hidden` never.
+- **A helper:** `delegate` hands a self-contained task to a helper with a fresh mind and her tools; a helper can't hand
+  work on again.
+
+Who she is comes from her own files, as her Atelier reads them (`host/steer.cjs`): her SYSTEM.md (when she has one),
+her SOUL, her standing instructions (AGENTS.md), her skills, the end of her Memory.md, and the time. Comments meant for
+the person never reach the model. Every tool she uses is in the host's trace. A turn stops after twelve rounds of
+tools, and says so.
+
+**The context guard:** before each step, when the conversation is about to outgrow her context (her chat job's context
+size, and her own compaction settings), the older part becomes a summary made by her compaction model; the recent turns
+stay whole, and a tool call is never split from its result.
 
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run

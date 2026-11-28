@@ -35,6 +35,8 @@ const { createHarbor } = require('./harbor.cjs');
 const backup = require('./backup.cjs');
 const { createState } = require('./state.cjs');
 const { createLoop } = require('./loop.cjs');
+const { createSteer } = require('./steer.cjs');
+const { createMcp } = require('./mcp_client.cjs');
 const { Cron } = require('./cron.cjs');
 
 const VERSION = '0.1.0';
@@ -637,6 +639,7 @@ function createResident(opts, shared) {
     } catch { return []; }
   }
   // ---------- her loop on the host (parity step 2) and her own schedules (step 3) ----------
+  let mcpClient = null;
   const loop = createLoop({
     root, chat: (role, req) => models.chat(role, req), state,
     isHers: (vp) => { try { return isHers()(vp); } catch { return false; } },
@@ -644,6 +647,12 @@ function createResident(opts, shared) {
       : writer && now() - writer.at <= writerMs ? 'An Atelier window is writing her vault right now: try again in a moment.' : null),
     hostTools: toolList().map((t) => ({ def: { type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema || { type: 'object', properties: {} } } }, run: async (a) => { const r = await callTool(t.name, a, { id: 'her-loop' }, null); return (r.content || []).map((c) => c.text).join('\n'); } })),
     trace, log: event,
+    // who she is, from her own files (her SOUL, SYSTEM, AGENTS, skills), as her Atelier reads them
+    steer: createSteer({ root, skillsOff: () => { const v = state.lsAll().values.skillsOff; return Array.isArray(v) ? v : []; } }),
+    // her tool servers (her mcp.json); servers the host starts, and header commands, need her hands (host_shell)
+    mcp: (mcpClient = createMcp({ root, secrets: () => { try { return JSON.parse(fs.readFileSync(path.join(stateDir, 'atelier-secrets.json'), 'utf8')); } catch { return {}; } }, mayRun: () => hostShell, log: event })),
+    // her context: from her own settings (kept on the host since step 1), and her chat job's context size
+    context: () => { const st = state.lsAll().values.settings || {}; const ro = (models.state().roles || {}).chat || {}; return { numCtx: ro.numCtx || (models.state().options || {}).numCtx || st.numCtx, compactPct: st.compactPct, compactKeep: st.compactKeep, compactAuto: st.compactAuto }; },
   });
   async function loopModel({ messages, why }) {
     const kind = String(why || '').split(':')[0];
@@ -769,7 +778,7 @@ function createResident(opts, shared) {
     runtime: () => runtime,
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); nap.close(); },
+    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); if (mcpClient) mcpClient.close(); nap.close(); },
   };
 }
 

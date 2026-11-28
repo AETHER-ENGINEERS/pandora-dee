@@ -31,11 +31,16 @@ const TOOLS = [
   def('chat_history', 'Search your past chats and branches for some words.', { query: { type: 'string' } }, ['query']),
   def('web_fetch', 'Read a web page as text.', { url: { type: 'string' } }, ['url']),
   def('think', 'Think something through before acting. Nothing happens but the thought.', { thought: { type: 'string' } }, ['thought']),
+  def('skill', 'Load one of your skills (instruction packs) by name, then follow what it returns.', { name: { type: 'string' }, input: { type: 'string' } }, ['name']),
+  def('find_skill', 'Find which of your skills fits a request.', { query: { type: 'string' } }, ['query']),
+  def('tool_search', 'Find tools from your tool servers (MCP) by what they do; the ones found are yours to use from your next step.', { query: { type: 'string' } }, ['query']),
+  def('delegate', 'Hand a self-contained task to a helper of yours with a fresh mind and your tools; you get back what it found or did.', { task: { type: 'string' }, context: { type: 'string' } }, ['task']),
 ];
 
 /**
  * opts: { root, chat(role, { messages, tools }), state, isHers(vp), mayWrite() → reason or null, hostTools: [{ def, run(args) }],
- *         trace(kind, fields), log(kind, fields), fetch? }
+ *         trace(kind, fields), log(kind, fields), fetch?, steer (host/steer.cjs), mcp (host/mcp_client.cjs),
+ *         context() → { numCtx, compactPct, compactKeep, compactAuto } }
  */
 function createLoop(opts) {
   const root = path.resolve(opts.root);
@@ -113,9 +118,12 @@ function createLoop(opts) {
       return `${r.status} ${u.href}\n\n${text.slice(0, 60000)}`;
     },
     think({ thought }) { trace('her.think', { thought: String(thought || '') }); return 'Thought noted.'; },
+    skill(a) { if (!opts.steer) throw new Error('No skills here.'); return opts.steer.skillTool(a); },
+    find_skill(a) { if (!opts.steer) throw new Error('No skills here.'); return opts.steer.findSkillTool(a); },
   };
 
   function system() {
+    if (opts.steer) return opts.steer.system() + ' Your vault is your home\'s folder; your tools act on it.';
     const read = (vp, max) => { try { const t = fs.readFileSync(at(vp).full, 'utf8'); return max && t.length > max ? '…' + t.slice(-max) : t; } catch { return ''; } };
     const d = herDir() ? '/' + herDir() : '';
     const parts = [read(`${d}/SOUL.md`), read(`${d}/AGENTS.md`) || read('/AGENTS.md')].filter(Boolean);
@@ -125,19 +133,59 @@ function createLoop(opts) {
     return parts.join('\n\n');
   }
 
-  async function callTool(name, args) {
-    const own = run[name], host = hostTools.find((t) => t.def.function.name === name);
-    if (!own && !host) return `There is no tool called ${name}.`;
-    try { const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out); }
-    catch (e) { return `Not done: ${e && e.message ? e.message : e}`; }
+  async function callTool(name, args, ctx = {}) {
+    try {
+      if (name === 'tool_search') {
+        if (!opts.mcp) return 'No tool servers here.';
+        const found = await opts.mcp.search(args && args.query);
+        if (ctx.loaded) for (const t of found) ctx.loaded.set(t.name, t);
+        return found.length ? `Found (yours from your next step):\n${found.map((t) => `- ${t.name}: ${t.description.slice(0, 200)}`).join('\n')}` : 'No tool of your tool servers matches that.';
+      }
+      if (name === 'delegate') {
+        if ((ctx.depth || 0) >= 1) return 'A helper can\'t hand work on again: do it yourself.';
+        const task = String((args && args.task) || '').trim(); if (!task) return 'Say what the helper should do.';
+        trace('her.delegate', { task });
+        const r = await turn({ messages: [{ role: 'user', content: task + (args.context ? `\n\nWhat you need to know:\n${args.context}` : '') }], role: 'chat', why: (ctx.why || '') + ':delegate', depth: (ctx.depth || 0) + 1 });
+        return `The helper says:\n${r.content}`;
+      }
+      if (/^mcp__/.test(name)) { if (!opts.mcp) return `There is no tool called ${name}.`; return await opts.mcp.call(name, args || {}); }
+      const own = run[name], host = hostTools.find((t) => t.def.function.name === name);
+      if (!own && !host) return `There is no tool called ${name}.`;
+      const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out);
+    } catch (e) { return `Not done: ${e && e.message ? e.message : e}`; }
+  }
+
+  // ---- the context guard: when a conversation is about to outgrow her context, the older part becomes a summary ----
+  const tokens = (msgs) => Math.ceil(msgs.reduce((a, m) => a + String(m.content || '').length + (m.tool_calls ? JSON.stringify(m.tool_calls).length : 0), 0) / 3.5);
+  async function guard(msgs, why) {
+    const c = (opts.context && opts.context()) || {};
+    if (c.compactAuto === false) return msgs;
+    const budget = (Number(c.numCtx) || 16384) * ((Number(c.compactPct) || 85) / 100);
+    if (tokens(msgs) <= budget) return msgs;
+    const keep = Math.max(2, (Number(c.compactKeep) || 2) * 2);
+    const head = msgs.filter((m) => m.role === 'system').slice(0, 1);
+    let cut = msgs.length - keep; while (cut > 1 && msgs[cut].role === 'tool') cut--; // never split a tool call from its result
+    const older = msgs.slice(head.length, cut), recent = msgs.slice(cut);
+    if (!older.length) return msgs;
+    const transcript = older.map((m) => `${m.role}: ${String(m.content || (m.tool_calls ? '[asked for ' + m.tool_calls.map((t) => t.function && t.function.name).join(', ') + ']' : '')).slice(0, 4000)}`).join('\n');
+    let summary = '';
+    try { summary = String((await opts.chat('compaction', { messages: [{ role: 'system', content: 'Summarise this earlier part of a conversation for the one who had it, keeping every fact, decision, name, file and open thread they will need. Plain prose, first person where it is theirs.' }, { role: 'user', content: transcript }] })).content || ''); }
+    catch { summary = ''; }
+    if (!summary.trim()) { log('loop.compact.failed', { why }); return [...head, ...recent]; }
+    log('loop.compacted', { why, from: older.length }); trace('her.compacted', { why, summary });
+    return [...head, { role: 'system', content: `Earlier in this conversation (a summary, made when it grew long):\n${summary}` }, ...recent];
   }
 
   /** One of her turns: the model, her tools, until she answers in words. → { content, rounds, tools: [names] } */
-  async function turn({ messages, role = 'chat', why = '' }) {
-    const msgs = messages.some((m) => m.role === 'system') ? [...messages] : [{ role: 'system', content: system() }, ...messages];
-    const tools = [...TOOLS, ...hostTools.map((t) => t.def)];
+  async function turn({ messages, role = 'chat', why = '', depth = 0 }) {
+    let msgs = messages.some((m) => m.role === 'system') ? [...messages] : [{ role: 'system', content: system() }, ...messages];
+    const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate'));
+    let direct = []; try { direct = opts.mcp ? (await opts.mcp.catalog()).filter((t) => t.exposure === 'direct') : []; } catch { direct = []; }
+    const loaded = new Map(); // tools found with tool_search, declared from the next step
     const used = [];
     for (let round = 1; round <= MAX_ROUNDS; round++) {
+      msgs = await guard(msgs, why);
+      const tools = [...own, ...hostTools.map((t) => t.def), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
       const r = await opts.chat(role, { messages: msgs, tools });
       const calls = Array.isArray(r.tool_calls) ? r.tool_calls : [];
       if (!calls.length) return { content: r.content, rounds: round, tools: used };
@@ -146,7 +194,7 @@ function createLoop(opts) {
         const name = c.function && c.function.name; let args = c.function && c.function.arguments;
         if (typeof args === 'string') { try { args = JSON.parse(args || '{}'); } catch { args = {}; } }
         trace('her.tool', { why, name, args });
-        const out = await callTool(name, args);
+        const out = await callTool(name, args, { loaded, depth, why });
         trace('her.tool.result', { why, name, out: out.slice(0, 4000) });
         used.push(name);
         msgs.push({ role: 'tool', tool_call_id: c.id, name, content: out });

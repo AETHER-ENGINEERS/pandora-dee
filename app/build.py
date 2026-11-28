@@ -1758,8 +1758,8 @@ rep("  if (b.dataset.act === 'run') { if (!Sched.queue.some(j => j.s === s))", "
 rep("    if (!Sched.queue.some(j => j.s.id === s.id)) Sched.queue.push({ s, why: 'scheduled' });", "    if (schedIsJob(s)) runScheduleKind(s, 'scheduled'); else if (!Sched.queue.some(j => j.s.id === s.id)) Sched.queue.push({ s, why: 'scheduled' });")
 rep("      if (s.catchUp) { Sched.queue.push({ s, why: 'catch-up' }); s.lastStatus = 'missed, catching up'; }", "      if (s.catchUp) { if (schedIsJob(s)) setTimeout(() => runScheduleKind(s, 'catch-up'), 4000); else Sched.queue.push({ s, why: 'catch-up' }); s.lastStatus = 'missed, catching up'; }")
 # her loop on the home host runs her prompt schedules there (host/home_host.cjs herSchedules): the page leaves them be
-rep("    if (!s.enabled || !s.nextRun || now < s.nextRun) continue;", "    if (!s.enabled || !s.nextRun || now < s.nextRun) continue;\n    if (HOST_RUNS_PROMPTS && !schedIsJob(s)) continue; // her loop is on the home host, which runs these")
-rep("    if (!s.enabled) continue;\n    if (s.nextRun && s.nextRun <= now) {", "    if (!s.enabled) continue;\n    if (HOST_RUNS_PROMPTS && !schedIsJob(s)) continue; // the home host catches these up itself\n    if (s.nextRun && s.nextRun <= now) {")
+rep("    if (!s.enabled || !s.nextRun || now < s.nextRun) continue;", "    if (!s.enabled || !s.nextRun || now < s.nextRun) continue;\n    if (hostTakesSchedule(s)) continue; // her loop is on the home host, which runs this one")
+rep("    if (!s.enabled) continue;\n    if (s.nextRun && s.nextRun <= now) {", "    if (!s.enabled) continue;\n    if (hostTakesSchedule(s)) continue; // the home host catches this one up itself\n    if (s.nextRun && s.nextRun <= now) {")
 rep("async function runSchedule({ s, why }) {", "async function runSchedule({ s, why }) {\n  if (schedIsJob(s)) return runScheduleKind(s, why);")
 rep("runningNow = s.lastStatus === 'running' && Sched.draining;", "runningNow = (s.lastStatus === 'running' && Sched.draining) || SchedBusy.has(s.id);")
 rep('<div class="sched-prompt">${esc(s.prompt)}</div>', '<div class="sched-prompt${schedIsJob(s) ? \' mono\' : \'\'}">${esc(s.prompt)}</div>')

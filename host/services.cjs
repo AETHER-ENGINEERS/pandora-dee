@@ -18,7 +18,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 
-const CODE_DIRS = [__dirname, path.join(__dirname, '..', 'desktop')].map((d) => path.resolve(d));
+const CODE_DIRS = [__dirname, path.join(__dirname, '..', 'desktop'), path.join(__dirname, '..', 'app', 'modules')].map((d) => path.resolve(d)); // (her playbook and ritual engines are read from app/modules)
 const MAIN = path.join(__dirname, 'resident_main.cjs');
 
 /** Her service's name, and her identity's (Linux and macOS names stay within 32 characters). */

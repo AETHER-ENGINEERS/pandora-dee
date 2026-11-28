@@ -37,6 +37,7 @@ const { createState } = require('./state.cjs');
 const { createLoop } = require('./loop.cjs');
 const { createSteer } = require('./steer.cjs');
 const { createMcp } = require('./mcp_client.cjs');
+const { createEngines } = require('./engines.cjs');
 const { Cron } = require('./cron.cjs');
 
 const VERSION = '0.1.0';
@@ -373,7 +374,7 @@ function createResident(opts, shared) {
       if (p === '/pair' && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'pair.html'), 'utf8'), 'text/html; charset=utf-8');
       // the host's own settings and information page (it holds nothing: what it shows comes from /host/status, with a key)
       if ((p === '/host' || p === '/host/' || p === '/host/ui') && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'gui.html'), 'utf8'), 'text/html; charset=utf-8');
-      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null, ...(d ? { brain: runtime ? runtime.brain : null } : {}) }); }
+      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null, ...(d ? { brain: runtime ? runtime.brain : null, hostShell } : {}) }); }
       if (p === '/host/pair' && req.method === 'POST') {
         let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
         const r = await pair(b.pin, b.name); return send(res, r.status, r.body);
@@ -654,6 +655,16 @@ function createResident(opts, shared) {
     // her context: from her own settings (kept on the host since step 1), and her chat job's context size
     context: () => { const st = state.lsAll().values.settings || {}; const ro = (models.state().roles || {}).chat || {}; return { numCtx: ro.numCtx || (models.state().options || {}).numCtx || st.numCtx, compactPct: st.compactPct, compactKeep: st.compactKeep, compactAuto: st.compactAuto }; },
   });
+  // her playbooks and rituals: the engines her Atelier runs, on the host (host/engines.cjs)
+  const secretsNow = () => { try { return JSON.parse(fs.readFileSync(path.join(stateDir, 'atelier-secrets.json'), 'utf8')); } catch { return {}; } };
+  const engines = createEngines({
+    root, state, loop, chat: (role, req) => models.chat(role, req), secrets: secretsNow, mayRun: () => hostShell,
+    runShell: ({ command, cwd, timeoutMs }) => runShell({ command, cwd, timeout: timeoutMs ? Math.round(timeoutMs / 1000) : undefined }),
+    isHers: (vp) => { try { return isHers()(vp); } catch { return false; } },
+    mayWrite: () => (importing ? 'Her things are being brought in right now: try again in a moment.' : writer && now() - writer.at <= writerMs ? 'An Atelier window is writing her vault right now: try again in a moment.' : null),
+    log: event, trace, keepChat: (title, prompt, reply) => keepRunChat({ name: title, chat: 'new' }, prompt, reply),
+  });
+  loop.addTools(engines.toolDefs().map((def) => ({ def, run: (a) => (def.function.name === 'playbook' ? engines.playbookTool(a) : engines.flowTool(a)) })));
   async function loopModel({ messages, why }) {
     const kind = String(why || '').split(':')[0];
     const role = kind === 'turn' ? 'chat' : models.ROLES.includes(kind) ? kind : 'chat';
@@ -682,6 +693,32 @@ function createResident(opts, shared) {
     const x = list.find((y) => y && y.id === sid); if (!x) return;
     Object.assign(x, patch); state.dbSet('schedules', list, g.rev, 'her schedule', 'host');
   }
+  /** Which of her schedules the host runs while her loop is here (an open page runs the rest; app/modules/hoststate.js
+   *  asks the same): prompts and rituals; shell jobs when her hands are on this computer; playbooks that don't drive
+   *  the browser. */
+  const hostTakes = (x) => !isJob(x) || (x.kind === 'shell' ? hostShell : x.kind === 'playbook' ? !engines.usesBrowser(x.playbook) : true);
+  /** One of her jobs, as her Atelier runs it (runScheduleKind): a shell line, a playbook, or a ritual. */
+  async function herJob(x) {
+    let status;
+    try {
+      if (!settings.on('schedules')) throw Object.assign(new Error('off'), { code: 'OFF', why: settings.holds('schedules') });
+      if (x.kind === 'shell') {
+        if (!hostShell) throw new Error('a shell job needs her hands on this computer (host_shell)');
+        const r = await runShell({ command: String(x.command || ''), cwd: '/', timeout: 300 });
+        status = r.code === 0 ? 'ok' : `error: exit ${r.code}`;
+        trace('her.job.shell', { id: x.id, command: x.command, code: r.code, out: String(r.stdout || '').slice(-2000), err: String(r.stderr || '').slice(-2000) });
+      } else if (x.kind === 'playbook') {
+        const r = await engines.runPlaybook(x.playbook, x.input ?? {}, 'schedule');
+        status = r.ok ? 'ok' : `error: ${(r.failed && r.failed.error) || 'failed'}`.slice(0, 160);
+      } else {
+        let input = x.input; if (typeof input === 'string' && /^\s*[\[{]/.test(input)) { try { input = JSON.parse(input); } catch { /* as text */ } }
+        const run = await engines.runRitual(x.flow, input ?? { trigger: 'schedule', schedule: x.name }, { via: 'schedule' });
+        status = run.status === 'ok' ? 'ok' : `error: ${run.error || run.status}`.slice(0, 160);
+      }
+    } catch (e) { status = e && e.code === 'OFF' ? `skipped: ${(e.why || []).join(', ')}` : `error: ${String((e && e.message) || e).slice(0, 150)}`; }
+    updateSchedule(x.id, { lastRun: Date.now(), lastStatus: `${status} (on the host)` });
+    event('her.job', { id: x.id, kind: x.kind, ok: /^ok/.test(status) });
+  }
   /** Her prompt schedules, run on the host with her tools while her loop is here (the page leaves these to the host). */
   async function herSchedules() {
     if (rhythmsBusy || !runtime || runtime.brain !== 'host') return;
@@ -690,7 +727,8 @@ function createResident(opts, shared) {
       const g = state.dbGet('schedules'); const list = Array.isArray(g.value) ? g.value : [];
       const t = Date.now(); const due = [];
       for (const x of list) {
-        if (!x || !x.enabled || isJob(x) || !x.nextRun || t < x.nextRun) continue;
+        if (!x || !x.enabled || !x.nextRun || t < x.nextRun) continue;
+        if (!hostTakes(x)) continue; // an open Atelier runs this one (see hostTakes)
         const missed = t - x.nextRun > 5 * 60000;
         if (missed && x.catchUp === false) x.lastStatus = `missed ${new Date(x.nextRun).toLocaleString()}`; else due.push(x.id);
         if (x.once) { x.done = true; x.enabled = false; x.nextRun = null; } else { try { x.nextRun = Cron.next(x.cron, t); } catch { x.nextRun = null; } }
@@ -698,6 +736,7 @@ function createResident(opts, shared) {
       if (due.length || list.some((x) => x && x.lastStatus && /^missed/.test(x.lastStatus))) state.dbSet('schedules', list, g.rev, 'her schedule', 'host');
       for (const sid of due) {
         const x = list.find((y) => y.id === sid);
+        if (isJob(x)) { await herJob(x); continue; }
         try {
           const reply = await runtime.ask(x.prompt, 'schedules', sid);
           const chat = keepRunChat(x, x.prompt, reply);
@@ -774,6 +813,7 @@ function createResident(opts, shared) {
     },
     /** Her own schedules, now (for tests and the host window). */
     herSchedules: () => herSchedules(),
+    engines: () => engines,
     loop: () => loop,
     runtime: () => runtime,
     bridgeConfigs,

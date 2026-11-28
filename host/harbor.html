@@ -823,7 +823,7 @@
     atoll: { cove: [28, 71], village: [42, 40], springs: [58, 56], stones: [78, 44], grove: [25, 22], cliffs: [78, 19], observatory: [50, 10], reef: [62, 88], islet: [91, 80] },
   };
   const OUTSIDE = () => Object.entries(REGIONS).filter(([, g]) => !g.inside);
-  const BUILDING = { grove: 'parity step 1 (her memory on the host)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
+  const BUILDING = { grove: 'parity step 1 (her memory on the host)' };
   let isle = null; // { id, region, place, tend, tendErr }
 
   const regionsAt = (land) => REGION_AT[land] || REGION_AT.tropics;
@@ -939,7 +939,7 @@
       const pk = isle.place, P = REGIONS[isle.region].places[pk];
       h = `<h3>${icon(REGIONS[isle.region].i)}${esc(P[2])}</h3>`;
       if (BUILDING[pk]) {
-        const what = { grove: 'Her deep memory: Memory.md, her embeddings, searching her chat history. The library in her house keeps her notes; the grove holds what she remembers.', boat: 'The crossing to the manor (SEASIDE): she visits as herself, one Pandora in many places, never a twin. Her vault, chats and memory are read through the host.' }[pk];
+        const what = { grove: 'Her deep memory: Memory.md, her embeddings, searching her chat history. The library in her house keeps her notes; the grove holds what she remembers.' }[pk];
         h += `<p class="note">${esc(what)}</p><div class="scaffold">Still being built: comes with ${esc(BUILDING[pk])}.</div>`;
       } else if (pk === 'gate') {
         h += `<p class="note">Where she lives, and your way to her.</p><div class="choices" id="sRun"${i.first ? ' hidden' : ''}>${choices('srun', RUNS, i.run, !host)}</div>
@@ -981,6 +981,10 @@
         const H = t.house || {}, so = H.soul || {};
         h += `<p class="note">Who she is: her SOUL, her steer, the people she knows. Hers to write; the keeper looks, and never edits.</p>
           <div class="kv"><span>Her SOUL</span><span>${so.here ? `here, last changed ${esc(ago(so.changed))}` : 'not written yet: hers to write'}</span></div>`;
+      } else if (pk === 'boat') {
+        const W = (t && t.visits) || [];
+        h += `<p class="note">The boat to the manor: the places she visits as herself. In PDA SEASIDE, a character can be linked to her here (the Cast: "Her home is a host", with a PIN lit at her jetty). Then, when it's her turn in a SEASIDE room, her one loop here answers, with her own SOUL, memory and tools: one of her in many places, never a twin. Each visit is kept as a chat every device of hers sees.</p>
+          <ul class="plain">${W.length ? W.map((v) => `<li><span><b>${esc(v.place)}</b> <small class="note">\u00b7 ${esc(v.room)}</small><br><small class="note">${esc(ago(new Date(v.at).toISOString()))} \u00b7 ${v.turns} turn${v.turns === 1 ? '' : 's'} \u00b7 through ${esc(v.via)}</small></span></li>`).join('') : '<li>The boat is moored: she hasn\u2019t visited anywhere yet.</li>'}</ul>`;
       } else if (pk === 'window' || pk === 'scope') {
         const V = (t && t.senses) || { devices: [], recent: [] };
         const here = !!t && t.brain === 'host';

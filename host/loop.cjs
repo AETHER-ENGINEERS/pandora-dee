@@ -265,7 +265,8 @@ function createLoop(opts) {
 
   /** One of her turns: the model, her tools, until she answers in words. → { content, rounds, tools: [names] } */
   async function turn({ messages, role = 'chat', why = '', depth = 0 }) {
-    let msgs = messages.some((m) => m.role === 'system') ? [...messages] : [{ role: 'system', content: system() }, ...messages];
+    // who she is comes first, always; a caller's own notes (what's waiting, where she's visiting) follow it
+    let msgs = [{ role: 'system', content: system() }, ...messages];
     const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate') && !extra.some((x) => x.def.function.name === t.function.name));
     const tctx = { depth, why };
     const mcpAll = await codemodeTools(tctx);

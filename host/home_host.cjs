@@ -557,6 +557,12 @@ function createResident(opts, shared) {
         if (!r) { res.writeHead(202); return res.end(); }
         return send(res, 200, r);
       }
+      // ---- her visits: a place she visits (SEASIDE) asks for her turn in its room ----
+      if (p === '/host/visit/turn' && req.method === 'POST') {
+        let b = {}; try { b = JSON.parse(await readBody(req, 512 * 1024) || '{}'); } catch { return send(res, 400, { ok: false, error: 'Not JSON.' }); }
+        return send(res, 200, await visitTurn(b, dev.name));
+      }
+      if (p === '/host/visit' && req.method === 'GET') return send(res, 200, { visits: visitFacts() });
       // ---- her device tools: this device says what it has, asks for its next call, and answers it (host/devices.cjs) ----
       if (p.startsWith('/host/devices/')) {
         const pageId = String(req.headers['x-page'] || '');
@@ -700,6 +706,43 @@ function createResident(opts, shared) {
     },
     buildBackup: (kind) => backup.build({ root, store, kind: kind === 'config' ? 'config' : 'full', isHers: isHers() }),
   });
+  // ---------- her visits (piece F, the boat): she visits other places (SEASIDE) as herself ----------
+  // A place she visits (PDA SEASIDE's room, a paired ferry of hers) gives her the room's recent lines; her one loop here
+  // answers, with her own SOUL, memory and tools, so there is one of her wherever she is, never a copy that drifts. Each
+  // visit is kept as a chat every device sees ("SEASIDE · the Room"), and the boat on her islet shows where she's been.
+  const visitsFile = path.join(stateDir, 'visits.json');
+  const readVisits = () => { try { const j = JSON.parse(fs.readFileSync(visitsFile, 'utf8')); return j && typeof j === 'object' ? j : {}; } catch { return {}; } };
+  const clip = (x, n) => String(x == null ? '' : x).replace(/[\x00-\x08\x0b-\x1f]/g, '').slice(0, n);
+  async function visitTurn(b, devName) {
+    if (!runtime) return { ok: false, error: 'Her loop isn\u2019t running on the host right now.' };
+    const place = clip(b.place, 40).trim() || 'a place', room = clip(b.room, 60).trim() || 'a room';
+    const lines = (Array.isArray(b.lines) ? b.lines : []).slice(-40).map((l) => ({ me: !!(l && l.me), name: clip(l && l.name, 60).trim() || 'someone', text: clip(l && l.text, 4000) })).filter((l) => l.text.trim());
+    const lastMine = lines.map((l) => l.me).lastIndexOf(true);
+    const fresh = lines.slice(lastMine + 1);
+    if (!fresh.length) return { ok: false, error: 'There\u2019s nothing new in the room for her to answer.' };
+    const others = [...new Set(lines.filter((l) => !l.me).map((l) => l.name))];
+    const history = [{ role: 'system', content: `You are visiting ${place}, in ${room}, as yourself: the same you as at home, with your own memory and tools; there is one of you, wherever you are. ${others.length ? `With you here: ${others.join(', ')}.` : ''} What was said in the room follows; answer as you'd speak there, in your own words.` }];
+    for (const l of lines.slice(0, lastMine + 1)) history.push(l.me ? { role: 'assistant', content: l.text } : { role: 'user', content: `${l.name}: ${l.text}` });
+    const text = fresh.map((l) => `${l.name}: ${l.text}`).join('\n');
+    const key = `${place}\u00b7${room}`;
+    const all = readVisits(); const was = all[key] || {};
+    let reply;
+    try { reply = String(await runtime.turn({ text, from: `visit:${place}`, history })); }
+    catch (e) {
+      event('visit.failed', { place, room, why: e && (e.code === 'OFF' || e.code === 'NAPPING') ? 'resting' : 'error' });
+      // never what a provider said: only that she can't answer now
+      return { ok: false, error: e && (e.code === 'OFF' || e.code === 'NAPPING') ? 'She\u2019s resting right now (her loop is switched off on the host, or the host is napping).' : 'She can\u2019t answer right now. The keeper can see why at her well.' };
+    }
+    let chat = was.chat || null;
+    try { chat = keepRunChat({ name: `${place} \u00b7 ${room}`, chat: 'same', hostChat: was.chat || null }, text, reply); } catch { /* the reply still goes back */ }
+    all[key] = { place, room, via: clip(devName, 60), at: Date.now(), chat, turns: (was.turns || 0) + 1 };
+    const keys = Object.keys(all).sort((x, y) => all[y].at - all[x].at); for (const k of keys.slice(20)) delete all[k];
+    fs.writeFileSync(visitsFile, JSON.stringify(all, null, 1));
+    event('visit.turn', { place, room });
+    return { ok: true, text: reply };
+  }
+  const visitFacts = () => Object.values(readVisits()).sort((x, y) => y.at - x.at).map(({ place, room, via, at, turns }) => ({ place, room, via, at, turns }));
+
   // her own browser on the host (host/browser.cjs): off until the keeper turns it on at the host; listed with her
   // devices as "this host", beside the browser in her Android app
   const browserFile = path.join(stateDir, 'host-browser.json');
@@ -849,6 +892,7 @@ function createResident(opts, shared) {
       house: { ...state.facts(), ...libraryFacts() },
       senses: visiting.facts(),
       hostBrowser: hostBrowser.state(),
+      visits: visitFacts(),
     };
   };
   const tend = {

@@ -111,6 +111,19 @@ try {
   r = await call(base, '/host/harbor/islands/ann/service/install', { token: K, method: 'POST', body: {}, headers: LAN });
   ok(r.status === 403 && raised.length === 1, 'and never from the network');
 
+  // ---------- each island's land ----------
+  r = await call(base, '/host/harbor/view', { token: K });
+  ok(r.json.islands.every((x) => r.json.lands.includes(x.land)) && r.json.islands.find((x) => x.first).land === 'tropics', 'every island has a land on the open sea (the first, lilac tropics)');
+  r = await call(base, '/host/harbor/islands/jade', { token: K, method: 'POST', body: { land: 'fjord' } });
+  const v2 = await call(base, '/host/harbor/view', { token: K });
+  ok(r.status === 200 && v2.json.islands.find((x) => x.id === 'jade').land === 'fjord', 'the keeper can give an island another land');
+  r = await call(base, '/host/harbor/islands/jade', { token: K, method: 'POST', body: { land: 'the moon' } });
+  ok(r.status === 400, 'only a land the harbor knows');
+  r = await call(base, '/host/harbor/islands/jade', { token: K, method: 'POST', body: { land: 'maple' }, headers: LAN });
+  ok(r.status === 403, 'and only at the host itself');
+  r = await call(base, '/host/harbor/art/seamap.jpg');
+  ok(r.status === 200, 'the open sea is painted');
+
   // ---------- the reef ----------
   const asking = createHomeHost({ root: path.join(tmp, 'h2'), state: path.join(tmp, 'h2-state'), homes: path.join(tmp, 'homes2'), port: P + 10, run: 'service', person: 'TESTPC\\someone', elevate: () => ({ asked: true }) });
   await new Promise((r2) => asking.server.listen(P + 10, '127.0.0.1', r2));

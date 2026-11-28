@@ -399,7 +399,17 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
 **harbor**, each resident an **island**, devices are **ferries**, and a fresh client asking for a home waits at the
 **reef**. The technical name follows in parentheses wherever precision matters.
 
-- **The archipelago:** every island on the sea, with where she lives (in the harbor's waters, her own cove, or her
+- **The open sea:** the harbor's home. A painted ocean with the harbor town at its heart and every resident's island
+  at a real distance around it, each painted as her own land (lilac tropics, misty highlands, a desert oasis, a snowy
+  fjord, maple hills, a coral atoll; she can be given another). Drag to sail, wheel or `+`/`−` to come nearer or
+  farther, arrow keys too. Clicking an island sails there: the farther it lies, the longer the voyage, rising a little
+  mid-way to see farther, while high clouds drift past more slowly than the sea (parallax). Arriving, her card offers
+  to step ashore. The harbor town's own places: the **lighthouse** (the keeper's), the **ferry office** (PINs), the
+  **shipyard** (a new island), the **drydock** (raising islands as their own); the **reef** lies offshore. The whole
+  world plan, region by region, is the harbor's map (B to F: her island's regions, her house, the boat to SEASIDE).
+- **The chart:** the same archipelago as a plain list, one click away, for old devices, screen readers, or speed. The
+  page remembers which you prefer.
+- **The archipelago (on the chart):** every island, with where she lives (in the harbor's waters, her own cove, or her
   own island: `inside`, `process` and `service`), and her tide (high: awake; low: not running).
 - **Her island** (click one): the painting grows from where it sat on the sea into her island, with signposts on
   the island itself (the cottage, the jetty, the palm, the beach…). Each opens what it looks after: move her, choose your way to her (walk her shore, or a tide pool between you:

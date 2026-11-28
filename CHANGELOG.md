@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Her things onto the home host, in the Atelier's own backup file.** On the host's page, under Her things, choose a
+  backup from Config → Backup (HTML, APK or Jade Vault; plain, gzip or encrypted).
+  - It works in the same steps as the page: it says what the file holds, asks the same question, moves Jade Vault
+    paths by the page's own rules, and then replaces (everything) or merges (config).
+  - What was there is kept, so the latest import can be undone.
+  - The host exports her things in that same file, for the HTML and APK versions' own Import.
+  - A backup's keys and tokens stay out (named, never shown), and are entered on the host itself.
 - **A home host: her vault on one computer, her Atelier from any device.** `node host/main.cjs --root <folder>` keeps
   the vault as real files on the host and serves the Atelier to browsers on the same computer, the home network or the
   tailnet. A device pairs once with a six-digit PIN the host shows, and gets its own key. Without one it gets nothing

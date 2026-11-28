@@ -297,14 +297,49 @@ changed.
 each bridge message in and out (after hiding), what was stopped and why, and her tool's use. It stays on the host, and
 the page shows it. The log (`events.jsonl`) keeps facts only.
 
+## Her things on the host: the Atelier's own backup file (`host/backup.cjs`)
+
+Her things move onto the host the way they already move between the HTML and APK versions: in the same backup file,
+with the same steps, and with ways back. Nothing new to learn, and no second format.
+
+- **The file.** Use Config → Backup → **Export everything** or **Export config** in any Atelier (HTML, APK, or Jade
+  Vault), or a scheduled backup. Plain JSON, gzip and the encrypted envelope are all read; an encrypted one asks for its
+  passphrase.
+- **The steps.** These are the page's own steps.
+  - A Jade Vault backup's `/Jade` paths become `/Pandora`, and flows become rituals. The host loads
+    `app/modules/migrate.js` itself, so there is one set of rules, not a copy.
+  - **Everything** replaces, and **config** merges (settings, SOUL/AGENTS/SYSTEM, memory, skills).
+  - The host asks the page's own question first. On the host's page, under **Her things**: choose the file, **Read
+    it** (nothing changes yet: it says what the file holds), then the yes.
+- **Where it lands.**
+  - Her files go into the home folder.
+  - Her chats, schedules, ritual runs, settings and storage go into the host's Atelier store (`<state>/atelier/`).
+    That's what her loop on the host will read next.
+- **The way back.**
+  - Before anything is written, what was there is kept in `<state>/imports/<id>/before/`, and never deleted.
+  - **Undo** (the latest import) puts it back. What the import brought is kept in `<id>/undone/`.
+  - **Export everything** and **Export config** on the host's page write her things in this same file. The HTML and
+    APK versions take it with their own Import button.
+- **Keys stay out.**
+  - A backup's keys and tokens (model keys, bridge tokens, the backup passphrase, MCP secrets, anything named like a
+    key) are left out.
+  - The host names which ones, never their values. Each is entered on the host itself, under Her models and Bridges.
+  - The host's exports hold no keys.
+- **Safe while windows are open.**
+  - An import waits while an Atelier window is writing her vault: close it, or wait half a minute.
+  - While an import is written, no window writes. Reload open windows afterwards.
+  - Imports, undos and their previews are only possible from the house network or the tailnet. Export also works
+    from elsewhere, since it only reads.
+
 ## Not yet
 
 These are the next milestones, in this order:
 
-1. **Chats, branches, schedules, settings and run history still live in each browser,** and turns still run in the
-   page. A device that opens the host gets her files, not her conversations. They move to the host next, followed by
-   the agent loop behind `host/runtime.cjs`, so every device shares one conversation and one heartbeat (while a
-   client is connected).
+1. **Her chats, schedules, settings and run history come onto the host from a backup** (above), but the Atelier
+   still reads them from its own browser, and turns still run in the page. Next:
+   - the Atelier reads and writes them on the host, so every device shares one conversation;
+   - then the agent loop behind `host/runtime.cjs`, so every device also shares one heartbeat (while a client is
+     connected).
 2. **The real shell sees the home through the host's own paths.**
    - A relative path, or `$PANDORA_HOME/Pandora/SOUL.md`, reaches the same file the vault calls `/Pandora/SOUL.md`.
    - A bare `/Pandora/…` in the real shell means the host's own `/`, so it doesn't reach that file.
@@ -316,5 +351,5 @@ These are the next milestones, in this order:
 5. **Her models on the host** answer plain turns, the heartbeat, schedules and sparks. Tool calls in a host turn come
    with the agent loop (milestone 1). Until then, a loop that needs her tools stays in the Atelier.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs` and `tests/models_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs` and `tests/host_import_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

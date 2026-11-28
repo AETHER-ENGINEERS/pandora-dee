@@ -16,6 +16,7 @@
   main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 60px; }
   section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
   h2 { font-size: 15px; margin: 0 0 10px; color: var(--accent); }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
   .muted { color: var(--muted); font-size: 13px; }
   .hi { color: var(--accent); font-weight: 600; }
   button, select, input, textarea { font: inherit; color: var(--text); background: #0f0c18; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; }
@@ -50,7 +51,7 @@
 </header>
 <nav>
   <a href="#switches">Switches</a><a href="#behaviour">Behaviour</a><a href="#models">Her models</a><a href="#waiting">Waiting</a><a href="#notices">Her notice</a><a href="#bridges">Bridges</a>
-  <a href="#trace">What happened</a><a href="#devices">Devices</a><a href="#tools">Tools</a><a href="#files">Files</a><a href="#colours">Colours</a><a href="#log">Log</a>
+  <a href="#trace">What happened</a><a href="#devices">Devices</a><a href="#tools">Tools</a><a href="#files">Files</a><a href="#bring">Her things</a><a href="#colours">Colours</a><a href="#log">Log</a>
 </nav>
 <main>
   <div id="note" role="status"></div>
@@ -162,6 +163,22 @@
 
   <section id="files"><h2>Files</h2><div id="filesInfo" class="muted"></div></section>
 
+  <section id="bring">
+    <h2>Her things on the host</h2>
+    <p class="muted">The same backup file the HTML and APK versions use (Config → Backup → Export everything, Export config, or a scheduled backup), with the same steps: a Jade Vault backup's paths become Pandora's, "everything" replaces, "config" merges. What was here before is kept beside her home, so an import can be undone. Keys and tokens in a backup stay out: enter them here, under Her models and Bridges.</p>
+    <div data-change>
+      <div class="row"><label class="f"><span>A backup file</span><input type="file" id="impFile" accept=".json,.gz,application/json,application/gzip"></label>
+        <label class="f" id="impPassRow" hidden><span>Its passphrase</span><input type="password" id="impPass" autocomplete="off"></label>
+        <button type="button" id="impRead">Read it</button></div>
+      <div id="impPreview" hidden></div>
+    </div>
+    <h3 class="hi">Imports</h3>
+    <div data-change><table><thead><tr><th>When</th><th>File</th><th>Kind</th><th>Files</th><th>Keys left out</th><th></th></tr></thead><tbody id="impRows"></tbody></table></div>
+    <h3 class="hi">Back to a browser or the phone</h3>
+    <p class="muted">Her things here, in that same file: the HTML and APK versions take it with their own Import button. No keys are in it.</p>
+    <div class="row"><button type="button" id="expFull">Export everything</button> <button type="button" id="expCfg">Export config</button></div>
+  </section>
+
   <section id="colours" data-change>
     <h2>Colours</h2>
     <p class="muted">The accent is the Atelier's new colour. The rest are its current defaults. The Atelier uses the same ones.</p>
@@ -225,7 +242,8 @@
     // devices, tools, files
     $('#devRows').innerHTML = st.devices.map((d) => `<tr><td>${esc(d.name)}${d.you ? ' <span class="hi">(this one)</span>' : ''}</td><td>${esc(when(d.created))}</td><td>${esc(when(d.seen))}</td></tr>`).join('');
     $('#toolRows').innerHTML = st.tools.map((t) => `<tr><td class="hi">${esc(t.name)}</td><td>${esc(t.description)}</td></tr>`).join('');
-    $('#filesInfo').innerHTML = `Her vault is real files on this computer. ${st.writer ? `Writing it now: ${esc(st.writer.device)}.` : 'No window is writing it right now.'} Chats, schedules and settings still live in each browser's Atelier for now; they move here next.`;
+    $('#filesInfo').innerHTML = `Her vault is real files on this computer. ${st.writer ? `Writing it now: ${esc(st.writer.device)}.` : 'No window is writing it right now.'} ${st.atelier && (st.atelier.chats || st.atelier.schedules) ? `Brought here from a backup: ${st.atelier.chats} chats and ${st.atelier.schedules} schedules. The Atelier still runs them from its own browser for now; reading them from here is next.` : "Chats, schedules and settings live in each browser's Atelier until a backup brings them here (Her things, below)."}`;
+    $('#impRows').innerHTML = (st.imports || []).map((r, i) => `<tr><td>${esc(when(r.at))}</td><td>${esc(r.name)}${r.fromJadeVault ? ' <span class="muted">(Jade Vault paths moved to Pandora)</span>' : ''}</td><td>${r.kind === 'full' ? 'everything' : 'config'}</td><td>${r.written}${r.skipped ? ` <span class="state off">${r.skipped} skipped</span>` : ''}</td><td>${r.keysLeftOut.length ? esc(r.keysLeftOut.join(', ')) : '<span class="muted">none</span>'}</td><td>${r.undone ? `<span class="muted">undone ${esc(when(r.undone.at))}</span>` : (st.imports.slice(0, i).some((x) => !x.undone) ? '' : `<button type="button" data-undo="${esc(r.id)}">Undo</button>`)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nothing brought here yet.</td></tr>';
     renderModels(st.models);
     // colours
     if (!$('#colourList').dataset.built) {
@@ -320,6 +338,46 @@
     const r = await api('/host/waiting/' + (q === 'next' ? 'deliver' : q), 'POST', q === 'next' ? { count: 5 } : q === 'clear' ? { confirm: true } : {});
     note(r.error ? r.error : q === 'write' ? (r.path ? `Written to ${r.path} in her vault (still queued too).` : 'Nothing to write.') : q === 'clear' ? `${r.cleared} cleared; ${r.file} keeps them.` : q === 'later' ? 'They stay queued.' : `${r.delivered} handed to her; ${r.left} still waiting.`);
     refresh();
+  });
+  // ---- her things: read a backup, say what's in it, and only on a yes bring it in ----
+  let staged = null;
+  $('#impRead').addEventListener('click', async () => {
+    const f = $('#impFile').files[0]; if (!f) return note('Choose a backup file first.');
+    note('Reading it…');
+    const r = await fetch('/host/import', { method: 'POST', headers: { Authorization: H.Authorization, 'X-Backup-Name': encodeURIComponent(f.name), ...($('#impPass').value ? { 'X-Backup-Pass': $('#impPass').value } : {}) }, body: f });
+    const j = await r.json().catch(() => ({ error: 'The host did not answer.' }));
+    if (j.needsPass) { $('#impPassRow').hidden = false; $('#impPass').focus(); return note(j.error); }
+    if (!r.ok) return note(j.error || 'That file could not be read.');
+    staged = j; $('#impPass').value = '';
+    $('#impPreview').hidden = false;
+    $('#impPreview').innerHTML = `<p><span class="hi">${esc(j.name)}</span>: ${j.kind === 'full' ? 'everything' : 'config'} from ${esc(String(j.exportedAt).slice(0, 10))} · ${j.files} files${j.kind === 'full' ? `, ${j.chats} chats, ${j.schedules} schedules` : ''}${j.fromJadeVault ? ` · from Jade Vault: ${j.movedPaths} paths move to /Pandora` : ''}</p>
+      <p>${j.keysLeftOut.length ? `Left out (keys and tokens, entered here instead): ${esc(j.keysLeftOut.join(', '))}` : 'No keys in it.'}</p>
+      <p class="hi">${esc(j.question)}</p><button type="button" id="impApply">${j.kind === 'full' ? 'Replace everything here' : 'Merge it in'}</button> <button type="button" id="impCancel">Cancel</button>`;
+    note('Read. Nothing has changed yet.');
+  });
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'impCancel') { staged = null; $('#impPreview').hidden = true; return note('Nothing was changed.'); }
+    if (b.id === 'impApply' && staged) {
+      if (!confirm(staged.question)) return;
+      const r = await api(`/host/import/${staged.id}/apply`, 'POST', { confirm: true });
+      if (r.error) return note(r.error);
+      staged = null; $('#impPreview').hidden = true;
+      note(`Brought in: ${r.written} files${r.skipped.length ? `, ${r.skipped.length} skipped (names this computer can't use; see the log)` : ''}. Reload any open Atelier window. Undo is below.`); return refresh();
+    }
+    if (b.dataset.undo) {
+      if (!confirm('Put back what was here before this import? What it brought is kept too, beside her home.')) return;
+      const r = await api(`/host/import/${b.dataset.undo}/undo`, 'POST', { confirm: true });
+      note(r.error || 'Undone: what was here before is back. Reload any open Atelier window.'); return refresh();
+    }
+    if (b.id === 'expFull' || b.id === 'expCfg') {
+      const kind = b.id === 'expFull' ? 'full' : 'config'; note('Making the file…');
+      const r = await fetch('/host/export?kind=' + kind, { headers: { Authorization: H.Authorization } });
+      if (!r.ok) return note('The export did not work.');
+      const name = (/filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '') || [])[1] || 'pandora-dee-backup.json';
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000); note(`Saved ${name}.`);
+    }
   });
   $('#noticeForm').addEventListener('submit', async (e) => {
     e.preventDefault();

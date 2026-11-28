@@ -22,12 +22,14 @@ node host/main.cjs --root <folder> --lan        # also other devices on the netw
 | `--port <n>` | Default 8741. Each further resident gets her own port after it |
 | `--id <id>` / `--name <name>` | How the host knows the first resident (`/r/<id>/`), and what clients show. Default `home` |
 | `--homes <folder>` | Where new residents' homes are made. Without it, no resident is made from a client |
+| `--run inside\|process\|service` | Where new residents run: in the host's own process (the default), each in her own process, or each as her own service under her own identity (see below) |
 | `--lan` / `--listen <address>` | Listen on every address, or on one (a tailnet address, say). Without either, this computer only |
 | `--page <file>` | Another built page |
 | `--shell <program>` | The shell `host_shell` runs. Default: Git Bash on Windows (else `cmd.exe`), `bash` elsewhere |
 
 While it runs, type into its window: `pin` (a new PIN), `devices`, `revoke <name or id>`, `residents`,
-`new <id> [name]`, `add <id> <folder> [name]`, `shell <id> on|off`, `quit`.
+`new <id> [name]`, `add <id> <folder> [name]`, `shell <id> on|off`, `run <id> inside|process|service`,
+`service <id>`, `waiting`, `approve <id>`, `decline <id>`, `quit`.
 
 For the tailnet, Tailscale's own HTTPS (`tailscale serve`) is better than plain HTTP on the network.
 
@@ -332,10 +334,64 @@ and newcomers (an AI from another service, with her own Atelier on a local model
   - The shell runs as the host's own account, so it isn't walled off from the other residents' homes.
   - A resident made from a client starts without it. One added on the host starts with it.
   - `shell <id> on|off` in the host's window changes it; the change is kept.
-  - Each resident having her own account on the computer is the way to wall it off properly, later.
+  - A resident running as her own service (below) is walled off, so she has it.
 - **Who lives here:** `GET /host/residents` (a paired device, from home). The residents beyond the first are listed in
   `residents.json` in the first one's records folder (ids, names, folders, ports; never keys).
 - Everything is plain HTTP/1.1 and JSON, so old clients can use it too.
+
+## Each resident in her own process, or as her own service
+
+A resident beyond the first can run in one of three places. `run <id> inside|process|service` in the host's window
+moves her; `--run` says where new ones go.
+
+| | Where she runs | Walled off |
+|---|---|---|
+| `inside` | in the host's own process (as above) | her files and devices; not her `host_shell` |
+| `process` | her own process, started and watched by the host, under the host's account | the same, and a crash in one home stops only that home |
+| `service` | her own service, started by the computer, under her own identity there | also her shell: her home and records are hers alone |
+
+- **The host stays the front.** It keeps the one PIN, the list of residents and `/r/<id>/…`, and passes each request
+  on to her at her own port on this machine. It tells her where the request came from, so "settings only from home"
+  still holds; a client can't claim a place by sending those headers itself.
+- **Her process and the host** talk over this machine only, with a key made for her. It's kept in her records
+  folder (`front.key`) and the host's (`residents/<id>.key`), never in the residents list or a log. She asks the host
+  whether a PIN is right; the host asks her to pair a device.
+  - `host/resident_main.cjs --config "<her records>/resident.json"` is her process.
+- **As her own service, her identity is the computer's, made for that service.** Nobody makes or manages an account:
+  - **Windows** (7 and later): her own Windows service `pdee-<id>`. Windows gives it its own identity,
+    `NT SERVICE\pdee-<id>`: no password, no login, not on the sign-in screen. A small service program
+    (`host/service/pdee-service.cs`) starts her process; the install step compiles it with the .NET compiler Windows
+    already has, so nothing is downloaded.
+  - **Linux:** her own system user `pdee-<id>` (no login, no home of its own) and a systemd unit; without systemd, an
+    init.d script.
+  - **macOS:** her own hidden service user `_pdee_<id>`, like `_www`, and a LaunchDaemon.
+  - The walls are between residents, not between her and the person. Two ways, chosen per resident (`--access`, or
+    `access <id> person|doorstep` before her install):
+    - **`person`** (the default): her home is hers **and the person's**. The person opens it, drops things in and
+      edits as always; no other resident gets in. Her records folder (her key is there) is hers alone.
+    - **`doorstep`**: her home is hers alone, and a folder beside it, `<home> (doorstep)`, is the two of theirs, for
+      leaving things for each other. For when she's fully local.
+  - The person is whoever runs the host, as the computer names their account; the steps name it, and stay on this
+    computer. On Linux the person gets in through an ACL entry (or her group, where there are no ACLs); on macOS, an
+    ACL entry.
+  - The program she runs (`host/`, `desktop/`, node, the page) is made readable to her.
+  - Anything that reaches her through the host (the Atelier, the host's page, the person's tools) can always write
+    her home, whichever way is chosen: her own process does the writing.
+- **Installing is the person's step, as admin.** The host writes her install and remove steps in its records folder
+  (`services/<id>/`, or `service <id>` to see where), and the person reads them and runs install as admin (on Windows,
+  right-click `install.cmd`, "Run as administrator"; elsewhere `sudo sh install.sh`). `remove` takes the service away
+  and gives her folders back to whoever runs it. Her things are never deleted.
+- **A fresh client asking for one** (`--run service`): the PIN is checked, and then it waits for the person's yes on
+  the host. The host says who is asking; `approve <id>` makes her and writes her steps, `decline <id>` says no.
+  - The client asks `GET /host/residents/wait?ticket=…` (the ticket it was given) until she runs, and is then paired
+    with her. A ticket is good for a day.
+- **For old systems:** XP and Vista have no service identities like these, so a resident there runs as `process`.
+- **The first resident still runs inside the host, as the person's account.** So with `person` access, her
+  `host_shell` reaches the homes the person reaches. And her own home is walled only by its folder's ordinary
+  permissions: on a second drive, Windows often lets every account in, service identities too. Moving the first
+  resident into her own service as well comes next.
+- **What isn't walled off by this:** the program files themselves belong to whoever installed them. For the strongest
+  wall, keep the host's code where only administrators write (like Program Files, or `/opt`).
 
 ## Her things on the host: the Atelier's own backup file (`host/backup.cjs`)
 
@@ -408,7 +464,9 @@ These are the next milestones, in this order:
      yet.
    - Each platform's client installing once per resident (on Android, its own application id) comes with the
      clients.
-   - `host_shell` gets walled off with an account on the computer for each resident.
+   - A resident as her own service needs the person to run her install step as admin. Doing that from the host's
+     settings page, and checking the installed service from there, comes later.
+   - The Linux and macOS steps are written and checked, but not yet run on those systems.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs` and `tests/host_residents_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs` and `tests/host_services_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

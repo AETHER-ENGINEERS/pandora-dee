@@ -30,6 +30,7 @@ const { createRedactor } = require('./redact.cjs');
 const { createRuntime } = require('./runtime.cjs');
 const { requestPlace, mayChange } = require('./places.cjs');
 const { createModels } = require('./models.cjs');
+const separate = require('./separate.cjs');
 const backup = require('./backup.cjs');
 
 const VERSION = '0.1.0';
@@ -185,8 +186,8 @@ function createResident(opts, shared) {
   const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event, isHers, keySink });
   let importing = false; // while an import is written or undone, no window writes the vault
   let runtime = null; // started with startRuntime()
-  function pair(code, name) {
-    const t = shared.pins.take(code);
+  async function pair(code, name) {
+    const t = await shared.pins.take(code); // the host's PIN; asked of the host when she runs in her own process
     if (!t.ok) return t;
     return pairNow(name);
   }
@@ -294,7 +295,7 @@ function createResident(opts, shared) {
       return { content: [{ type: 'text', text: JSON.stringify(r, null, 1) }], isError: !!r.error };
     }
     if (name === 'host_shell') {
-      if (!hostShell) { event('tool.refused', { device: dev.id, tool: name }); return { content: [{ type: 'text', text: 'host_shell is off for you on this host: the shell runs as the host\'s own account, which can reach the other residents\' homes. The person can turn it on for you on the host itself.' }], isError: true }; }
+      if (!hostShell) { event('tool.refused', { device: dev.id, tool: name }); return { content: [{ type: 'text', text: 'host_shell is off for you on this host: the shell runs as the host\'s own account, which can reach the other residents\' homes. The person can turn it on for you on the host itself, or run you as your own service, where your shell is walled off.' }], isError: true }; }
       const r = await runShell(args || {});
       event('tool', { device: dev.id, tool: name, command: String(args?.command || '').slice(0, 500), cwd: args?.cwd || '/', code: r.code, ms: r.ms });
       return { content: [{ type: 'text', text: `exit ${r.code}\n--- stdout\n${r.stdout}${r.stderr ? `\n--- stderr\n${r.stderr}` : ''}` }], isError: r.code !== 0 };
@@ -367,7 +368,7 @@ function createResident(opts, shared) {
       if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null }); }
       if (p === '/host/pair' && req.method === 'POST') {
         let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
-        const r = pair(b.pin, b.name); return send(res, r.status, r.body);
+        const r = await pair(b.pin, b.name); return send(res, r.status, r.body);
       }
 
       // everything else: paired devices only
@@ -601,8 +602,14 @@ const PAGE_PATHS = new Set(['/', '/index.html', '/pair', '/host', '/host/', '/ho
  *   port       the first resident's port; each further one gets her own after it (so a browser keeps each one's
  *              pages, key and storage apart: a browser keeps those per address)
  *
+ *   run        where new residents run: 'inside' (the host's own process, the default), 'process' (each her own
+ *              process) or 'service' (each her own service, under her own identity; a client's request waits for the
+ *              person's yes on the host, who installs it as admin). See separate.cjs and services.cjs
+ *   front      (resident_main.cjs only) { port, key }: this host is one resident in her own process, and the PIN is
+ *              the front's
+ *
  * The residents beyond the first are listed in "residents.json" in the first one's state folder:
- *   [{ id, name, root, state, port, hostShell, created, by }]
+ *   [{ id, name, root, state, port, hostShell, run, plan, created, by }]
  * The person can add an existing home there by hand (or with the host window's `add`); a client can only make a new,
  * empty one, with the host's PIN.
  *
@@ -612,65 +619,217 @@ const PAGE_PATHS = new Set(['/', '/index.html', '/pair', '/host', '/host/', '/ho
 function createHomeHost(opts) {
   let first = null;
   const residents = new Map();
-  const pins = createPins((k) => first && first.event(k));
+  // in her own process (resident_main.cjs), the PIN is the front's: she asks it, over this machine, with her key
+  const front = opts.front && opts.front.key ? opts.front : null;
+  const pins = front ? separate.remotePins({ frontPort: front.port, id: opts.id || 'home', key: front.key }) : createPins((k) => first && first.event(k));
   const shared = { pins, say: opts.log || (() => {}), trustNets: Array.isArray(opts.trustNets) ? opts.trustNets.map(String) : [], page: opts.page, many: () => residents.size > 1 };
   const common = { shell: opts.shell, napGraceMs: opts.napGraceMs, writerMs: opts.writerMs };
   first = createResident({ ...common, root: opts.root, state: opts.state, id: opts.id || 'home', name: opts.name, hostShell: opts.hostShell }, shared);
   residents.set(first.id, first);
   const homes = opts.homes ? path.resolve(opts.homes) : null;
   const basePort = Number(opts.port) > 0 ? Number(opts.port) : null;
+  const defaultRun = separate.RUNS.includes(opts.run) ? opts.run : 'inside';
+  // as her own service: 'person' (her home is hers and the person's) or 'doorstep' (hers alone, and a folder beside it
+  // for the two of them to leave things in); see services.cjs
+  const ACCESS = ['person', 'doorstep'];
+  const defaultAccess = ACCESS.includes(opts.access) ? opts.access : 'person';
+  const spawnThem = opts.spawn !== false; // tests and the host window start run: 'process' residents; a service, the computer does
   const regFile = path.join(first.stateDir, 'residents.json');
+  const keyDir = path.join(first.stateDir, 'residents');
   let reg = [];
-  try { reg = JSON.parse(fs.readFileSync(regFile, 'utf8')); if (!Array.isArray(reg)) reg = []; } catch { reg = []; }
+  if (!front) { try { reg = JSON.parse(fs.readFileSync(regFile, 'utf8')); if (!Array.isArray(reg)) reg = []; } catch { reg = []; } }
   const saveReg = () => { fs.writeFileSync(regFile + '.tmp', JSON.stringify(reg, null, 1)); fs.renameSync(regFile + '.tmp', regFile); };
   const listeners = [];
+  const tell = (r, entry, what) => { for (const f of listeners) { try { f(r, entry, what); } catch { /* a listener never stops this */ } } };
+  const stateOf = (e) => e.state || path.join(path.dirname(path.resolve(e.root)), path.basename(path.resolve(e.root)) + ' (host)');
+
+  /** What her own process is told: the page, the shell, her port, and where the front is. */
+  const configFor = (e) => separate.writeResidentConfig({ ...e, state: stateOf(e) }, {
+    page: opts.page ? path.resolve(opts.page) : null, shell: opts.shell, napGraceMs: opts.napGraceMs, writerMs: opts.writerMs,
+    trustNets: shared.trustNets, frontPort: basePort, listen: opts.listen || '127.0.0.1', brain: opts.brain,
+  });
+
+  /** A resident in her own process or service: the front knows her port and her key, and passes clients on to her. */
+  function remoteResident(e) {
+    const keyFile = path.join(keyDir, e.id + '.key');
+    let child = null;
+    const r = {
+      id: e.id, name: e.name || e.id, remote: true, get run() { return e.run; }, root: path.resolve(e.root), stateDir: stateOf(e),
+      livePort: null, get hostShell() { return e.hostShell !== false; }, get pid() { return child ? child.pid : null; }, configFile: path.join(stateOf(e), 'resident.json'),
+      key: () => separate.readKey(keyFile),
+      event: (k, d) => first.event(k, { resident: e.id, ...(d || {}) }),
+      async up() { const h = await separate.call(e.port, '/host/hello', undefined, null, 1500); return h.status === 200 && h.body && h.body.resident && h.body.resident.id === e.id; },
+      start() { if (e.run === 'process' && spawnThem && !child) child = separate.spawnResident(r.configFile, { log: shared.say }); return r; },
+      restart: async () => { if (child) { await child.stop(); child = null; } r.start(); },
+      close: () => (child ? child.stop().then(() => { child = null; }) : Promise.resolve()),
+    };
+    return r;
+  }
+  /** Her key, in her state folder and the front's: made once, when she first runs on her own. */
+  function keysFor(e) {
+    const kf = path.join(keyDir, e.id + '.key');
+    let key = separate.readKey(kf);
+    if (!key) { key = separate.newKey(); separate.writeKey(kf, key); }
+    separate.writeKey(path.join(stateOf(e), 'front.key'), key);
+  }
+  const services = () => require('./services.cjs');
+  /** A service's install and remove steps, written in the front's state folder for the person to run as admin. */
+  const planFor = (e) => {
+    const dir = path.join(first.stateDir, 'services', e.id);
+    return services().writePlan(dir, services().plan({
+      entry: { ...e, state: stateOf(e), root: path.resolve(e.root) }, configFile: path.join(stateOf(e), 'resident.json'),
+      page: opts.page ? path.resolve(opts.page) : null, dir, access: e.access || defaultAccess,
+      ...(opts.person !== undefined ? { person: opts.person } : {}),
+    }));
+  };
+
   for (const e of reg) {
     if (!RESIDENT_ID.test(String(e.id)) || residents.has(e.id) || !e.root) { first.event('resident.skipped', { id: String(e.id) }); continue; }
-    try { residents.set(e.id, createResident({ ...common, ...e }, shared)); } catch (err) { first.event('resident.unavailable', { id: e.id, why: err.message }); shared.say(`Resident ${e.id}: not available (${err.message}).`); }
+    try {
+      if (e.run === 'process' || e.run === 'service') residents.set(e.id, remoteResident(e).start());
+      else residents.set(e.id, createResident({ ...common, ...e }, shared));
+    } catch (err) { first.event('resident.unavailable', { id: e.id, why: err.message }); shared.say(`Resident ${e.id}: not available (${err.message}).`); }
   }
   const cleanName = (s) => String(s || '').replace(/[\x00-\x1f<>]/g, '').trim().slice(0, 60);
   const fail = (status, error) => Object.assign(new Error(error), { status });
-
-  /**
-   * A new resident. From a client (with the PIN): a new, empty home in `homes`, named by them, without host_shell.
-   * From the host itself (local: true): may name an existing folder as her home, and give her the shell.
-   */
-  function addResident({ id, name, root, hostShell, local = false } = {}, by = 'the host') {
+  /** Whether a new resident by this id could be made from a client (before the PIN is taken). */
+  function checkNew(id) {
     id = String(id || '').trim().toLowerCase();
     if (!RESIDENT_ID.test(id) || RESERVED.has(id)) throw fail(400, 'A resident\'s id is lowercase letters, digits and dashes (up to 40), like "noe" or "jade-vault".');
     if (residents.has(id)) throw fail(409, `There is already a resident "${id}" on this host.`);
+    if (!homes) throw fail(409, 'This host was started without a folder for new residents (--homes), so none can be made from a client.');
+    const home = path.join(homes, id);
+    if (fs.existsSync(home) && fs.readdirSync(home).length) throw fail(409, `A folder named "${id}" is already there with things in it. A client never takes over a folder; the person can add it on the host itself.`);
+    return { id, home };
+  }
+
+  /**
+   * A new resident. From a client (with the PIN): a new, empty home in `homes`, named by them, without host_shell
+   * (unless she runs as her own service, where the shell is walled off). From the host itself (local: true): may name
+   * an existing folder as her home, and give her the shell.
+   * run: 'inside' (in the host's own process, as before), 'process' (her own process, the host's account), or
+   * 'service' (her own service under her own identity: the person installs it as admin; see services.cjs).
+   */
+  function addResident({ id, name, root, hostShell, local = false, run, access } = {}, by = 'the host') {
+    id = String(id || '').trim().toLowerCase();
+    run = separate.RUNS.includes(run) ? run : defaultRun;
     let home;
-    if (local && root) home = path.resolve(root);
-    else {
-      if (!homes) throw fail(409, 'This host was started without a folder for new residents (--homes), so none can be made from a client.');
-      home = path.join(homes, id);
-      if (fs.existsSync(home) && fs.readdirSync(home).length) throw fail(409, `A folder named "${id}" is already there with things in it. A client never takes over a folder; the person can add it on the host itself.`);
-    }
+    if (local && root) {
+      if (!RESIDENT_ID.test(id) || RESERVED.has(id)) throw fail(400, 'A resident\'s id is lowercase letters, digits and dashes (up to 40), like "noe" or "jade-vault".');
+      if (residents.has(id)) throw fail(409, `There is already a resident "${id}" on this host.`);
+      home = path.resolve(root);
+    } else ({ home } = checkNew(id));
+    if (run !== 'inside' && !basePort) throw fail(409, 'A resident in her own process needs her own port, and this host was started without one.');
     fs.mkdirSync(home, { recursive: true });
     const ports = [basePort, ...reg.map((e) => e.port)].filter((n) => Number(n) > 0);
     const entry = {
       id, name: cleanName(name) || id, root: home, state: local && root ? undefined : path.join(path.dirname(home), id + ' (host)'),
-      port: basePort ? Math.max(...ports) + 1 : null, hostShell: local ? hostShell !== false : false,
-      created: new Date().toISOString(), by: cleanName(by) || 'a device',
+      port: basePort ? Math.max(...ports) + 1 : null,
+      hostShell: run === 'service' ? hostShell !== false : local ? hostShell !== false : false,
+      run, created: new Date().toISOString(), by: cleanName(by) || 'a device',
     };
-    const r = createResident({ ...common, ...entry }, shared);
-    entry.state = r.stateDir;
+    if (run === 'service') entry.access = ACCESS.includes(access) ? access : defaultAccess;
+    let r;
+    if (run === 'inside') { r = createResident({ ...common, ...entry }, shared); entry.state = r.stateDir; }
+    else {
+      entry.state = stateOf(entry);
+      keysFor(entry); configFor(entry);
+      if (run === 'service') entry.plan = planFor(entry).dir;
+      r = remoteResident(entry);
+    }
     reg.push(entry); saveReg();
     residents.set(id, r);
-    first.event('resident.new', { id, by: entry.by, fromClient: !local });
-    r.event('resident.new', { id, by: entry.by, fromClient: !local });
-    shared.say(`New resident: ${entry.name} (${id})${entry.port ? `, at port ${entry.port}` : ''}.`);
-    for (const f of listeners) { try { f(r, entry); } catch { /* a listener never stops this */ } }
+    if (run !== 'inside') r.start();
+    first.event('resident.new', { id, by: entry.by, fromClient: !local, run });
+    r.event('resident.new', { id, by: entry.by, fromClient: !local, run });
+    shared.say(`New resident: ${entry.name} (${id})${entry.port ? `, at port ${entry.port}` : ''}${run === 'inside' ? '' : run === 'process' ? ', in her own process' : ', as her own service once it is installed'}.`);
+    tell(r, entry, 'new');
     return r;
   }
   /** host_shell on or off for a resident beyond the first (the person, on the host itself); kept in residents.json. */
-  function setHostShell(rid, on) {
+  async function setHostShell(rid, on) {
     const e = reg.find((x) => x.id === rid);
     if (!e) throw fail(404, rid === first.id ? `${first.name} is the host's first resident: her host_shell is always on.` : `No resident ${rid}.`);
-    e.hostShell = !!on; saveReg(); residents.get(rid).setHostShell(on);
-    return residents.get(rid);
+    const r = residents.get(rid);
+    if (e.run === 'service') {
+      // before her service is installed, her folder is still the host's to write; after, it's hers (and the admins')
+      if (await r.up()) throw fail(409, `${e.name}'s service is running, so her folder is hers now: run its remove step, change this, and install it again.`);
+      const was = e.hostShell; e.hostShell = !!on;
+      try { configFor(e); } catch (err) { e.hostShell = was; throw fail(409, `${e.name}'s folder is hers now (her service is installed): run its remove step, change this, and install it again.`); }
+      saveReg(); return r;
+    }
+    e.hostShell = !!on; saveReg();
+    if (e.run === 'process') { configFor(e); await r.restart(); } else r.setHostShell(on);
+    return r;
   }
-  const residentList = () => [...residents.values()].map((r) => ({ id: r.id, name: r.name, port: r.livePort || (reg.find((e) => e.id === r.id) || {}).port || (r === first ? basePort : null), hostShell: r.hostShell, first: r === first }));
+  /**
+   * Move a resident beyond the first between the host's own process, her own process, and her own service. A move
+   * away from 'service' waits until the person has run its remove step (her folders are hers until then).
+   */
+  async function setRun(rid, run) {
+    const e = reg.find((x) => x.id === rid);
+    if (!e) throw fail(404, rid === first.id ? `${first.name} is the host's first resident: she stays in the host's own process.` : `No resident ${rid}.`);
+    if (!separate.RUNS.includes(run)) throw fail(400, 'inside, process or service.');
+    if (e.run === run || (!e.run && run === 'inside')) return residents.get(rid);
+    if (run !== 'inside' && !e.port) throw fail(409, 'She needs her own port for that, and this host was started without one.');
+    const old = residents.get(rid);
+    if (e.run === 'service' && await old.up()) throw fail(409, `${e.name}'s service is still running: run its remove step first (as admin), then move her.`);
+    if (old.remote) await old.close(); else { old.close(); const s = servers.get(rid); if (s) { await closeServer(s); servers.delete(rid); } }
+    const was = e.run || 'inside';
+    e.run = run;
+    // as her own service, her shell is walled off from the other homes: so she has it (the person can turn it off)
+    if (run === 'service') { e.hostShell = true; if (!ACCESS.includes(e.access)) e.access = defaultAccess; }
+    let r;
+    if (run === 'inside') r = createResident({ ...common, ...e }, shared);
+    else { e.state = stateOf(e); keysFor(e); configFor(e); if (run === 'service') e.plan = planFor(e).dir; r = remoteResident(e); }
+    saveReg(); residents.set(rid, r);
+    if (run !== 'inside') r.start();
+    first.event('resident.run', { id: rid, from: was, to: run });
+    tell(r, e, 'moved');
+    return r;
+  }
+  /** How the person reaches a service resident's home: through it ('person'), or a doorstep beside it. Before install. */
+  async function setAccess(rid, access) {
+    const e = reg.find((x) => x.id === rid);
+    if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`);
+    if (!ACCESS.includes(access)) throw fail(400, 'person or doorstep.');
+    if (await residents.get(rid).up()) throw fail(409, `${e.name}'s service is running: run its remove step first (as admin), then change this and install again.`);
+    const was = e.access; e.access = access;
+    const p = planFor(e);
+    if (!p.written) { e.access = was; throw fail(409, p.why); }
+    saveReg(); first.event('resident.access', { id: rid, access });
+    return p;
+  }
+  const entryOf = (rid) => reg.find((e) => e.id === rid) || {};
+  const residentList = () => [...residents.values()].map((r) => ({ id: r.id, name: r.name, port: r.livePort || entryOf(r.id).port || (r === first ? basePort : null), hostShell: r.hostShell, run: r === first ? 'inside' : entryOf(r.id).run || 'inside', ...(entryOf(r.id).access ? { access: entryOf(r.id).access } : {}), first: r === first }));
+
+  // ---- a fresh client asking for a resident that will run as her own service: the person says yes on the host ----
+  const tickets = new Map(); // ticket → { id, name, device, state: waiting|approved|declined, at }
+  const TICKET_MS = 24 * 3600e3;
+  const sweep = () => { for (const [t, v] of tickets) if (Date.now() - v.at > TICKET_MS) tickets.delete(t); };
+  const waiting = () => { sweep(); return [...tickets.values()].filter((v) => v.state === 'waiting').map(({ id, name, device, at }) => ({ id, name, device, asked: new Date(at).toISOString() })); };
+  function answer(rid, yes) {
+    sweep();
+    const t = [...tickets.entries()].find(([, v]) => v.id === rid && v.state === 'waiting');
+    if (!t) throw fail(404, `No one is waiting for a resident "${rid}".`);
+    if (!yes) { t[1].state = 'declined'; first.event('resident.declined', { id: rid }); return null; }
+    const r = addResident({ id: rid, name: t[1].name, run: 'service' }, t[1].device);
+    t[1].state = 'approved';
+    return r;
+  }
+  /** Pair the client that asked with a resident in her own process, once she answers (her process makes the key). */
+  async function pairRemote(r, device, waitMs = 15000) {
+    const until = Date.now() + waitMs;
+    for (;;) {
+      if (await r.up()) {
+        const p = await separate.call(entryOf(r.id).port, '/host/front/pair', { name: device }, r.key());
+        if (p.status === 200) return p.body;
+        return null;
+      }
+      if (Date.now() > until) return null;
+      await new Promise((ok) => setTimeout(ok, 300));
+    }
+  }
 
   const send = (res, status, body, headers = {}) => {
     res.writeHead(status, { 'Content-Type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers });
@@ -684,7 +843,33 @@ function createHomeHost(opts) {
     const p = url.pathname;
     const here = residents.get(defaultId) || first;
     try {
+      // ---- between the front and a resident in her own process: this machine only, with her key ----
+      if (p === '/host/front/pin' && req.method === 'POST' && !front) {
+        const b = await readJson(req);
+        const r = residents.get(String(b.id || ''));
+        if (!r || !r.remote || !separate.keyOk(req, r.key())) { first.event('refused.front', { path: p }); return send(res, 403, { error: 'Not for you.' }); }
+        const t = pins.take(b.code);
+        return t.ok ? send(res, 200, { ok: true }) : send(res, t.status, t.body);
+      }
+      if (p === '/host/front/pair' && req.method === 'POST' && front) {
+        if (!separate.keyOk(req, front.key)) { first.event('refused.front', { path: p }); return send(res, 403, { error: 'Not for you.' }); }
+        const b = await readJson(req);
+        return send(res, 200, first.pairNow(b.name).body);
+      }
       // ---- the residents themselves: who lives here, and a new one ----
+      if (p === '/host/residents/wait' && req.method === 'GET' && !front) {
+        if (fromElsewhere(req)) return send(res, 403, { error: 'Only pages from this host may ask it.' });
+        sweep();
+        const t = tickets.get(String(url.searchParams.get('ticket') || ''));
+        if (!t) return send(res, 404, { error: 'No such request, or it has run out (a day).' });
+        if (t.state === 'declined') return send(res, 410, { error: 'The person at the host said no to this one.' });
+        if (t.state === 'waiting') return send(res, 202, { waiting: 'for the person at the host to say yes' });
+        const r = residents.get(t.id);
+        const paired = r && await pairRemote(r, t.device, 0);
+        if (!paired) return send(res, 202, { waiting: 'for her service to be installed and started' });
+        tickets.delete(url.searchParams.get('ticket'));
+        return send(res, 200, { resident: residentList().find((x) => x.id === r.id), ...paired });
+      }
       if (p === '/host/residents') {
         if (fromElsewhere(req)) { here.event('refused.cross-site', { path: p }); return send(res, 403, { error: 'Only pages from this host may ask it.' }); }
         const where = requestPlace(req, shared.trustNets);
@@ -698,12 +883,25 @@ function createHomeHost(opts) {
           // a fresh client with no backup: the host's PIN (the person, at the host) is the yes for a new home
           if (!mayChange(where)) { here.event('refused.settings-from-elsewhere', { path: p, via: where.via }); return send(res, 403, { error: "A new resident can only be made from the house's own network or the tailnet." }); }
           const b = await readJson(req);
-          const t = pins.take(b.pin);
+          if (defaultRun === 'service' && !front) {
+            // her own service needs the person at the host to install it, as admin: so the PIN asks, and they say yes there
+            let id; try { ({ id } = checkNew(b.id)); } catch (e) { return send(res, e.status || 500, { error: e.message }); }
+            if ([...tickets.values()].some((v) => v.id === id && v.state === 'waiting')) return send(res, 409, { error: `Someone is already waiting for a resident "${id}".` });
+            const t = await pins.take(b.pin);
+            if (!t.ok) return send(res, t.status, t.body);
+            const ticket = crypto.randomBytes(24).toString('base64url');
+            tickets.set(ticket, { id, name: cleanName(b.name) || id, device: cleanName(b.device) || 'a device', state: 'waiting', at: Date.now() });
+            first.event('resident.asked', { id });
+            shared.say(`A device asks for a new resident: ${cleanName(b.name) || id} (${id}), as her own service. Type "approve ${id}" (or "decline ${id}").`);
+            return send(res, 202, { waiting: 'for the person at the host to say yes, and install her service', ticket, ask: `/host/residents/wait?ticket=${ticket}` });
+          }
+          const t = await pins.take(b.pin);
           if (!t.ok) return send(res, t.status, t.body);
           let r;
           try { r = addResident({ id: b.id, name: b.name }, b.device); } catch (e) { return send(res, e.status || 500, { error: e.message }); }
-          const paired = r.pairNow(b.device);
-          return send(res, 200, { resident: residentList().find((x) => x.id === r.id), ...paired.body });
+          const paired = r.remote ? await pairRemote(r, b.device) : r.pairNow(b.device).body;
+          if (!paired) return send(res, 202, { resident: residentList().find((x) => x.id === r.id), waiting: 'She is made, but her process hasn\'t answered yet: pair with her at /pair on her own address.' });
+          return send(res, 200, { resident: residentList().find((x) => x.id === r.id), ...paired });
         }
         return send(res, 405, { error: 'GET to list, POST to make a new one.' });
       }
@@ -720,6 +918,8 @@ function createHomeHost(opts) {
           const hostName = String(req.headers.host || '127.0.0.1').replace(/:\d+$/, '');
           return send(res, 302, '', { Location: `http://${hostName}:${port}${rest}${url.search}` });
         }
+        // in her own process or service: passed on to her, at her port on this machine
+        if (r.remote) return separate.proxy(req, res, entryOf(r.id).port, rest + url.search);
         req.url = rest + url.search;
         return r.handle(req, res);
       }
@@ -730,12 +930,14 @@ function createHomeHost(opts) {
   }
 
   const servers = new Map();
+  const closeServer = (s) => new Promise((ok) => { if (!s.listening) return ok(); if (s.closeAllConnections) s.closeAllConnections(); s.close(() => ok()); });
   /** The server for one resident's own address: everything there is hers, without the /r/<id> prefix. */
   function serverFor(rid) {
     if (!residents.has(rid)) throw new Error(`No resident ${rid}.`);
+    if (residents.get(rid).remote) throw new Error(`${rid} runs in her own process, which opens her own address.`);
     if (!servers.has(rid)) {
       const s = http.createServer((q, w) => { route(rid, q, w); });
-      s.on('listening', () => { const a = s.address(); if (a && typeof a === 'object') residents.get(rid).livePort = a.port; });
+      s.on('listening', () => { const a = s.address(); if (a && typeof a === 'object' && residents.get(rid)) residents.get(rid).livePort = a.port; });
       servers.set(rid, s);
     }
     return servers.get(rid);
@@ -750,12 +952,20 @@ function createHomeHost(opts) {
     resident: (rid) => residents.get(rid) || null,
     addResident,
     setHostShell,
+    setRun,
+    setAccess,
+    /** Fresh clients waiting for the person's yes to a resident as her own service; and that yes (or no). */
+    waiting,
+    approve: (rid) => answer(rid, true),
+    decline: (rid) => { answer(rid, false); },
+    /** Her service's install and remove steps, written again (the person runs them as admin). */
+    servicePlan: (rid) => { const e = reg.find((x) => x.id === rid); if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`); return planFor(e); },
     serverFor,
-    /** Called with (resident, entry) for each resident made while the host runs (main.cjs gives her a port and her runtime). */
+    /** Called with (resident, entry, 'new' | 'moved') for each resident made or moved while the host runs. */
     onResident: (f) => listeners.push(f),
-    close: () => {
-      for (const r of residents.values()) r.close();
-      return Promise.all([...servers.values()].map((s) => new Promise((ok) => { if (!s.listening) return ok(); if (s.closeAllConnections) s.closeAllConnections(); s.close(() => ok()); })));
+    close: async () => {
+      await Promise.all([...residents.values()].map((r) => r.close()));
+      await Promise.all([...servers.values()].map(closeServer));
     },
   };
 }

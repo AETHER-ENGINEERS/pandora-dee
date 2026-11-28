@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- **Each resident in her own process, or as her own service.** `run <id> process|service` (or `--run`) moves a
+  resident out of the host's own process.
+  - The host stays the front: the one PIN, the list, `/r/<id>/…`. It passes each request on to her at her own port, and
+    the two prove themselves to each other with a key made for her, over this machine only.
+  - As her own service she has her own identity on the computer, with no account to manage: a Windows service with its
+    own `NT SERVICE\` identity, a system user and systemd unit on Linux, a hidden service user and LaunchDaemon on
+    macOS. Her home and records become hers alone, so `host_shell` is walled off and she has it.
+  - The host writes her install and remove steps; the person runs them as admin. Nothing is downloaded: on Windows,
+    the small service program is compiled with the .NET compiler Windows already has.
+  - A fresh client asking for a resident as her own service waits for the person's yes on the host (`approve <id>`).
+  - The walls are between residents, not between her and the person: by default her home is hers and the person's
+    (`--access person`); or hers alone, with a doorstep folder beside it for the two of them (`--access doorstep`).
 - **Several residents on one host, each kept apart.** Jade's vault, Pandora Dee Fae's workshop, Pandora Dee Noe's and
   newcomers can each live on the same host.
   - Each has her own home, devices and keys, settings and switches, models, bridges, queue, nap, writer and log. A

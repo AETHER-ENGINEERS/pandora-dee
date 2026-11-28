@@ -4,7 +4,8 @@
 // onnx). While her loop runs on the host, each paired device served by the host says which of these it has; her loop
 // offers them, and each call goes to a device that has it (the one she names, or the one seen last), which runs it
 // there, with its own checks and the person's own yes where her Atelier asks for one, and sends back what happened.
-// Nothing is lost when she moves: the tools are the device's, and they go where the device goes.
+// Nothing is lost when she moves: the tools are the device's, and they go where the device goes. The host itself can
+// hold one too (her own browser on the host, host/browser.cjs): it is listed like a device, as "this host".
 //
 // The way between them is plain HTTP, so old devices can take part: a device offers its tools, then asks for its next
 // call (a long poll), and posts the answer. A device is here while it is asking (it always is, but for a moment between
@@ -35,7 +36,9 @@ function createDevices(opts = {}) {
     const s = JSON.stringify(params); if (s.length > 32768) return null;
     return { name: f.name, description: String(f.description || '').slice(0, 4000), parameters: JSON.parse(s) };
   };
-  const live = () => [...pages.values()].filter((p) => p.waiter || now() - p.seen < GONE_MS);
+  const locals = []; // the host's own: { name, tools() → [def], run(tool, args) → text }
+  const localPages = () => locals.map((l) => ({ page: 'local:' + l.name, device: 'host', name: l.name, tools: (l.tools() || []).map(clean).filter(Boolean), seen: now(), local: l })).filter((x) => x.tools.length);
+  const live = () => [...[...pages.values()].filter((p) => p.waiter || now() - p.seen < GONE_MS), ...localPages()];
 
   /** A device's page says what it has. → { tools: [names] } */
   function offer({ page, device, name, tools }) {
@@ -91,7 +94,7 @@ function createDevices(opts = {}) {
     if (!p) return `None of your devices called "${named}" has ${tool} right now. These have it: ${all.map((x) => x.name).join(', ')}.`;
     const id = crypto.randomBytes(8).toString('hex'); const at = now();
     trace('her.device.call', { tool, device: p.device, name: p.name, args: a });
-    const r = await new Promise((resolve) => {
+    const r = p.local ? await p.local.run(tool, a).then((out) => ({ ok: true, out: String(out) }), (e) => ({ ok: false, out: String((e && e.message) || e) })) : await new Promise((resolve) => {
       const ms = CALL_MS[tool] || 120000;
       const timer = setTimeout(() => { waiting.delete(id); p.queue = p.queue.filter((c) => c.id !== id); resolve({ ok: false, out: `${p.name} didn't answer within ${Math.round(ms / 1000)} seconds.`, late: true }); }, ms);
       waiting.set(id, { resolve, timer, page: p.page, tool, at });
@@ -127,7 +130,9 @@ function createDevices(opts = {}) {
     for (const [k, p] of pages) if (k === match || p.device === match) { if (p.waiter) p.waiter.resolve(null); pages.delete(k); for (const [id, w] of waiting) if (w.page === k) { clearTimeout(w.timer); waiting.delete(id); w.resolve({ ok: false, out: 'the device went away before it answered' }); } }
   }
   function close() { for (const k of [...pages.keys()]) forget(k); }
-  return { offer, next, result, dropped, call, defs, facts, forget, close, has: (tool) => holders(tool).length > 0 };
+  /** The host's own device tool (her browser on the host): always here while it has the tool to offer. */
+  function local(l) { locals.push(l); return () => { const i = locals.indexOf(l); if (i >= 0) locals.splice(i, 1); }; }
+  return { offer, next, result, dropped, call, defs, facts, forget, close, local, has: (tool) => holders(tool).length > 0 };
 }
 
 module.exports = { createDevices, DEVICE_TOOLS };

@@ -39,6 +39,7 @@ const { createSteer } = require('./steer.cjs');
 const { createMcp } = require('./mcp_client.cjs');
 const { createEngines } = require('./engines.cjs');
 const { createDevices } = require('./devices.cjs');
+const { createHostBrowser } = require('./browser.cjs');
 const { Cron } = require('./cron.cjs');
 
 const VERSION = '0.1.0';
@@ -699,6 +700,21 @@ function createResident(opts, shared) {
     },
     buildBackup: (kind) => backup.build({ root, store, kind: kind === 'config' ? 'config' : 'full', isHers: isHers() }),
   });
+  // her own browser on the host (host/browser.cjs): off until the keeper turns it on at the host; listed with her
+  // devices as "this host", beside the browser in her Android app
+  const browserFile = path.join(stateDir, 'host-browser.json');
+  const browserSettings = () => { try { const j = JSON.parse(fs.readFileSync(browserFile, 'utf8')); return { on: j.on === true, lan: j.lan === true }; } catch { return { on: false, lan: false }; } };
+  const hostBrowser = createHostBrowser({
+    stateDir, settings: browserSettings, log: event, trace,
+    saveShot: (buf) => {
+      if (importing) throw new Error('her things are being brought in');
+      const day = new Date().toISOString().slice(0, 10); const dir = path.join(root, 'attachments', 'browser');
+      fs.mkdirSync(dir, { recursive: true });
+      let n = `${day}-browser.jpg`, i = 2; while (fs.existsSync(path.join(dir, n))) n = `${day}-browser-${i++}.jpg`;
+      fs.writeFileSync(path.join(dir, n), buf); return `/attachments/browser/${n}`;
+    },
+  });
+  visiting.local({ name: 'this host', tools: () => (browserSettings().on ? [{ type: 'function', function: hostBrowser.def() }] : []), run: (tool, a) => hostBrowser.tool(a) });
   const ENGINE_TOOLS = { playbook: (a) => engines.playbookTool(a), ritual: (a) => engines.flowTool(a), think: (a) => engines.think(a), curiosity: (a) => engines.curiosity(a) };
   loop.addTools(engines.toolDefs().map((def) => ({ def, run: ENGINE_TOOLS[def.function.name] || ((a) => engines.flowTool(a)) })));
   async function loopModel({ messages, why }) {
@@ -832,6 +848,7 @@ function createResident(opts, shared) {
       tools: toolList().map((t) => t.name),
       house: { ...state.facts(), ...libraryFacts() },
       senses: visiting.facts(),
+      hostBrowser: hostBrowser.state(),
     };
   };
   const tend = {
@@ -854,6 +871,13 @@ function createResident(opts, shared) {
         event('her.backup.key', { name, set: !!cur[name] }); return { ok: true, set: !!cur[name] };
       }
       if (op === 'backupNow') return engines.backupNow();
+      if (op === 'hostBrowser') {
+        const was = browserSettings(); const next = { on: 'on' in a ? a.on === true : was.on, lan: 'lan' in a ? a.lan === true : was.lan };
+        fs.writeFileSync(browserFile, JSON.stringify(next));
+        event('host_browser.set', { by, on: next.on, lan: next.lan });
+        if (!next.on || next.lan !== was.lan) hostBrowser.close(next.on ? 'changed' : 'off');
+        return hostBrowser.state();
+      }
       throw Object.assign(new Error('Not something the keeper tends.'), { status: 400 });
     },
   };
@@ -883,7 +907,8 @@ function createResident(opts, shared) {
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
     visiting,
-    close: () => { visiting.close(); if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); for (const t of rhythms2) clearInterval(t); if (mcpClient) mcpClient.close(); nap.close(); },
+    hostBrowser: () => hostBrowser,
+    close: () => { hostBrowser.close('closing'); visiting.close(); if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); for (const t of rhythms2) clearInterval(t); if (mcpClient) mcpClient.close(); nap.close(); },
   };
 }
 

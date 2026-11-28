@@ -507,6 +507,20 @@ a text), and what happened comes back to her. Her codemode scripts can call them
   seconds, and a call for it says which of her devices have that tool, or that none is here.
 - A call waits two minutes for its answer (five for the browser, SSH and models), and says so when it doesn't come.
 
+**Her own browser on the host** (`host/browser.cjs`), an addition (the browser in her Android app stays hers): her
+Atelier's own browser tool and page agent (`browser_tool.js`, `browser_agent.js`) run unchanged in a sandbox, and
+where her Android app gives them a second WebView, the host gives them a headless Chrome, Edge or Chromium of this
+computer's (the person can name one with `PDHOST_BROWSER`), driven over the DevTools protocol, with no added packages.
+- It is listed with her devices as "this host", so she can name it or her phone's.
+- It is off until the keeper turns it on at the host, in her house's window; her own tools can't.
+- It has its own profile (cookies, logins) in her state folder, never in her vault or another resident's.
+- It doesn't visit this house's own network (this computer, the router, the machines at home) unless the keeper allows
+  that too. Everything it sends goes through a small proxy of the host's own on this computer's loopback, which looks
+  up where each connection would go and connects only to an address outside the house: pages, what they fetch, their
+  WebSockets, and names that point home.
+- A screenshot is kept in her vault under `/attachments/browser`, and she's told where.
+- It closes after ten quiet minutes, and when the keeper changes it.
+
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
 is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her

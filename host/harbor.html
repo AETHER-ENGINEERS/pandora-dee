@@ -811,6 +811,7 @@
     observatory: { t: 'The observatory', i: 'stars', places: { scope: [56, 42, 'The telescope'] } },
     reef: { t: 'Her reef', i: 'reef', places: { reef: [50, 56, 'Her boundary'] } },
     islet: { t: 'The islet', i: 'boat', places: { boat: [45, 56, 'The boat to the manor'] } },
+    house: { t: 'Her house', i: 'lantern', inside: true, places: { hearth: [52, 50, 'The hearth'], library: [35, 34, 'The library'], shelves: [13, 44, 'The shelves'], table: [45, 72, 'The table'], computer: [82, 50, 'The computer'], mirror: [51, 27, 'The mirror'], keys: [68, 25, 'The key hook'], window: [88, 31, 'The window'] } },
   };
   // where each region lies on each land's overview painting
   const REGION_AT = {
@@ -821,7 +822,8 @@
     maple: { cove: [34, 78], village: [43, 47], springs: [57, 60], stones: [76, 45], grove: [24, 25], cliffs: [79, 13], observatory: [50, 9], reef: [70, 85], islet: [92, 82] },
     atoll: { cove: [28, 71], village: [42, 40], springs: [58, 56], stones: [78, 44], grove: [25, 22], cliffs: [78, 19], observatory: [50, 10], reef: [62, 88], islet: [91, 80] },
   };
-  const BUILDING = { grove: 'parity step 1 (her memory on the host)', scope: 'parity step 4 (device tools through connected devices)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
+  const OUTSIDE = () => Object.entries(REGIONS).filter(([, g]) => !g.inside);
+  const BUILDING = { table: 'piece D (her apps and games on the table)', window: 'parity step 4 (device tools through connected devices)', grove: 'parity step 1 (her memory on the host)', scope: 'parity step 4 (device tools through connected devices)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
   let isle = null; // { id, region, place, tend, tendErr }
 
   const regionsAt = (land) => REGION_AT[land] || REGION_AT.tropics;
@@ -865,7 +867,30 @@
     setTimeout(() => { $('#regionView').classList.add('on'); $('#landView').classList.remove('diving'); drawIsle(i); }, reduce() ? 0 : 750);
     drawPanel(i, true);
   }
+  /** Into her house: the terrace draws toward her door, then the room opens around you. */
+  function enterHouse() {
+    const i = view.islands.find((x) => x.id === isle.id); if (!i) return;
+    const img = $('#rgArt'), door = REGIONS.village.places.house;
+    img.style.animation = 'none'; // the scene's slow drift would hold the zoom still
+    img.style.transition = 'transform 1s cubic-bezier(.45,0,.2,1), opacity .5s ease .55s';
+    img.style.transformOrigin = `${door[0]}% ${door[1]}%`;
+    img.style.transform = 'scale(2.4)'; img.style.opacity = '0';
+    $('#placeSigns').innerHTML = '';
+    setTimeout(() => {
+      isle.region = 'house'; isle.place = 'hearth';
+      img.style.transition = 'none'; img.style.transform = 'scale(1.12)'; img.src = '/host/harbor/art/rg-house.jpg';
+      requestAnimationFrame(() => { img.style.transition = ''; img.style.opacity = ''; img.style.transform = ''; setTimeout(() => { img.style.animation = ''; }, 1700); });
+      drawIsle(i); drawPanel(i, true);
+    }, reduce() ? 0 : 1000);
+  }
+  function leaveHouse() {
+    const i = view.islands.find((x) => x.id === isle.id); if (!i) return;
+    const img = $('#rgArt');
+    img.style.opacity = '0';
+    setTimeout(() => { isle.region = 'village'; isle.place = 'house'; img.src = '/host/harbor/art/rg-village.jpg'; img.style.opacity = ''; drawIsle(i); drawPanel(i, true); }, reduce() ? 0 : 450);
+  }
   function leaveRegion() {
+    if (isle.region === 'house') return leaveHouse();
     const i = view.islands.find((x) => x.id === isle.id);
     isle.region = null; isle.place = null;
     $('#regionView').classList.remove('on');
@@ -879,10 +904,10 @@
     const r = runOf(i.run);
     $('#isleName').textContent = i.name;
     $('#isleNote').textContent = `${i.up ? 'running' : 'not running'} · ${r.b.toLowerCase()} · ${LAND_NAMES[i.land] || i.land}`;
-    $('#isleBack').textContent = isle.region ? 'Back to her island' : 'Back to the sea';
+    $('#isleBack').textContent = isle.region === 'house' ? 'Out to the terrace' : isle.region ? 'Back to her island' : 'Back to the sea';
     // the land's regions
     const at = regionsAt(i.land);
-    const rs = isle.region ? '' : Object.entries(REGIONS).map(([k, g]) => `<button class="sign${quiet ? ' shown' : ''}" data-region="${k}" style="left:${at[k][0]}%;top:${at[k][1]}%">${icon(g.i)}${esc(g.t)}</button>`).join('');
+    const rs = isle.region ? '' : OUTSIDE().map(([k, g]) => `<button class="sign${quiet ? ' shown' : ''}" data-region="${k}" style="left:${at[k][0]}%;top:${at[k][1]}%">${icon(g.i)}${esc(g.t)}</button>`).join('');
     if ($('#regionSigns').dataset.sig !== (isle.region || 'land') + i.land) {
       $('#regionSigns').dataset.sig = (isle.region || 'land') + i.land;
       $('#regionSigns').innerHTML = rs;
@@ -909,7 +934,7 @@
     if (!isle.region) {
       h = `<h3>${icon('island')}${esc(i.name)}'s island</h3>
         <p class="note">${esc(LAND_NAMES[i.land] || i.land)}. Follow a signpost on her land, or choose a place here.</p>
-        <div class="places">${Object.entries(REGIONS).map(([k, g]) => `<button class="ghost" data-go-region="${k}">${icon(g.i)} ${esc(g.t)} <small class="note">· ${Object.values(g.places).map((v) => v[2].toLowerCase()).join(', ')}</small></button>`).join('')}</div>`;
+        <div class="places">${OUTSIDE().map(([k, g]) => `<button class="ghost" data-go-region="${k}">${icon(g.i)} ${esc(g.t)} <small class="note">· ${Object.values(g.places).map((v) => v[2].toLowerCase()).join(', ')}</small></button>`).join('')}</div>`;
     } else {
       const pk = isle.place, P = REGIONS[isle.region].places[pk];
       h = `<h3>${icon(REGIONS[isle.region].i)}${esc(P[2])}</h3>`;
@@ -924,10 +949,38 @@
             <details class="steps" id="stepsBox"><summary>Read the steps first (install and remove)</summary><div id="stepsText" class="note">…</div></details>` : ''}
           ${i.first ? '' : `<label class="small">Her hands on this shore</label><label class="switch"><input type="checkbox" id="sShell"${i.hostShell ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Her own tools on this computer (host_shell)${i.run === 'service' ? ', walled to her shore' : ''}</span></label>`}`;
       } else if (pk === 'house') {
-        h += `<p class="note">Her Atelier. Inside: the hearth (her branches and chats), the library (her notes), the shelves (her tools and skills), the table (her apps and games), the computer (rituals, schedules, her shell), a mirror (who she is, hers to write) and the key hook (her secrets, never shown).</p>
-          ${t ? `<div class="kv"><span>Chats kept on the host</span><span>${t.atelier.chats}</span><span>Schedules</span><span>${t.atelier.schedules}</span></div>` : ''}
-          <div class="scaffold">Stepping inside comes with parity step 1, when her chats and settings live on the host. Until then, her own Atelier is open at her own address.</div>
-          ${i.port ? `<p class="row" style="margin-top:12px"><a class="ghost" href="${location.protocol}//${location.hostname}:${i.port}/" target="_blank" rel="noopener">Open her Atelier</a></p>` : ''}`;
+        h += `<p class="note">Her Atelier: the hearth (her branches and chats), the library (her notes), the shelves (her tools and skills), the table (her apps and games), the computer (rituals, schedules, her shell), a mirror (who she is, hers to write) and the key hook (her secrets, never shown). Her things are kept on the host now: one copy for every device she's opened on.</p>
+          <p class="row" style="margin-top:12px"><button class="sail" id="stepIn">Step inside</button>${i.port ? `<a class="ghost" href="${location.protocol}//${location.hostname}:${i.port}/" target="_blank" rel="noopener">Open her Atelier</a>` : ''}</p>`;
+      } else if (!t && isle.region === 'house') h += notHere;
+      else if (pk === 'hearth') {
+        const H = t.house || {};
+        h += `<p class="note">Her branches and chats, warm by the fire. Kept on the host, so every device she's opened on has the same ones. What was said is hers: the keeper sees how many, never what.</p>
+          <div class="kv"><span>Chats and branches</span><span>${H.chats || 0}</span><span>Last one</span><span>${H.lastChat ? esc(ago(new Date(H.lastChat).toISOString())) : 'none yet'}</span><span>Runs in her history</span><span>${H.runs || 0}</span></div>
+          ${i.port ? `<p class="row"><a class="ghost" href="${location.protocol}//${location.hostname}:${i.port}/" target="_blank" rel="noopener">Sit by the fire (open her Atelier)</a></p>` : ''}`;
+      } else if (pk === 'library') {
+        const H = t.house || {};
+        h += `<p class="note">The leaves: her notes and vault, real files in her home.</p>
+          <div class="kv"><span>Notes</span><span>${H.notes || 0}</span><span>Folders</span><span>${H.folders || 0}</span></div>
+          <div class="scaffold">Searching her notes and memory from here comes with the grove (her memory on the host).</div>`;
+      } else if (pk === 'shelves') {
+        const H = t.house || {};
+        h += `<p class="note">Her features and tools, on the shelves.</p>
+          <div class="kv"><span>The host's tools for her</span><span>${t.tools.length}</span><span>Skills she's set aside</span><span>${H.skillsOff || 0}</span><span>Playbooks approved</span><span>${H.approvals || 0}</span></div>
+          <ul class="plain">${t.tools.map((n) => `<li><span>${esc(n)}</span></li>`).join('')}</ul>`;
+      } else if (pk === 'computer') {
+        const H = t.house || {};
+        h += `<p class="note">Her rituals, schedules and shell. Her schedules are kept on the host now; running them there, with her tools, comes with steps 2 and 3.</p>
+          <ul class="plain">${(H.schedules || []).length ? H.schedules.map((x) => `<li><span>${esc(x.name)}</span><small class="note">${x.on ? 'on' : 'resting'}</small></li>`).join('') : '<li>No schedules yet.</li>'}</ul>
+          <div class="kv"><span>Her shell on this computer</span><span>${t.resident.hostShell ? 'in her hands' : 'resting'}</span></div>`;
+      } else if (pk === 'mirror') {
+        const H = t.house || {}, so = H.soul || {};
+        h += `<p class="note">Who she is: her SOUL, her steer, the people she knows. Hers to write; the keeper looks, and never edits.</p>
+          <div class="kv"><span>Her SOUL</span><span>${so.here ? `here, last changed ${esc(ago(so.changed))}` : 'not written yet: hers to write'}</span></div>`;
+      } else if (pk === 'keys') {
+        const ks = Object.values((t.models || {}).providers || {}).filter((p2) => p2.keySet).length, bs = (t.bridges || []).filter((b2) => b2.tokenSet).length;
+        h += `<p class="note">Her keys, hung up by the door: written once, never shown again, not even here.</p>
+          <div class="kv"><span>Providers' keys</span><span>${ks}</span><span>Bridges' keys</span><span>${bs}</span></div>
+          <p class="note">Hang one up at the well (a provider's) or the campfire (a bridge's).</p>`;
       } else if (!t) h += notHere;
       else if (pk === 'jetty') {
         h += `<p class="note">Her ferries (paired devices). A ferry moors with a PIN from the ferry office.</p>
@@ -968,6 +1021,7 @@
     const paint = () => {
       el.innerHTML = h;
       el.querySelectorAll('[data-go-region]').forEach((b2) => (b2.onclick = () => enterRegion(b2.dataset.goRegion)));
+      if ($('#stepIn')) $('#stepIn').onclick = enterHouse;
       const act = async (b2, said) => { try { await api('/host/harbor/islands/' + i.id, 'POST', b2); bottle(said); await refresh(); } catch (e) { bottle(e.message); await refresh(); } };
       const tendAct = async (op, args, said) => { try { await api(`/host/harbor/islands/${i.id}/tend/${op}`, 'POST', args || {}); if (said) bottle(said); await loadTend(); drawPanel(i, false); } catch (e) { bottle(e.message); } };
       if ($('#sRun')) bindChoices($('#sRun'), (v) => act({ run: v }, `${i.name} is moving: ${runOf(v).b.toLowerCase()}.`));

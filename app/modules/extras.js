@@ -48,10 +48,12 @@ const b64dec = b => { const s = atob(b); const u = new Uint8Array(s.length); for
 function rawDb() { return new Promise((res, rej) => { const r = indexedDB.open('jade-vault', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 // everything in IndexedDB but the vault and the settings copy (it holds API keys; backups carry settings their own way)
 async function dbDump() {
+  if (window.PandoraDesk?.state) return window.PandoraDesk.state.dbAllShared(); // served by the home host: her things there
   const db = await rawDb();
   return new Promise((res, rej) => { const st = db.transaction('kv').objectStore('kv'); const out = {}; const q = st.openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); if (c.key !== 'vfs' && c.key !== 'settingsCopy' && c.key !== 'settingsMirror' && c.key !== 'pendingSettings') out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); });
 }
 async function dbRestore(obj, wipe) {
+  if (window.PandoraDesk?.state) { for (const [k, v] of Object.entries(obj)) await idb.set(k, v); return; } // onto the host (nothing there is wiped)
   const db = await rawDb();
   return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); const st = t.objectStore('kv'); if (wipe) st.clear(); for (const [k, v] of Object.entries(obj)) st.put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); });
 }
@@ -59,7 +61,8 @@ const isText = u8 => { if (u8.length > 4e6) return false; try { new TextDecoder(
 const isConfigPath = p => /^\/(pandora|jade)\/(soul|system|agents|memory|heartbeat|curiosity)\.md$/i.test(p) || /^\/(pandora|jade)\/mcp\.json$/i.test(p) || /^\/(pandora|jade)\/skills\//i.test(p) || /^\/agents\.md$/i.test(p);
 async function buildBackup(kind, withKeys) {
   const settings = JSON.parse(JSON.stringify(S)); if (!withKeys) for (const k of SECRET_KEYS) delete settings[k];
-  const storage = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith('jvault:') && k !== 'jvault:settings') { try { storage[k.slice(7)] = JSON.parse(localStorage.getItem(k)); } catch {} } }
+  const storage = window.PandoraDesk?.state ? window.PandoraDesk.state.lsStorage() : {};
+  if (!window.PandoraDesk?.state) for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith('jvault:') && k !== 'jvault:settings') { try { storage[k.slice(7)] = JSON.parse(localStorage.getItem(k)); } catch {} } }
   const files = {}, dirs = [];
   for (const [p, n] of vfs.nodes) {
     if (p === '/') continue; if (kind === 'config' && !isConfigPath(p)) continue;

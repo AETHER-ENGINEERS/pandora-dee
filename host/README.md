@@ -393,6 +393,29 @@ moves her; `--run` says where new ones go.
 - **What isn't walled off by this:** the program files themselves belong to whoever installed them. For the strongest
   wall, keep the host's code where only administrators write (like Program Files, or `/opt`).
 
+## Her things on the host, one copy for every device (`host/state.cjs`)
+
+The Atelier page served by the host keeps her things on the host, not in each browser, so every device she's opened on
+sees the same her (parity step 1):
+
+- **On the host:** her chats and branches, schedules, ritual runs, the Jade script store, her settings, her
+  heartbeat, spark, storybook, journal and auto-backup markers, her skills and playbook approvals, and her run history.
+  They live in the same files a backup import writes, so bringing her things in and using them are one and the same.
+- **On each device:** which chat is open, a draft, a few view choices, her own API keys and each device's own model
+  addresses (a "localhost" means that device), and caches the page rebuilds itself. A device's keys never reach the
+  host this way; keys reach the host only through the import's box, or hung up at the well and campfire.
+- **Two devices at once:** every key has a revision, and each write says which one it started from. Her chat and
+  schedule lists are merged when another device wrote in between: what it added stays, what this device removed goes.
+  Other keys are last-write-wins. Every change is told to every open page (`/host/state/stream`), and her chat list and
+  schedules update in place; the open chat and her settings say so, and apply after a reload.
+- **Rules:** a paired device of hers only. Her settings change from home or the tailnet, as before; chats and the rest
+  from wherever her device is.
+- **A backup made in her Atelier** on a host-served page holds what's on the host, from every device.
+- **Elsewhere** (the desktop app, a plain browser, the APK) nothing changed: the browser's own storage, as before.
+
+Routes: `GET /host/state` (her small things), `PUT /host/state/ls/<key>`, `GET|PUT|DELETE /host/state/db/<key>`
+(`{ value, base }`), `GET /host/state/db?all=1`, `GET|PUT|DELETE /host/state/runs[/<id>]`, `GET /host/state/stream`.
+
 ## The Harbor: the host's own page for everything (`/host/harbor`)
 
 Everything typed into the host's window has a place here too, in Pandora's ISLANDS words: the host is the
@@ -419,6 +442,11 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
   - **the cliffs:** the lighthouse (her tide: nap, every switch and why it rests, turning back on what the tide turned
     off);
   - **her reef:** her boundary (what was turned away lately);
+  - **her house** (from the village terrace, "Step inside"): the hearth (her chats and branches: how many, when),
+    the library (her notes and folders), the shelves (the host's tools for her, skills set aside, playbooks approved),
+    the computer (her schedules, on or resting; her shell), the mirror (whether her SOUL is written and when it
+    changed: hers to write, never edited here), the key hook (how many keys are hung up, never their values); the
+    table and the window stand under scaffolding (pieces D and E);
   - **the misty grove, the observatory and the islet** stand under scaffolding, saying which step brings them (her
     memory, device senses, the boat to SEASIDE).
 
@@ -528,5 +556,5 @@ These are the next milestones, in this order:
      (Windows), and shows the command to run elsewhere.
    - The Linux and macOS steps are written and checked, but not yet run on those systems.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs`, `tests/host_services_test.mjs` and `tests/host_harbor_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs`, `tests/host_services_test.mjs`, `tests/host_harbor_test.mjs` and `tests/host_state_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

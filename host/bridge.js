@@ -55,6 +55,126 @@
     diskDel: call('del'), diskMove: call('move'), diskTouch: call('touch'), diskClear: call('clear'), diskUseShared: call('useShared')
   };
 
+  // ---- her things, one copy for every device (host/state.cjs; the page takes these in app/modules/hoststate.js) ----
+  // What stays on this device: which chat is open, a draft, a few view choices, her own API keys and each device's own
+  // model addresses (a "localhost" means this device), and the caches the page rebuilds on its own.
+  var DEVICE_LS = { lastSession: 1, draft: 1, setTab: 1, noteMode: 1, openDirs: 1, hist: 1, diskHint: 1, jadeLinkVer: 1 };
+  var DEVICE_SETTINGS = ['host', 'lcppHost', 'ollayaHost', 'oaiHost', 'engine', 'voiceName', 'voicePitch', 'voiceRate', 'jadeFrame', 'jadeShow',
+    'jadeVoice', 'jadeCompact', 'bbUrl', 'ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets'];
+  function dbLocal(k) { return k === 'vfs' || k === 'vfs-migrated' || /^vfs-before-folder/.test(k) || /^mpy:/.test(k) || k === 'vaultParse' || k === 'settingsCopy' || k === 'pendingSettings'; }
+  var cache = {}, revs = {}, changeFns = [], mergedFns = [], errorFns = [];
+  function loadAll() {
+    try {
+      var x = new XMLHttpRequest();
+      x.open('GET', '/host/state', false);
+      x.setRequestHeader('Authorization', 'Bearer ' + token);
+      x.send();
+      if (x.status === 200) { var j = JSON.parse(x.responseText); cache = j.values || {}; return true; }
+    } catch (e) { /* an empty start; the host is asked again on the next change */ }
+    return false;
+  }
+  loadAll();
+  var same = function (a, b) { try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; } };
+  var chain = Promise.resolve();
+  function send(method, path, body) {
+    // one at a time, in order: a later write never overtakes an earlier one
+    var p = chain.then(function () {
+      var b = typeof body === 'function' ? body() : body; // a write's starting point is read as it's sent
+      var data = b === undefined ? undefined : JSON.stringify(b);
+      return window.fetch(path, { method: method, keepalive: !!data && data.length < 60000, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'X-Page': page }, body: data })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { errorFns.forEach(function (f) { try { f(j.error || ('The home host answered ' + r.status + '.')); } catch (e) { /* */ } }); } return j; }); });
+    });
+    chain = p.catch(function () { errorFns.forEach(function (f) { try { f('The home host could not be reached; that change did not reach it.'); } catch (e) { /* */ } }); });
+    return p;
+  }
+  var enc = encodeURIComponent;
+  var state = {
+    dbLocal: dbLocal,
+    lsGet: function (k, d, local) {
+      if (DEVICE_LS[k]) return local.get(k, d);
+      if (k === 'settings') {
+        var out = {}, sh = cache.settings || {}, mine = local.get('settings', {}) || {};
+        for (var a in sh) out[a] = sh[a];
+        for (var i = 0; i < DEVICE_SETTINGS.length; i++) if (DEVICE_SETTINGS[i] in mine) out[DEVICE_SETTINGS[i]] = mine[DEVICE_SETTINGS[i]];
+        return Object.keys(out).length ? out : d;
+      }
+      return k in cache ? cache[k] : d;
+    },
+    lsSet: function (k, v, local) {
+      if (DEVICE_LS[k]) return local.set(k, v);
+      if (k === 'settings') {
+        var dev = {}, sh = {};
+        for (var a in v) { if (DEVICE_SETTINGS.indexOf(a) >= 0) dev[a] = v[a]; else sh[a] = v[a]; }
+        local.set('settings', dev);
+        if (same(sh, cache.settings)) return;
+        cache.settings = sh; send('PUT', '/host/state/ls/settings', { value: sh });
+        return;
+      }
+      if (same(v, cache[k])) return;
+      cache[k] = v; send('PUT', '/host/state/ls/' + enc(k), { value: v });
+    },
+    lsStorage: function () { var o = {}; for (var k in cache) if (k !== 'settings') o[k] = cache[k]; return o; },
+    dbGet: function (k) {
+      return window.fetch('/host/state/db/' + enc(k), { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (!j) return undefined; revs[k] = j.rev; return j.exists ? j.value : undefined; })
+        .catch(function () { return undefined; });
+    },
+    dbSet: function (k, v) {
+      // the starting point is the version this value was built from: what this page knew when it asked to save
+      var base = revs[k];
+      return send('PUT', '/host/state/db/' + enc(k), function () { return { value: v, base: base }; }).then(function (j) {
+        if (j && j.rev != null) revs[k] = j.rev;
+        if (j && j.merged) mergedFns.forEach(function (f) { try { f(k, j.value); } catch (e) { /* */ } });
+      }).catch(function () { /* told through errorFns */ });
+    },
+    dbDel: function (k) { return send('DELETE', '/host/state/db/' + enc(k)).then(function (j) { if (j && j.rev != null) revs[k] = j.rev; }).catch(function () {}); },
+    dbAllShared: function () {
+      return window.fetch('/host/state/db?all=1', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' }).then(function (r) { return r.json(); })
+        .then(function (all) { var o = {}; for (var k in all) if (!dbLocal(k)) o[k] = all[k]; return o; });
+    },
+    runs: {
+      put: function (rec) { return send('PUT', '/host/state/runs/' + enc(rec && rec.id), rec); },
+      get: function (id) { return window.fetch('/host/state/runs/' + enc(id), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.ok ? r.json() : undefined; }); },
+      all: function () { return window.fetch('/host/state/runs', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }); },
+      count: function () { return window.fetch('/host/state/runs?count=1', { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }).then(function (j) { return j.count || 0; }); },
+      clear: function () { return send('DELETE', '/host/state/runs'); },
+      del: function (id) { return send('DELETE', '/host/state/runs/' + enc(id)); }
+    },
+    onChange: function (f) { changeFns.push(f); },
+    onMerged: function (f) { mergedFns.push(f); },
+    onError: function (f) { errorFns.push(f); }
+  };
+  window.PandoraDesk.state = state;
+  // what other devices change, as it happens: this page's cache is refreshed, then the page is told
+  function listen() {
+    if (removed || !window.fetch) return;
+    window.fetch('/host/state/stream', { headers: { 'Authorization': 'Bearer ' + token, 'X-Page': page }, cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 401) { removed = true; return; }
+        if (!r.ok || !r.body) throw new Error('no stream');
+        var rd = r.body.getReader(), dec = new TextDecoder(), buf = '';
+        var pump = function () {
+          return rd.read().then(function (x) {
+            if (x.done) return;
+            buf += dec.decode(x.value, { stream: true });
+            var lines = buf.split('\n'); buf = lines.pop();
+            lines.forEach(function (l) {
+              var e; try { e = JSON.parse(l); } catch (er) { return; }
+              if (!e || !e.kind || e.page === page) return; // its own writes, or a heartbeat
+              if (e.kind === 'ls') loadAll();
+              changeFns.forEach(function (f) { try { f(e); } catch (er) { /* */ } });
+            });
+            return pump();
+          });
+        };
+        return pump();
+      })
+      .catch(function () { /* reopened below */ })
+      .then(function () { if (!removed) setTimeout(listen, 2500); });
+  }
+  listen();
+
   // presence: while this page holds the stream open, the host is awake (host/nap.cjs). If it drops (the host restarted,
   // the Wi-Fi blinked), it's reopened; the host's grace period covers the gap. Closing the page closes it.
   var removed = false;

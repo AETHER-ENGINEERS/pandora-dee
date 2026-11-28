@@ -41,7 +41,7 @@
   .tight td, .tight th { padding: 4px 5px; } .tight input, .tight select { padding: 3px 6px; width: 100%; min-width: 60px; }
 </style>
 <header>
-  <h1>Pandora Dee's home host</h1>
+  <h1 id="hostTitle">Pandora Dee's home host</h1>
   <span class="pill" id="napPill">…</span>
   <span class="pill" id="modelPill">…</span>
   <span class="pill" id="waitPill">…</span>
@@ -203,6 +203,8 @@
   function applyColours(c) { for (const [k, v] of Object.entries(c || {})) document.documentElement.style.setProperty('--' + k, v); }
   function render(st) {
     S = st;
+    // whose host this page is: each resident has her own (her own address, her own settings)
+    if (st.resident) { const t = `${st.resident.name}'s home host`; if ($('#hostTitle').textContent !== t) { $('#hostTitle').textContent = t; document.title = t; } }
     applyColours(st.settings.colors);
     $('#version').textContent = `${st.version} · ${st.platform} · shell: ${st.shell}`;
     const hostOff = Object.values(st.switches).some((v) => v.offBy);

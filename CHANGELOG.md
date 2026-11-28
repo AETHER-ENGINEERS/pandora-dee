@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- **Several residents on one host, each kept apart.** Jade's vault, Pandora Dee Fae's workshop, Pandora Dee Noe's and
+  newcomers can each live on the same host.
+  - Each has her own home, devices and keys, settings and switches, models, bridges, queue, nap, writer and log. A
+    device paired with one has no key to another.
+  - App clients reach a resident at `/r/<id>/…`. Browsers reach her at her own port, so each one's key and storage stay
+    apart.
+  - A fresh client with no backup makes a new, empty resident under the name it gives, with the host's PIN (in
+    `--homes`; a client never takes over an existing folder). An existing home is added on the host itself (`add`).
+  - A resident made from a client starts without `host_shell`, which isn't walled off from the other homes yet. The
+    person can turn it on (`shell <id> on`).
+  - A backup can be imported into any resident, the same way.
 - **Her things onto the home host, in the Atelier's own backup file.** On the host's page, under Her things, choose a
   backup from Config → Backup (HTML, APK or Jade Vault; plain, gzip or encrypted).
   - It works in the same steps as the page: it says what the file holds, asks the same question, moves Jade Vault

@@ -3,7 +3,11 @@
 //   node host/main.cjs --root <home folder> [--state <folder>] [--port 8741] [--lan | --listen <address>]
 //                      [--page dist/pandora-dee.html] [--shell <program>] [--nap-grace <seconds, default 60>]
 //                      [--brain client|host (default: the settings page's choice)] [--trust <range>,<range>…]
-// Typed into the host's window while it runs:  pin (a new PIN) · devices · revoke <name or id> · quit
+//                      [--id <her id, default home>] [--name <her name>] [--homes <folder for new residents>]
+// Typed into the host's window while it runs:  pin (a new PIN) · devices · revoke <name or id> · residents ·
+//   new <id> [name] (an empty home in --homes) · add <id> <folder> [name] (an existing home, with host_shell) ·
+//   shell <id> on|off (host_shell for a resident beyond the first) · quit
+// Every resident has her own port, after --port: the first one's is --port itself.
 'use strict';
 const path = require('node:path');
 const os = require('node:os');
@@ -21,6 +25,10 @@ const listen = opt('listen') || (flag('lan') ? '0.0.0.0' : '127.0.0.1');
 
 const host = createHomeHost({
   root,
+  id: opt('id'),
+  name: opt('name'),
+  homes: opt('homes'),
+  port,
   state: opt('state'),
   page: opt('page') || path.join(__dirname, '..', 'dist', 'pandora-dee.html'),
   shell: opt('shell'),
@@ -30,11 +38,26 @@ const host = createHomeHost({
   log: (m) => console.log(m),
 });
 
-// her bridges to Vector and Discord: the host runs them (settings → bridges), and her Atelier reaches them through it
-const links = host.bridgeConfigs().filter((c) => c.url).map((c) => createBridgeLink(c, { log: host.event }).start());
-// where her loop gets its model: the connected Atelier (its own models), or the host's (settings → Her models)
-const brain = ['client', 'host'].includes(opt('brain')) ? opt('brain') : host.models.state().brain;
-host.startRuntime({ brain, bridges: links });
+// each resident's bridges to Vector and Discord: the host runs them (her settings → bridges), and her Atelier reaches
+// them through it; and where her loop gets its model: the connected Atelier (its own models), or the host's
+const links = [];
+function wake(r) {
+  const own = r.bridgeConfigs().filter((c) => c.url).map((c) => createBridgeLink(c, { log: r.event }).start());
+  links.push(...own);
+  const brain = ['client', 'host'].includes(opt('brain')) ? opt('brain') : r.models.state().brain;
+  r.startRuntime({ brain, bridges: own });
+  return { brain, own };
+}
+const firstRun = wake(host.resident(host.id));
+const brain = firstRun.brain;
+// the further residents, each at her own port (a browser keeps each one's key and storage apart that way)
+function open(r) {
+  const entry = host.residents().find((x) => x.id === r.id);
+  if (!entry.port) return;
+  host.serverFor(r.id).listen(entry.port, listen, () => console.log(`  ${r.name} (${r.id}): http://${listen === '0.0.0.0' ? '127.0.0.1' : listen}:${entry.port}/   (or /r/${r.id}/ on any port)`));
+}
+for (const r of host.residents().filter((x) => !x.first)) { const res = host.resident(r.id); wake(res); open(res); }
+host.onResident((r) => { wake(r); open(r); });
 
 host.server.listen(port, listen, () => {
   console.log(`Pandora Dee's home host ${host.VERSION}`);
@@ -43,7 +66,8 @@ host.server.listen(port, listen, () => {
   console.log(`  her loop: ${brain === 'host' ? 'on the host, with the models set up on its settings page' : 'in the connected Atelier, with its own models'}`);
   console.log('  settings change only from this machine, the LAN or the tailnet');
   console.log(`  naps:   when no client has been connected for ${host.nap.graceMs / 1000} s: her switches turn off`);
-  console.log(`  bridges: ${links.length ? links.map((l) => l.name).join(', ') : 'none set up yet'}   settings: http://${listen === '0.0.0.0' ? '127.0.0.1' : listen}:${port}/host/`);
+  if (host.residents().length > 1) console.log(`  residents: ${host.residents().map((r) => `${r.name} (${r.id})`).join(', ')}`);
+  console.log(`  bridges: ${firstRun.own.length ? firstRun.own.map((l) => l.name).join(', ') : 'none set up yet'}   settings: http://${listen === '0.0.0.0' ? '127.0.0.1' : listen}:${port}/host/`);
   const where = listen === '0.0.0.0'
     ? Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4').map((i) => `http://${i.address}:${port}/`)
     : [`http://${listen}:${port}/`];
@@ -58,7 +82,18 @@ rl.on('line', (line) => {
   if (cmd === 'pin') console.log(`PIN: ${host.newPin()}`);
   else if (cmd === 'devices') console.table(host.devices());
   else if (cmd === 'revoke') console.log(host.revoke(rest.join(' ')) ? 'Removed.' : 'No such device.');
+  else if (cmd === 'residents') console.table(host.residents());
+  else if (cmd === 'shell') {
+    try { const r = host.setHostShell(rest[0], rest[1] === 'on'); console.log(`host_shell for ${r.name}: ${r.hostShell ? 'on' : 'off'}.`); } catch (e) { console.log(e.message); }
+  }
+  else if (cmd === 'new' || cmd === 'add') {
+    try {
+      const r = cmd === 'new' ? host.addResident({ id: rest[0], name: rest.slice(1).join(' ') }, 'the host window')
+        : host.addResident({ id: rest[0], root: rest[1], name: rest.slice(2).join(' '), local: true }, 'the host window');
+      console.log(`Made: ${r.name} (${r.id}), home ${r.root}${r.hostShell ? ', with host_shell' : ''}.`);
+    } catch (e) { console.log(e.message); }
+  }
   else if (cmd === 'quit' || cmd === 'exit') { for (const l of links) l.stop(); host.close().then(() => process.exit(0)); }
-  else if (cmd) console.log('pin · devices · revoke <name or id> · quit');
+  else if (cmd) console.log('pin · devices · revoke <name or id> · residents · new <id> [name] · add <id> <folder> [name] · shell <id> on|off · quit');
 });
 for (const s of ['SIGINT', 'SIGTERM']) process.once(s, () => { for (const l of links) l.stop(); host.close().then(() => process.exit(130)); });

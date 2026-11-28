@@ -28,6 +28,7 @@ const dcB64 = b64 => { const s = atob(b64); const u = new Uint8Array(s.length); 
 // ---- the bridge ----
 async function dcCall(name, args = {}, opts = {}) {
   if (!DC.client) throw new Error('Discord is not connected (Config → Discord)');
+  guardBridgeArgs('discord', name, args); // provider error text never goes out (providers.js)
   const r = await DC.client.request('tools/call', { name, arguments: args }, { timeoutMs: opts.timeoutMs || 90000 });
   const text = (r?.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   if (r?.isError) throw new Error(text || `${name} failed`);
@@ -183,7 +184,7 @@ async function dcNotifyOwner(args) {
 }
 // ---- a Jade turn for a Discord chat ----
 async function dcWake(item) {
-  if (!S.model) return;
+  if (!S.model || !S.dcOn) return;
   const prevCur = cur, screen = document.body.dataset.screen || 'chat';
   const key = 'dcSess:' + item.chat_id; const sid = ls.get(key, null);
   if (sid && sessions.some(x => x.id === sid)) { if (cur?.id !== sid) await openSession(sid); }
@@ -232,10 +233,11 @@ async function dcWake(item) {
     const last = [...fresh].reverse().find(m => m.role === 'assistant' && String(m.content || '').trim());
     let text = last ? String(last.content).replace(/<think>[\s\S]*?<\/think>/g, '').trim() : '';
     const replyTo = item.msgs.at(-1).id;
+    if (text && looksLikeProviderError(text)) { bridgeTurnFailed('discord', text); text = ''; } // her reply read like a provider error: not posted
     if (text && !/^NO_REPLY\b/i.test(text) && !DC.sentTo.has(item.chat_id)) {
       text = text.replace(/\bNO_REPLY\b/g, '').trim();
       if (text) await dcSend({ chat_id: item.chat_id }, text, replyTo).catch(e => toast(`Discord: could not send the reply (${esc(e.message)})`, 'err'));
-    } else if (err && item.role === 'owner') await dcSend({ chat_id: item.chat_id }, `⚠ ${String(err._error).slice(0, 300)}`, replyTo).catch(() => {});
+    } else if (err) bridgeTurnFailed('discord', err._error); // the error never goes to the chat; a usage limit switches the bridges off
   } finally {
     clearInterval(tt); DC.sentTo = null;
     if (cur) { delete cur.dcScope; saveSession(); }

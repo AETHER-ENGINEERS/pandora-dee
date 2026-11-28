@@ -38,6 +38,7 @@ function vecEnsureName(npub) {
 // ---- the bridge ----
 async function vcall(name, args = {}, opts = {}) {
   if (!VEC.client) throw new Error('Vector is not connected (Config → Vector messenger)');
+  guardBridgeArgs('vector', name, args); // provider error text never goes out (providers.js)
   const r = await VEC.client.request('tools/call', { name, arguments: args }, { timeoutMs: opts.timeoutMs || 90000 });
   const text = (r?.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   if (r?.isError) throw new Error(text || `${name} failed`);
@@ -180,7 +181,7 @@ async function notifyOwnerTool(args) {
 }
 // ---- a Jade turn for a Vector chat ----
 async function vecWake(item) {
-  if (!S.model) return;
+  if (!S.model || !S.vecOn) return;
   await vecEnsureName(item.sender);
   const prevCur = cur, prevId = cur?.id, screen = document.body.dataset.screen || 'chat';
   const key = 'vecSess:' + item.chat_id; const sid = ls.get(key, null);
@@ -229,11 +230,13 @@ async function vecWake(item) {
     const err = fresh.find(m => m._error);
     const last = [...fresh].reverse().find(m => m.role === 'assistant' && String(m.content || '').trim());
     let text = last ? String(last.content).replace(/<think>[\s\S]*?<\/think>/g, '').trim() : '';
+    if (text && looksLikeProviderError(text)) { bridgeTurnFailed('vector', text); text = ''; } // her reply read like a provider error: not posted
     if (item.kind === 'msg' && text && !/^NO_REPLY\b/i.test(text) && !VEC.sentTo.has(item.chat_id)) {
       text = text.replace(/\bNO_REPLY\b/g, '').trim();
       if (text) await vcall('send_message', { chat_id: item.chat_id, content: text.slice(0, 8000), replied_to: item.msgs.at(-1).id }).catch(e => toast(`Vector: could not send the reply (${esc(e.message)})`, 'err'));
-    } else if (item.kind === 'msg' && err && item.role === 'owner') {
-      await vcall('send_message', { chat_id: item.chat_id, content: `⚠ ${String(err._error).slice(0, 300)}`, replied_to: item.msgs.at(-1).id }).catch(() => {});
+    } else if (err) {
+      // the error itself never goes to the chat (it can name the person's account); a usage limit switches the bridges off
+      bridgeTurnFailed('vector', err._error);
     }
   } finally {
     clearInterval(tt); VEC.sentTo = null;

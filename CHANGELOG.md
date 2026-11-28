@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Provider and model error text never goes to Vector or Discord.** During an outage the Atelier used to post
+  "⚠ <the provider's error>" into the chat it was answering, and a usage-limit error names the person's account.
+  - Now nothing that reads like a provider or model error leaves through a bridge: not a failed turn's error, not a
+    reply of hers, not a tool call of hers.
+  - A usage limit switches Vector and Discord off. The person is told on their own screen, and the bridges stay off
+    until they turn them back on (Config).
 - **A desktop app, with her vault as a real folder.** `desktop/` (Electron) opens the Atelier in its own window. Her
   vault is a folder you pick on the computer, not the browser's database: every note is an ordinary file there, so
   bash, a file manager and MCP file tools all see the same `/Pandora/SOUL.md`. The vault's existing disk mode (the

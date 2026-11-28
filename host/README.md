@@ -462,13 +462,26 @@ the same thing wherever it runs. Her loop offers her `playbook` and `ritual` too
   stopped after 5 seconds, as in her Atelier.
 - Browser steps need an open Atelier: the host has no browser of hers.
 
+**Her rhythms, on the host** (her Atelier's own `think_tool.js`, `curiosity.js` and `autobackup.js`, in the same
+sandbox), while her loop is here; an open page steps back from each:
+- **Her tree-of-thought `think`**, in place of the loop's simple one: branches, verifiers (code and shell ones need her
+  hands), and judging, through her models.
+- **Her rituals' own triggers:** a ritual on a schedule, or waiting for a note to change, fires on the host (through
+  her schedules switch).
+- **Her curiosity:** wake-ups chosen and measured by her Atelier's own curiosity (her settings: on, hours, range, daily
+  cap, activities), run through her loop and her sparks switch, kept in her curiosity chat.
+- **Her scheduled backup:** sent to her backup server as her Atelier sends it (gzipped, checksummed, encrypted with
+  her passphrase when she chose that), holding what's on the host, never keys. Her backup server's token and
+  passphrase stay on each device in her Atelier; on the host the keeper hangs them up write-only at the sea chest,
+  where her last backup shows and one can be started now.
+
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
 is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her
 schedules to it, so none runs twice. Her jobs too: rituals, playbooks (unless one drives the browser), and shell jobs
 when her hands are on this computer. The page and the host ask the same question (`hostTakes` / `hostTakesSchedule`),
 so each schedule has exactly one runner; an open page keeps the browser-driving playbooks, and the shell jobs while her
-hands are off. Ritual triggers (a ritual's own schedule or note trigger) still fire in an open Atelier, for now.
+hands are off.
 
 **Her apps on the table:** the Atelier's webxdc apps and their updates live on the host too
 (`/host/state/xdc[/<id>[/updates]]`): one table for every device. A move made on the laptop reaches the same app open

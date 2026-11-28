@@ -145,6 +145,7 @@ function createState({ store, dir, log = () => {} }) {
       runs: runCount(),
       skillsOff: Array.isArray(st.skillsOff) ? st.skillsOff.length : 0,
       approvals: st.pbApproved && typeof st.pbApproved === 'object' ? Object.keys(st.pbApproved).length : 0,
+      backup: { on: !!(store.settings() || {}).abOn, last: st.abLast || 0, ok: st.abStatus ? st.abStatus.ok : null, note: st.abStatus ? String(st.abStatus.msg || '').slice(0, 160) : '' },
       apps: xdcApps().map((a) => ({ name: String(a.name || 'an app').slice(0, 60), lastActive: a.lastActive || a.opened || a.installed || null })),
     };
   }

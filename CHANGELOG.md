@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Her rhythms on the host.** With her loop on the host: her Atelier's own tree-of-thought think, her rituals'
+  triggers (a schedule, a note changing), her curiosity wake-ups (chosen, measured and learned from as in her Atelier),
+  and her scheduled backup to her backup server (never with keys). An open page steps back from each. Her backup
+  server's token and passphrase no longer travel through her shared settings; the keeper hangs them up write-only at
+  the sea chest.
 - **Her playbooks, rituals and jobs on the host.** The very engines her Atelier runs, in a sandbox on the host: her
   playbook and ritual tools, approved playbooks only, secrets from the host's write-only key file and hidden in every
   record, shell and JavaScript steps only with her hands on the computer. Her job schedules run there too (rituals,

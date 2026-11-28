@@ -128,6 +128,7 @@ function createEngines(opts) {
     enc: new TextEncoder(), dec: new TextDecoder(), fmtSize: (n) => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'),
     Cron: require('./cron.cjs').Cron, CRON_LOG: '/Pandora/Logs/cron.log',
     cronMacro: (w) => ({ '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *', '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *', '@hourly': '0 * * * *' })[String(w || '').trim().toLowerCase()] || w,
+    stripComments: require('./steer.cjs').stripComments,
     isNote: (p) => /\.(md|markdown|txt)$/i.test(String(p)),
     MEM_PATH: '/Pandora/Memory.md',
     memoryLines: () => { if (!vfs.isFile('/Pandora/Memory.md')) return []; let sec = ''; const out = []; for (const line of vfs.read('/Pandora/Memory.md').split('\n')) { const h = /^##\s+(.+)/.exec(line); if (h) { sec = h[1].trim(); continue; } const b = /^\s*[-*]\s+(.+)/.exec(line); if (b && b[1].trim()) out.push({ sec, text: b[1].trim(), line }); } return out; },
@@ -161,7 +162,8 @@ function createEngines(opts) {
   ctx.__hostSecrets = secrets;
   loading = false;
   // the engines' own panels and lists are drawn by her Atelier; on the host there is nothing to draw
-  for (const f of ['flowsRender', 'flowRunUi', 'flowListHtml', 'renderPlaybooks', 'pbRender', 'flowsArm']) if (typeof ctx[f] === 'function') ctx[f] = () => '';
+  for (const f of ['flowsRender', 'flowRunUi', 'flowListHtml', 'renderPlaybooks', 'pbRender', 'abRenderStatus', 'cuRenderStatus']) if (typeof ctx[f] === 'function') ctx[f] = () => '';
+  ctx.clock = (t) => new Date(t).toLocaleString();
   ctx.relTime = () => '';
   ctx.editing = null; // the note her Atelier has open: none, on the host
   ctx.splitFrontmatter = (t) => { const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(String(t || '')); return { front: m ? m[0] : '', body: m ? String(t).slice(m[0].length) : String(t || '') }; };
@@ -220,12 +222,14 @@ function createEngines(opts) {
       if (CU.running) return null;
       if (!manual && ctx.cuToday().n >= (+S.cuCap || 5)) { const d = new Date(); d.setHours(24, 0, 0, 0); ls.set('cuNext', ctx.cuNextAt(d.getTime(), ctx.cuOpts())); return null; }
       const ids = ctx.cuEnabledIds(); if (!ids.length) return null;
-      CU.running = true; ctx.ensureCuFile();
-      const st = ctx.cuState(), wish = ctx.cuUserNotes().todo > 0 ? { explore: 0.35, anticipate: 0.35 } : null;
-      const scores = ctx.cuScores(st, ids, Date.now(), (st.log.at(-1) || {}).id, wish), suggested = ctx.cuPick(scores, ctx.cuTemperature(st));
-      CU.pending = { suggested, chosen: null, intent: '', before: ctx.cuSnapshot(), startedAt: Date.now(), done: false };
-      const t = ctx.cuToday(); t.n++; ls.set('cuToday', t);
-      try {
+      CU.running = true;
+      let suggested = null;
+      try { // everything from here clears "running" whatever happens, so one failure never stops her next wake-up
+        ctx.ensureCuFile();
+        const st = ctx.cuState(), wish = ctx.cuUserNotes().todo > 0 ? { explore: 0.35, anticipate: 0.35 } : null;
+        const scores = ctx.cuScores(st, ids, Date.now(), (st.log.at(-1) || {}).id, wish); suggested = ctx.cuPick(scores, ctx.cuTemperature(st));
+        CU.pending = { suggested, chosen: null, intent: '', before: ctx.cuSnapshot(), startedAt: Date.now(), done: false };
+        const t = ctx.cuToday(); t.n++; ls.set('cuToday', t);
         const prompt = ctx.cuPrompt(st, scores, suggested);
         const reply = await ask(prompt);
         if (!CU.pending.done) ctx.cuFinish(null, 'no report was made');

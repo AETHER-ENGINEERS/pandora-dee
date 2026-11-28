@@ -105,7 +105,7 @@ try {
 
   // ---------- an open page leaves these to the host ----------
   const page = fs.readFileSync(process.env.JV_WEB, 'utf8');
-  ok((page.match(/her loop is on the home host, which runs this\n/g) || []).length === 4, 'the built page steps back from her rituals\' triggers, her curiosity and her backup while her loop is on the host');
+  ok((page.match(/if \(typeof HOST_RUNS_PROMPTS !== 'undefined' && HOST_RUNS_PROMPTS\) return;/g) || []).length === 4, 'the built page steps back from her rituals\' triggers, her curiosity and her backup while her loop is on the host');
 } catch (e) {
   fail.push('FAIL threw: ' + (e && e.stack || e));
 } finally {

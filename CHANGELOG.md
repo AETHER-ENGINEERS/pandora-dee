@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Her own browser on the host.** An addition beside the browser in her Android app: her Atelier's own browser tool,
+  driving a headless Chrome, Edge or Chromium of this computer's, listed with her devices as "this host". Off until the
+  keeper turns it on at the host; its own profile in her state folder; and it doesn't visit this house's own network
+  unless the keeper allows it (a checking proxy holds pages, fetches and WebSockets alike).
 - **Her device tools, through the devices that visit.** With her loop on the host, each paired device says which of her
   device tools it has (the phone's own in her Android app, USB, models on its own chip); her loop offers them, and each
   call goes to a device that has it, runs there with its own yes, and comes back. In the Harbor, her house's window

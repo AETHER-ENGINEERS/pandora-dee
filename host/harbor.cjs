@@ -144,7 +144,7 @@ function createHarbor(ctx) {
       }
       const ta = /^\/host\/harbor\/islands\/([a-z0-9-]+)\/tend\/([a-zA-Z]+)$/.exec(p);
       if (ta) {
-        const TENDS = ['settings', 'resume', 'models', 'modelKey', 'modelBack', 'modelCheck', 'bridgeKey', 'release', 'backupKey', 'backupNow'];
+        const TENDS = ['settings', 'resume', 'models', 'modelKey', 'modelBack', 'modelCheck', 'bridgeKey', 'release', 'backupKey', 'backupNow', 'hostBrowser'];
         if (!TENDS.includes(ta[2])) throw fail(400, 'Not something the keeper tends.');
         event('keeper.tend', { id: ta[1], op: ta[2], keeper: k.id });
         send(res, 200, await ctx.tendOf(ta[1], ta[2], b, `the keeper (${k.name})`)); return true;

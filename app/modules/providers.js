@@ -249,3 +249,59 @@ async function llmPost(init) {
   }
   return postWith(client, body, init);
 }
+/* ---------- provider and model error text never goes to Vector or Discord ----------
+   During an outage the Atelier used to post the provider's error into the chat it was answering ("⚠ <error>"). A
+   usage-limit error names the person's account ("you (<account>) have reached your session usage limit, upgrade for
+   higher limits: <link> (ref: <id>)"), so it reached everyone in that channel. Now nothing that reads like a provider's
+   or a model's error leaves through a bridge, whoever wrote it (the turn's error, her reply, or a tool call of hers),
+   and a usage limit switches both bridges off until the person turns them back on (Config → Vector / Discord).
+   The same rules as the home host's (host/errors.cjs). */
+const PE_LIMIT = /usage limit|rate[- ]?limit|quota|reached your [a-z ]*limit|upgrade for higher limits|add (?:usage )?credits|insufficient (?:credits|quota|balance|funds)|out of credits|billing|too many requests|\b429\b/i;
+const PE_AUTH = /\b40[13]\b|unauthori[sz]ed|forbidden|invalid (?:api )?key|incorrect api key|authentication|not authenticated|api key (?:is )?(?:missing|invalid|expired)|permission denied|rejected the api key/i;
+const PE_DOWN = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EHOSTUNREACH|ECONNRESET|could not reach|couldn't reach|fetch failed|failed to fetch|network ?error|socket hang up|\b50[234]\b|service unavailable|bad gateway|gateway time-?out|timed out|did not answer within/i;
+const PE_STRONG = /reached your (?:session |weekly |daily |monthly )?usage limit|upgrade for higher limits|add usage credits|you \([^)]{1,80}\) have reached|insufficient_quota|rate_limit_exceeded|invalid_api_key|model_not_found|context_length_exceeded|overloaded_error|"type"\s*:\s*"error"|\(ref: [^)]+\)/i;
+const PE_URL = /https?:\/\/(?:www\.)?(?:ollama\.com\/(?:upgrade|settings|pricing)|platform\.openai\.com|console\.anthropic\.com|openrouter\.ai\/(?:settings|credits)|console\.groq\.com|aistudio\.google\.com|console\.mistral\.ai|platform\.deepseek\.com|together\.ai\/settings)/i;
+const PE_SHAPE = /^\s*(?:⚠|error\b|\[error\]|\w*error:)/i;
+const PE_STATUS = /\bHTTP\s?\d{3}\b|\b(?:status|code)[: ]+\d{3}\b|\(\d{3}\)/i;
+/** True when text looks like a provider's or a model's error, which must never reach a channel or a DM. */
+function looksLikeProviderError(text) {
+  const t = String(text || ''); if (!t.trim()) return false;
+  if (PE_STRONG.test(t) || PE_URL.test(t)) return true;
+  const general = PE_LIMIT.test(t) || PE_AUTH.test(t) || PE_DOWN.test(t);
+  if (PE_SHAPE.test(t) && (general || PE_STATUS.test(t))) return true;
+  return general && PE_STATUS.test(t);
+}
+/** → 'usage-limit' | 'auth' | 'unreachable' | null */
+const modelErrorKind = (e) => { const t = String(e?.message || e || ''); return PE_LIMIT.test(t) ? 'usage-limit' : PE_AUTH.test(t) ? 'auth' : PE_DOWN.test(t) ? 'unreachable' : null; };
+const BRIDGE_TEXT_KEYS = ['content', 'text', 'message', 'caption', 'bio', 'about', 'name', 'reason', 'frame'];
+/** Throws (nothing is sent) when a bridge call carries text that reads like a provider error. */
+function guardBridgeArgs(bridge, tool, args) {
+  for (const k of BRIDGE_TEXT_KEYS) {
+    if (typeof args?.[k] !== 'string' || !looksLikeProviderError(args[k])) continue;
+    console.warn(`${bridge}: not sent (${tool}): it reads like a provider or model error`);
+    if (modelErrorKind(args[k]) === 'usage-limit') bridgesOffForModel('usage-limit');
+    throw new Error('Not sent: that reads like a provider or model error, which never goes to a channel or a DM.');
+  }
+}
+/** Her model hit its usage limit: switch Vector and Discord off (receiving and sending), and tell the person here,
+ *  never in a chat. They stay off until the person turns them on, when she has a model again. */
+function bridgesOffForModel(kind) {
+  const was = [];
+  if (S.vecOn) { S.vecOn = false; was.push('Vector'); try { vecStop(); renderVecSettings(); } catch {} }
+  if (S.dcOn) { S.dcOn = false; was.push('Discord'); try { dcStop(); renderDcSettings(); } catch {} }
+  if (!was.length) return false;
+  S.bridgesOffBy = { kind, at: Date.now(), was };
+  saveSettings();
+  const msg = `${was.join(' and ')} switched off: her model's usage limit was reached. Nothing was posted. Turn ${was.length > 1 ? 'them' : 'it'} back on (Config) when she has a model again.`;
+  try { toast(esc(msg), 'err'); } catch {}
+  try { schedNotify('Pandora: bridges off', msg); } catch {}
+  return true;
+}
+/** After a bridge turn that failed: nothing goes to the chat; a usage limit switches the bridges off. */
+function bridgeTurnFailed(bridge, error) {
+  const kind = modelErrorKind(error);
+  console.warn(`${bridge}: her turn failed (${kind || 'error'}); nothing is posted to the chat`);
+  if (kind === 'usage-limit') bridgesOffForModel(kind);
+  return kind;
+}
+Object.assign(window, { looksLikeProviderError, modelErrorKind, guardBridgeArgs, bridgesOffForModel, bridgeTurnFailed });

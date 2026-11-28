@@ -150,7 +150,8 @@ function createLoop(opts) {
         return `The helper says:\n${r.content}`;
       }
       if (/^mcp__/.test(name)) { if (!opts.mcp) return `There is no tool called ${name}.`; return await opts.mcp.call(name, args || {}); }
-      const own = run[name], host = hostTools.find((t) => t.def.function.name === name) || extra.find((t) => t.def.function.name === name);
+      const later = extra.find((t) => t.def.function.name === name);
+      const own = later ? null : run[name], host = later || hostTools.find((t) => t.def.function.name === name);
       if (!own && !host) return `There is no tool called ${name}.`;
       const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out);
     } catch (e) { return `Not done: ${e && e.message ? e.message : e}`; }
@@ -180,7 +181,7 @@ function createLoop(opts) {
   /** One of her turns: the model, her tools, until she answers in words. → { content, rounds, tools: [names] } */
   async function turn({ messages, role = 'chat', why = '', depth = 0 }) {
     let msgs = messages.some((m) => m.role === 'system') ? [...messages] : [{ role: 'system', content: system() }, ...messages];
-    const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate'));
+    const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate') && !extra.some((x) => x.def.function.name === t.function.name));
     let direct = []; try { direct = opts.mcp ? (await opts.mcp.catalog()).filter((t) => t.exposure === 'direct') : []; } catch { direct = []; }
     const loaded = new Map(); // tools found with tool_search, declared from the next step
     const used = [];
@@ -208,7 +209,7 @@ function createLoop(opts) {
   return {
     turn, system, TOOLS, callTool,
     addTools: (list) => { for (const t of list) if (!extra.some((x) => x.def.function.name === t.def.function.name)) extra.push(t); },
-    allToolDefs: () => [...TOOLS, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)],
+    allToolDefs: () => [...TOOLS.filter((t) => !extra.some((x) => x.def.function.name === t.function.name)), ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)],
   };
 }
 

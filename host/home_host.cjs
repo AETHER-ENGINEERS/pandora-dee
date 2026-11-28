@@ -662,15 +662,37 @@ function createResident(opts, shared) {
     runShell: ({ command, cwd, timeoutMs }) => runShell({ command, cwd, timeout: timeoutMs ? Math.round(timeoutMs / 1000) : undefined }),
     isHers: (vp) => { try { return isHers()(vp); } catch { return false; } },
     mayWrite: () => (importing ? 'Her things are being brought in right now: try again in a moment.' : writer && now() - writer.at <= writerMs ? 'An Atelier window is writing her vault right now: try again in a moment.' : null),
-    log: event, trace, keepChat: (title, prompt, reply) => keepRunChat({ name: title, chat: 'new' }, prompt, reply),
+    log: event, trace,
+    // a run kept as a chat every device sees; with sessionKey, the same chat each time (its id kept in her Atelier's small things)
+    keepChat: (title, prompt, reply, o = {}) => {
+      if (!o.sessionKey) return keepRunChat({ name: title, chat: 'new' }, prompt, reply);
+      const sid = keepRunChat({ name: title, chat: 'same', hostChat: state.lsAll().values[o.sessionKey] || null }, prompt, reply);
+      state.lsSet(o.sessionKey, sid, 'her rhythms', 'host'); return sid;
+    },
+    buildBackup: (kind) => backup.build({ root, store, kind: kind === 'config' ? 'config' : 'full', isHers: isHers() }),
   });
-  loop.addTools(engines.toolDefs().map((def) => ({ def, run: (a) => (def.function.name === 'playbook' ? engines.playbookTool(a) : engines.flowTool(a)) })));
+  const ENGINE_TOOLS = { playbook: (a) => engines.playbookTool(a), ritual: (a) => engines.flowTool(a), think: (a) => engines.think(a), curiosity: (a) => engines.curiosity(a) };
+  loop.addTools(engines.toolDefs().map((def) => ({ def, run: ENGINE_TOOLS[def.function.name] || ((a) => engines.flowTool(a)) })));
   async function loopModel({ messages, why }) {
     const kind = String(why || '').split(':')[0];
     const role = kind === 'turn' ? 'chat' : models.ROLES.includes(kind) ? kind : 'chat';
     return (await loop.turn({ messages, role, why })).content;
   }
-  let rhythms = null, rhythmsBusy = false;
+  let rhythms = null, rhythmsBusy = false, rhythms2 = [];
+  /** Her rituals' own triggers (a schedule, a note changing), through her schedules switch, while her loop is here. */
+  async function herRituals() {
+    if (!runtime || runtime.brain !== 'host' || !settings.on('schedules')) return;
+    try { engines.ritualTick(); engines.noteTick(); } catch (e) { event('her.rituals.tick.failed', {}); }
+  }
+  /** A curiosity wake-up when one is due (her settings), through her sparks switch, while her loop is here. */
+  async function herCuriosity({ manual = false } = {}) {
+    if (!runtime || runtime.brain !== 'host') return null;
+    if (!manual && (!settings.on('sparks') || !engines.curiosityDue())) return null;
+    try { const r = await engines.curiosityWake({ manual, ask: (prompt) => runtime.ask(prompt, 'sparks', 'curiosity') }); if (r) event('her.curiosity', { chosen: r.chosen }); return r; }
+    catch (e) { event('her.curiosity.failed', { why: e && e.code ? 'off' : 'error' }); return null; }
+  }
+  /** Her scheduled backup (her Atelier's own, to her backup server), while her loop is here. */
+  async function herBackup() { if (!runtime || runtime.brain !== 'host') return; try { await engines.backupTick(); } catch { event('her.backup.tick.failed', {}); } }
   const isJob = (x) => x && (x.kind === 'shell' || x.kind === 'flow' || x.kind === 'playbook');
   const newId = () => crypto.randomBytes(5).toString('hex');
   /** Write a schedule's run as a chat every device sees (a new one each time, or the same one with chat 'same'). */
@@ -794,6 +816,15 @@ function createResident(opts, shared) {
       if (op === 'modelCheck') return runtime ? runtime.checkModel(by) : { ok: null, note: 'No runtime on this host.' };
       if (op === 'bridgeKey') { setBridgeToken(String(a.bridge || ''), typeof a.key === 'string' ? a.key.trim() : ''); return { ok: true, set: !!a.key, note: 'Restart the host for a bridge to use a new key.' }; }
       if (op === 'release') return { released: !!revoke(String(a.device || '')) };
+      if (op === 'backupKey') {
+        const f = path.join(stateDir, 'atelier-secrets.json'); const name = String(a.name || '');
+        if (!['abToken', 'abPass'].includes(name)) throw Object.assign(new Error('Her backup server\u2019s token (abToken) or passphrase (abPass).'), { status: 400 });
+        let cur = {}; try { cur = JSON.parse(fs.readFileSync(f, 'utf8')); } catch { cur = {}; }
+        if (typeof a.key === 'string' && a.key.trim()) cur[name] = a.key.trim(); else delete cur[name];
+        fs.writeFileSync(f + '.tmp', JSON.stringify(cur), { mode: 0o600 }); fs.renameSync(f + '.tmp', f);
+        event('her.backup.key', { name, set: !!cur[name] }); return { ok: true, set: !!cur[name] };
+      }
+      if (op === 'backupNow') return engines.backupNow();
       throw Object.assign(new Error('Not something the keeper tends.'), { status: 400 });
     },
   };
@@ -808,17 +839,21 @@ function createResident(opts, shared) {
       // brain 'host': her loop on the host (host/loop.cjs), along her models' chains; "Try the model again" asks them
       const own = o.brain === 'host' ? { model: loopModel, probe: () => models.check() } : {};
       runtime = createRuntime({ settings, queue, redact, log: event, trace, home: root, ...own, ...o }).start();
-      if (runtime.brain === 'host') rhythms = setInterval(herSchedules, o.schedulesMs || 10000);
+      if (runtime.brain === 'host') {
+        rhythms = setInterval(herSchedules, o.schedulesMs || 10000);
+        rhythms2 = [setInterval(herRituals, o.ritualsMs || 15000), setInterval(herCuriosity, o.curiosityMs || 30000), setInterval(herBackup, o.backupMs || 60000)];
+      }
       return runtime;
     },
     /** Her own schedules, now (for tests and the host window). */
     herSchedules: () => herSchedules(),
+    herRituals: () => herRituals(), herCuriosity: (o) => herCuriosity(o), herBackup: () => herBackup(),
     engines: () => engines,
     loop: () => loop,
     runtime: () => runtime,
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); if (mcpClient) mcpClient.close(); nap.close(); },
+    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); for (const t of rhythms2) clearInterval(t); if (mcpClient) mcpClient.close(); nap.close(); },
   };
 }
 

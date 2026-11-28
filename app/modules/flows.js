@@ -390,6 +390,7 @@ function flowFire(f, input, via) {
     .finally(() => { FlowTrig.busy.delete(f._path); if (f.trigger?.type === 'note') FlowTrig.sig.set(f._path, flowWatchSig(f.trigger.path)); });
 }
 function flowTick() {
+  if (typeof HOST_RUNS_PROMPTS !== 'undefined' && HOST_RUNS_PROMPTS) return; // her loop is on the home host, which runs this
   const now = Date.now();
   for (const f of flowList()) {
     if (f._bad || f.enabled === false || f.trigger?.type !== 'schedule') continue;
@@ -400,6 +401,7 @@ function flowTick() {
   }
 }
 function flowNoteCheck() {
+  if (typeof HOST_RUNS_PROMPTS !== 'undefined' && HOST_RUNS_PROMPTS) return; // her loop is on the home host, which runs this
   const sig = flowFiles().map(p => p + ':' + vfs.nodes.get(p)?.mtime).join('|');
   if (sig !== FlowTrig.files) { FlowTrig.files = sig; flowsChanged(); }
   for (const f of flowList()) {

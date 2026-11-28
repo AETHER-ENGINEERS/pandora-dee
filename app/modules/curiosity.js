@@ -253,6 +253,7 @@ async function runCuriosity({ manual = false } = {}) {
 }
 function cuTick() {
   cuRenderStatus();
+  if (typeof HOST_RUNS_PROMPTS !== 'undefined' && HOST_RUNS_PROMPTS) return; // her loop is on the home host, which runs this
   if (!S.curiosityOn || CU.running || running || (typeof HB !== 'undefined' && HB.running) || Sched.draining || (typeof compacting !== 'undefined' && compacting)) return;
   let next = ls.get('cuNext', 0);
   if (!next || next < Date.now() - (cuOpts().max + 30) * 60000) { next = cuNextAt(Date.now(), cuOpts()); ls.set('cuNext', next); }

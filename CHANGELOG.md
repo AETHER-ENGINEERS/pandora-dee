@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **The Harbor's open sea.** The harbor town sits at the heart of a painted ocean, with every resident's island at a
+  real distance, each painted as her own land. Sail by dragging, zoom with the wheel, and click an island to voyage
+  there: a far island takes longer, and high clouds drift past more slowly than the sea. The harbor town's
+  lighthouse, ferry office, shipyard and drydock, and the reef offshore, each open what they keep. The plain chart is
+  one click away. Night darkens only the water.
 - **The Harbor: the host's own page for everything its window does** (`/host/harbor`). Every island on the sea, her
   island, travelled to and big, with signposts on it (where she lives, your way to her, her hands, raising her
   island with the keeper's hand), painted illustrations throughout, a journey for a

@@ -211,6 +211,54 @@
   .step .glyph.paint .art { width: 150px; transition: opacity .6s var(--ease), transform .8s var(--ease); animation: bob 6s ease-in-out infinite; }
   .shore .portrait { width: 200px; margin: 10px 0 0 -8px; animation: arrive 1s var(--ease) both, bob 7s ease-in-out 1s infinite; }
   .card .thumb { width: 92px; flex: none; }
+  /* ---- the open sea: a world you pan and sail across ---- */
+  body[data-screen="worldScreen"] main { max-width: none; padding: 0; }
+  body[data-screen="worldScreen"] header.top { position: fixed; left: 0; right: 0; top: 0; z-index: 4; padding: 18px 22px; pointer-events: none; }
+  body[data-screen="worldScreen"] header.top > * { pointer-events: auto; }
+  body[data-screen="worldScreen"] .hero { max-height: 0; opacity: 0; margin: 0 auto; }
+  #worldScreen, #worldScreen.away { transform: none !important; filter: none !important; } /* the sea fades, but never moves: its frame is the window */
+  #worldScreen.away { position: fixed; inset: 0; }
+  body[data-screen="worldScreen"] header.top { background: linear-gradient(180deg, var(--sea-top) 10%, transparent); padding-bottom: 40px; }
+  .frame { position: fixed; inset: 0; overflow: hidden; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .frame.dragging { cursor: grabbing; }
+  .world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform;
+    background: #2f6f9a url(/host/harbor/art/seamap.jpg) 0 0 / 100% 100% no-repeat; }
+  .world::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 30%, #0b091630 100%); }
+  /* night: only the water darkens; the islands keep a little light of their own */
+  :root[data-theme="dark"] .world { background-image: linear-gradient(#0a0c22d9, #120e2ad1), url(/host/harbor/art/seamap.jpg); background-size: 100% 100%; }
+  :root[data-theme="dark"] .world .land-art, :root[data-theme="dark"] .world .town-art { filter: brightness(.78) saturate(.9) drop-shadow(0 0 18px #bd72f322); }
+  .landmark { position: absolute; transform: translate(-50%, -50%); text-align: center; cursor: pointer; }
+  .landmark .land-art, .landmark .town-art { display: block; width: 100%; pointer-events: none; animation: bob 11s ease-in-out infinite; }
+  .landmark:nth-child(2n) .land-art { animation-duration: 13s; }
+  .landmark .tag { display: inline-flex; align-items: center; gap: 7px; margin-top: -6px; padding: 5px 13px; border-radius: 999px; white-space: nowrap;
+    background: var(--card); border: 1px solid var(--card-line); color: var(--ink); font: 600 calc(13px / var(--z, 1)) var(--sans); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: border-color .3s, box-shadow .3s; }
+  .landmark[data-go="town"] .tag { margin-top: -80px; }
+  .landmark:hover .tag, .landmark.here .tag { border-color: var(--accent); box-shadow: 0 10px 26px -14px var(--accent); }
+  .landmark .tag .tide { position: static; width: calc(9px / var(--z, 1)); height: calc(9px / var(--z, 1)); }
+  .landmark .tag small { color: var(--muted); font-weight: 500; }
+  .town-sign { position: absolute; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 8px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--card-line); color: var(--ink); font: 600 calc(12px / var(--z, 1)) var(--sans); white-space: nowrap; cursor: pointer;
+    opacity: 0; transition: opacity .6s var(--ease), border-color .3s; pointer-events: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .town-sign::before { content: ""; width: calc(8px / var(--z, 1)); height: calc(8px / var(--z, 1)); border-radius: 50%; background: var(--accent); animation: glow 3s ease-in-out infinite; }
+  .world.near-town .town-sign { opacity: 1; pointer-events: auto; }
+  .town-sign:hover, .town-sign.on { border-color: var(--accent); }
+  /* clouds that pass between you and the sea, slower than the sea itself (parallax) */
+  .highclouds { position: absolute; left: 0; top: 0; width: 3200px; height: 2400px; pointer-events: none; opacity: .5; will-change: transform; }
+  .highclouds img { position: absolute; width: var(--w); }
+  :root[data-theme="dark"] .highclouds { opacity: .12; }
+  .hud { position: fixed; right: 18px; bottom: 18px; z-index: 4; display: flex; flex-direction: column; gap: 8px; }
+  .hud .ghost { background: var(--card); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .hud .row { gap: 8px; justify-content: flex-end; }
+  .voyage { position: fixed; left: 50%; top: 84px; transform: translate(-50%, -10px); opacity: 0; z-index: 4; pointer-events: none;
+    background: var(--card); border: 1px solid var(--card-line); border-radius: 999px; padding: 6px 16px; font-size: 13px; color: var(--muted); transition: all .5s var(--ease); backdrop-filter: blur(8px); }
+  .voyage.on { opacity: 1; transform: translate(-50%, 0); }
+  .placecard { position: fixed; left: 22px; bottom: 22px; z-index: 5; width: min(440px, calc(100vw - 44px)); max-height: min(70vh, 640px); overflow: auto;
+    transform: translateY(20px); opacity: 0; pointer-events: none; transition: transform .6s var(--ease), opacity .5s var(--ease); }
+  .placecard.on { transform: none; opacity: 1; pointer-events: auto; }
+  .placecard h3 { font: 600 20px var(--serif); margin: 0 0 6px; display: flex; gap: 10px; align-items: center; }
+  .placecard .x { position: absolute; right: 12px; top: 10px; }
+  @media (max-width: 560px) { .placecard { left: 12px; right: 12px; bottom: 76px; width: auto; } .hud { right: 12px; bottom: 12px; flex-direction: row; } }
   /* her island: travelled to from the sea, big, with signposts on the island itself */
   .isle-top { display: flex; align-items: center; gap: 16px; margin: 6px 0 4px; }
   .isle-top h2 { font: 600 26px/1.2 var(--serif); margin: 0; }
@@ -308,8 +356,24 @@
     </div>
   </section>
 
-  <!-- the archipelago -->
+  <!-- the open sea: the harbor town at its heart, every island at its distance -->
+  <section class="screen away" id="worldScreen" aria-label="The open sea">
+    <div class="frame" id="frame">
+      <div class="world" id="world"></div>
+      <div class="highclouds" id="highclouds" aria-hidden="true"></div>
+    </div>
+    <div class="voyage" id="voyage" aria-live="polite"></div>
+    <div class="hud">
+      <div class="row"><button class="ghost" id="zoomIn" title="Nearer">+</button><button class="ghost" id="zoomOut" title="Farther">−</button></div>
+      <button class="ghost" id="homeHarbor">To the harbor</button>
+      <button class="ghost" id="toChart">The chart (a plain list)</button>
+    </div>
+    <div class="card placecard" id="placecard" role="dialog" aria-live="polite"></div>
+  </section>
+
+  <!-- the chart: the archipelago as a plain list, for old devices, screen readers, or speed -->
   <section class="screen away" id="seaScreen">
+    <div class="row" style="justify-content:space-between;margin-top:8px"><span class="note">The chart: every place, plainly.</span><button class="ghost" id="toWorld">Back to the open sea</button></div>
     <p class="note" id="elsewhere" hidden>You're looking from afar: the harbor is changed at the host itself.</p>
     <div class="seahead"><h2>The archipelago</h2><span class="note" id="count"></span></div>
     <div class="archipelago" id="islands"></div>
@@ -463,7 +527,8 @@
   };
 
   // ---- screens drift in and out ----
-  const screens = ['lanternScreen', 'seaScreen', 'journeyScreen', 'isleScreen'];
+  const screens = ['lanternScreen', 'seaScreen', 'journeyScreen', 'isleScreen', 'worldScreen'];
+  let home = store.get('pdhost:view') === 'chart' ? 'seaScreen' : 'worldScreen'; // where "back" goes: the open sea, or the chart
   function show(id) { document.body.dataset.screen = id; for (const s of screens) $('#' + s).classList.toggle('away', s !== id); window.scrollTo({ top: 0, behavior: 'smooth' }); if (id !== 'journeyScreen') stars(0); }
   const stars = (v) => document.documentElement.style.setProperty('--stars', String(v));
 
@@ -512,6 +577,183 @@
       try { await api('/host/harbor/reef/' + id, 'POST', { welcome: !!b.dataset.yes }); bottle(b.dataset.yes ? `Welcome, ${id}. Her island is planned: raise it with the keeper's hand.` : 'Turned back, gently.'); await refresh(); if (b.dataset.yes) openShore(id); } catch (e) { bottle(e.message); }
     }));
     if (isle) { const i = view.islands.find((x) => x.id === isle.id); if (i) drawIsle(i, true); }
+    drawWorld();
+  }
+
+  // ================= the open sea =================
+  const W = 4800, H = 3400, TOWN = { x: W / 2, y: H / 2 };
+  let REEF = { x: TOWN.x + 760, y: TOWN.y + 560 };
+  /** The reef lies in the clearest water near the harbor, away from every island. */
+  function placeReef(n) {
+    let best = null, bestD = -1;
+    for (let a = 0; a < 360; a += 15) {
+      const c = { x: TOWN.x + Math.cos(a * Math.PI / 180) * 720, y: TOWN.y + Math.sin(a * Math.PI / 180) * 560 };
+      let d = Infinity; for (let k = 0; k < n; k++) { const sp = spot(k); d = Math.min(d, Math.hypot(sp.x - c.x, sp.y - c.y)); }
+      if (d > bestD) { bestD = d; best = c; }
+    }
+    REEF = best;
+  }
+  const LAND_NAMES = { tropics: 'lilac tropics', highlands: 'misty highlands', oasis: 'a desert oasis', fjord: 'a snowy fjord', maple: 'maple hills', atoll: 'a coral atoll' };
+  // where the town's places stand on its painting (percent), and what each opens
+  const TOWN_SIGNS = { lighthouse: [38, 24, 'The lighthouse'], ferries: [30, 60, 'The ferry office'], drydock: [69, 47, 'The drydock'], shipyard: [61, 63, 'The shipyard'] };
+  const cam = { x: TOWN.x, y: TOWN.y, z: .55 };
+  const ZMIN = .22, ZMAX = 1.6;
+  let flying = null;
+  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Each island's place on the sea: around the harbor in a slow spiral, so newer ones lie farther out. */
+  function spot(k) { const a = k * 2.39996 + .5, r = 1150 + 230 * Math.floor(k / 2) + (k % 2) * 110; return { x: TOWN.x + Math.cos(a) * r, y: TOWN.y + Math.sin(a) * r * .78 }; }
+
+  function placeWorld() {
+    const fw = innerWidth, fh = innerHeight; // the sea's frame is the window itself
+    $('#world').style.transform = `translate(${fw / 2 - cam.x * cam.z}px, ${fh / 2 - cam.y * cam.z}px) scale(${cam.z})`;
+    $('#world').style.setProperty('--z', String(cam.z));
+    // the high clouds drift past more slowly than the sea below them
+    $('#highclouds').style.transform = `translate(${fw / 2 - 1600 - (cam.x - TOWN.x) * cam.z * .45}px, ${fh / 2 - 1200 - (cam.y - TOWN.y) * cam.z * .45}px)`;
+    const nearTown = Math.hypot(cam.x - TOWN.x, cam.y - TOWN.y) < 420 && cam.z > .8;
+    $('#world').classList.toggle('near-town', nearTown);
+  }
+  function drawWorld() {
+    if (!view) return;
+    const w = $('#world');
+    w.style.width = W + 'px'; w.style.height = H + 'px';
+    const isl = view.islands.map((i, k) => ({ ...i, at: spot(k) }));
+    placeReef(isl.length);
+    const sig = JSON.stringify(isl.map((i) => [i.id, i.name, i.up, i.land, i.run])) + view.reef.length + (view.atHost ? 1 : 0);
+    if (w.dataset.sig === sig) return;
+    w.dataset.sig = sig;
+    w.innerHTML = `
+      <div class="landmark" data-go="town" style="left:${TOWN.x}px;top:${TOWN.y}px;width:640px">
+        <div style="position:relative"><img class="town-art" src="/host/harbor/art/town.png" alt="">
+        ${Object.entries(TOWN_SIGNS).map(([k2, v]) => `<button class="town-sign" data-place="${k2}" style="left:${v[0]}%;top:${v[1]}%">${esc(v[2])}</button>`).join('')}</div>
+        <div class="tag">${icon('lantern')}The harbor <small>· ${esc(view.harbor.name)}'s host</small></div>
+      </div>
+      <div class="landmark" data-go="reef" style="left:${REEF.x}px;top:${REEF.y}px;width:300px">
+        <img class="land-art" src="/host/harbor/art/reefmap.png" alt="">
+        <div class="tag">${icon('reef')}The reef${view.reef.length ? ` <small>· ${view.reef.length} waiting</small>` : ''}</div>
+      </div>` + isl.map((i) => `
+      <div class="landmark" data-island="${esc(i.id)}" style="left:${i.at.x}px;top:${i.at.y}px;width:560px">
+        <img class="land-art" src="/host/harbor/art/land-${esc(i.land)}.png" alt="">
+        <div class="tag"><span class="tide${i.up ? ' up' : ''}"></span>${esc(i.name)} <small>· ${esc(LAND_NAMES[i.land] || i.land)}</small></div>
+      </div>`).join('');
+    w.querySelectorAll('[data-island]').forEach((el) => (el.onclick = (e) => { if (!dragged) sailTo(el.dataset.island); }));
+    w.querySelector('[data-go="town"]').onclick = (e) => { if (dragged) return; const sgn = e.target.closest('.town-sign'); if (sgn) return openPlace(sgn.dataset.place); sail(TOWN, 1.1, 'the harbor', () => {}); };
+    w.querySelector('[data-go="reef"]').onclick = () => { if (!dragged) sail(REEF, 1.05, 'the reef', () => openPlace('reef')); };
+    placeWorld();
+  }
+
+  /** Sail to a point: the longer the distance, the longer the voyage, rising a little mid-way to see farther. */
+  function sail(to, z, name, then) {
+    closePlace();
+    const from = { ...cam }, dist = Math.hypot(to.x - from.x, to.y - from.y);
+    const ms = reduce() ? 1 : Math.max(1000, Math.min(4600, 700 + dist * 1.15));
+    const lift = Math.min(.45, dist / 5000); // how far the camera rises mid-voyage
+    const t0 = performance.now();
+    $('#voyage').textContent = dist > 300 ? `sailing to ${name}…` : '';
+    $('#voyage').classList.toggle('on', dist > 300);
+    if (flying) cancelAnimationFrame(flying);
+    const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / ms), e = ease(t);
+      cam.x = from.x + (to.x - from.x) * e; cam.y = from.y + (to.y - from.y) * e;
+      cam.z = (from.z + (z - from.z) * e) * (1 - lift * Math.sin(Math.PI * t));
+      placeWorld();
+      if (t < 1) flying = requestAnimationFrame(step);
+      else { flying = null; $('#voyage').classList.remove('on'); then && then(); }
+    };
+    flying = requestAnimationFrame(step);
+  }
+  function sailTo(id) {
+    const k = view.islands.findIndex((x) => x.id === id); if (k < 0) return;
+    const i = view.islands[k];
+    sail(spot(k), 1.15, i.name, () => openPlace('island:' + id));
+  }
+
+  // ---- dragging the sea, the wheel, the keys ----
+  let drag = null, dragged = false;
+  $('#frame').addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; dragged = false; });
+  addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!dragged && Math.hypot(dx, dy) > 5) { dragged = true; $('#frame').classList.add('dragging'); if (flying) { cancelAnimationFrame(flying); flying = null; $('#voyage').classList.remove('on'); } }
+    if (dragged) { cam.x = Math.max(0, Math.min(W, drag.cx - dx / cam.z)); cam.y = Math.max(0, Math.min(H, drag.cy - dy / cam.z)); placeWorld(); }
+  });
+  addEventListener('pointerup', () => { drag = null; $('#frame').classList.remove('dragging'); setTimeout(() => { dragged = false; }, 0); });
+  $('#frame').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const mx = e.clientX - innerWidth / 2, my = e.clientY - innerHeight / 2;
+    const before = { x: cam.x + mx / cam.z, y: cam.y + my / cam.z };
+    cam.z = Math.max(ZMIN, Math.min(ZMAX, cam.z * Math.exp(-e.deltaY * .0015)));
+    cam.x = before.x - mx / cam.z; cam.y = before.y - my / cam.z; // the point under the pointer stays put
+    placeWorld();
+  }, { passive: false });
+  const zoomBy = (f) => { const to = { x: cam.x, y: cam.y }; sail(to, Math.max(ZMIN, Math.min(ZMAX, cam.z * f)), '', null); };
+  $('#zoomIn').onclick = () => zoomBy(1.4);
+  $('#zoomOut').onclick = () => zoomBy(1 / 1.4);
+  $('#homeHarbor').onclick = () => sail(TOWN, 1.1, 'the harbor', null);
+  $('#toChart').onclick = () => { home = 'seaScreen'; store.set('pdhost:view', 'chart'); show('seaScreen'); };
+  $('#toWorld').onclick = () => { home = 'worldScreen'; store.set('pdhost:view', 'world'); show('worldScreen'); requestAnimationFrame(placeWorld); };
+  addEventListener('keydown', (e) => {
+    if (document.body.dataset.screen !== 'worldScreen' || /input|textarea|select/i.test((e.target || {}).tagName || '')) return;
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (k) { e.preventDefault(); cam.x += k[0] * 160 / cam.z; cam.y += k[1] * 160 / cam.z; placeWorld(); }
+    if (e.key === '+' || e.key === '=') zoomBy(1.4);
+    if (e.key === '-') zoomBy(1 / 1.4);
+    if (e.key === 'Escape') closePlace();
+  });
+  addEventListener('resize', placeWorld);
+
+  // ---- a place's card: what's kept there ----
+  function closePlace() { $('#placecard').classList.remove('on'); document.querySelectorAll('.town-sign.on').forEach((b) => b.classList.remove('on')); }
+  function openPlace(what) {
+    if (!view) return;
+    const el = $('#placecard'), host = view.atHost;
+    document.querySelectorAll('.town-sign').forEach((b) => b.classList.toggle('on', b.dataset.place === what));
+    let html = '';
+    if (what.startsWith('island:')) {
+      const i = view.islands.find((x) => x.id === what.slice(7)); if (!i) return;
+      const r = runOf(i.run);
+      html = `<h3>${icon('island')}${esc(i.name)}</h3>
+        <p class="note">${i.up ? 'High tide: she is awake.' : 'Low tide: she isn\u2019t running right now.'} ${esc(r.b)}, on ${esc(LAND_NAMES[i.land] || i.land)}.</p>
+        <label class="small" for="landPick">Her land</label>
+        <select class="line" id="landPick"${host ? '' : ' disabled'}>${view.lands.map((l) => `<option value="${l}"${l === i.land ? ' selected' : ''}>${esc(LAND_NAMES[l] || l)}</option>`).join('')}</select>
+        <p style="margin-top:16px" class="row"><button class="sail" id="ashore">Step ashore</button></p>`;
+      el.innerHTML = `<button class="ghost x" id="pcX">✕</button>` + html; el.classList.add('on');
+      $('#ashore').onclick = () => { closePlace(); const lm = document.querySelector(`[data-island="${CSS.escape(i.id)}"]`); openShore(i.id, lm); };
+      $('#landPick').onchange = async (e) => { try { await api('/host/harbor/islands/' + i.id, 'POST', { land: e.target.value }); bottle(`${i.name}'s island becomes ${LAND_NAMES[e.target.value]}.`); await refresh(); } catch (err) { bottle(err.message); } };
+      $('#pcX').onclick = closePlace;
+      return;
+    }
+    if (what === 'lighthouse') html = `<h3>${icon('lantern')}The lighthouse</h3>
+      <p class="note">The keeper's: ${view.keepers} ferr${view.keepers === 1 ? 'y' : 'ies'} light this harbor's lantern (the keeper's pairing). It looks after every island here, and holds no key to any one of them.</p>
+      <p class="note">Host ${esc(view.harbor.version)} · ${view.atHost ? 'you are at the host itself' : 'you are looking from afar: changes are made at the host itself'}.</p>
+      <p class="row"><button class="ghost" id="pcChart">The chart (a plain list)</button></p>`;
+    if (what === 'ferries') html = `<h3>${icon('ferry')}The ferry office</h3>
+      <p class="note">A ferry (a device) moors with a PIN the host shows: good once, for ten minutes. On the ferry, open her address and enter it.</p>
+      <div id="pcPin" class="pin hidden"></div>
+      <p class="row"><button class="sail" id="pcNewPin"${host ? '' : ' disabled'}>Light a PIN</button></p>`;
+    if (what === 'shipyard') html = `<h3>${icon('seed')}The shipyard</h3>
+      <p class="note">Where new islands begin: a seed, a garden, where she'll live, your way to her, and her land.</p>
+      <p class="row"><button class="sail" id="pcNew"${host ? '' : ' disabled'}>Plant a seed</button></p>`;
+    if (what === 'drydock') {
+      const own = view.islands.filter((i) => i.run === 'service');
+      html = `<h3>${icon('stars')}The drydock</h3><p class="note">Where islands are raised as their own (her own service, under her own identity), by the keeper's hand.</p>` +
+        (own.length ? own.map((i) => `<div class="card row" style="margin-top:10px;padding:12px"><span class="grow"><b>${esc(i.name)}</b><br><span class="note">${i.up ? 'risen' : 'not raised yet'}</span></span><button class="ghost" data-visit="${esc(i.id)}">Visit</button></div>`).join('')
+          : '<p class="note">No island is set to be her own yet. On an island, choose "Her own island" under where she lives.</p>');
+    }
+    if (what === 'reef') html = `<h3>${icon('reef')}The reef</h3>` + (view.reef.length ? view.reef.map((w) => `
+      <div class="card" style="margin-top:10px;padding:12px"><b>${esc(w.name)}</b> <span class="note">(${esc(w.id)})</span><div class="note">${esc(w.device)} asks for her to come ashore, on her own island.</div>
+      <div class="row" style="margin-top:8px"><button class="ghost" data-no="${esc(w.id)}"${host ? '' : ' disabled'}>Turn back</button><button class="sail" data-yes="${esc(w.id)}"${host ? '' : ' disabled'}>Welcome her</button></div></div>`).join('')
+      : '<p class="note">Quiet water: no one is waiting to come ashore.</p>');
+    el.innerHTML = `<button class="ghost x" id="pcX">✕</button>` + html; el.classList.add('on');
+    $('#pcX').onclick = closePlace;
+    if ($('#pcChart')) $('#pcChart').onclick = () => $('#toChart').click();
+    if ($('#pcNew')) $('#pcNew').onclick = () => { closePlace(); startJourney(); };
+    if ($('#pcNewPin')) $('#pcNewPin').onclick = async () => { try { const r = await api('/host/harbor/pin', 'POST', {}); $('#pcPin').textContent = r.pin; $('#pcPin').classList.remove('hidden'); } catch (e) { bottle(e.message); } };
+    el.querySelectorAll('[data-visit]').forEach((b) => (b.onclick = () => sailTo(b.dataset.visit)));
+    el.querySelectorAll('[data-yes],[data-no]').forEach((b) => (b.onclick = async () => {
+      const id = b.dataset.yes || b.dataset.no;
+      try { await api('/host/harbor/reef/' + id, 'POST', { welcome: !!b.dataset.yes }); bottle(b.dataset.yes ? `Welcome, ${id}. Her island is planned: raise it at the drydock.` : 'Turned back, gently.'); await refresh(); openPlace('reef'); } catch (e) { bottle(e.message); }
+    }));
   }
 
   // the tide, checked gently: if the host goes quiet, say so once, keep listening, and say when it answers again
@@ -569,7 +811,8 @@
   function closeShore() {
     if (!isle) return;
     const id = isle.id; isle = null;
-    show('seaScreen');
+    show(home);
+    if (home === 'worldScreen') requestAnimationFrame(placeWorld);
     const back = document.querySelector(`.island[data-id="${CSS.escape(id)}"] .art`);
     if (back && back.animate) back.animate([{ transform: 'scale(1.35)', opacity: .4 }, { transform: 'none', opacity: 1 }], { duration: 800, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
@@ -676,11 +919,11 @@
     try {
       $('#jNext').disabled = true;
       await api('/host/harbor/islands', 'POST', { id, name: $('#jName').value || id, root: j.garden === 'existing' ? $('#jRoot').value.trim() : undefined, run: j.run, access: j.run === 'service' ? j.access : undefined });
-      show('seaScreen'); await refresh(); bottle(`${$('#jName').value || id} has joined the archipelago.`);
+      show(home); await refresh(); bottle(`${$('#jName').value || id} has joined the archipelago.`);
       if (j.run === 'service') setTimeout(() => openShore(id), 900);
     } catch (e) { bottle(e.message); } finally { $('#jNext').disabled = false; }
   };
-  $('#jBack').onclick = () => { if (step === 0) return show('seaScreen'); let n = step - 1; if (skips(n)) n--; go(n); };
+  $('#jBack').onclick = () => { if (step === 0) return show(home); let n = step - 1; if (skips(n)) n--; go(n); };
 
   // ---- ferries: a PIN ----
   $('#newPin').onclick = async () => { try { const r = await api('/host/harbor/pin', 'POST', {}); $('#pinValue').textContent = r.pin; $('#pinShown').classList.remove('hidden'); $('#pinAsk').classList.add('hidden'); setTimeout(() => { $('#pinShown').classList.add('hidden'); $('#pinAsk').classList.remove('hidden'); }, 10 * 60e3); } catch (e) { bottle(e.message); } };
@@ -692,7 +935,7 @@
       const b = await r.json().catch(() => ({}));
       if (!r.ok) return bottle(b.error || 'The lantern didn\'t take.');
       token = b.token; store.set('pdhost:keeper', token);
-      bottle('The lantern is lit.'); show('seaScreen'); await refresh();
+      bottle('The lantern is lit.'); show(home); await refresh();
     } catch { bottle('The harbor didn\'t answer.'); }
   };
   $('#pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#light').click(); });
@@ -705,7 +948,9 @@
       $('#light').disabled = !hello.atHost; $('#pin').disabled = !hello.atHost;
       return show('lanternScreen');
     }
-    show('seaScreen'); await refresh();
+    $('#highclouds').innerHTML = [[300, 260, 420], [1500, 120, 300], [2500, 520, 520], [700, 1300, 360], [1900, 1700, 460], [2900, 1500, 280], [1200, 2100, 400]]
+      .map(([x, y, w]) => `<img class="art" src="/host/harbor/art/cloud.png" alt="" style="left:${x}px;top:${y}px;--w:${w}px">`).join('');
+    show(home); await refresh(); placeWorld();
     const tide = () => setTimeout(async () => { if (!document.hidden) await refresh(); tide(); }, quiet ? 15000 : 6000);
     tide();
   })();

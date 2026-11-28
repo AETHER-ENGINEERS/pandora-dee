@@ -18,6 +18,8 @@ const { spawn } = require('node:child_process');
 const separate = require('./separate.cjs');
 const { requestPlace, mayChange } = require('./places.cjs');
 
+// each island's land: how she looks on the open sea (the regions, and so her abilities, are the same on every land)
+const LANDS = ['tropics', 'highlands', 'oasis', 'fjord', 'maple', 'atoll'];
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 const bearer = (req) => { const m = /^Bearer\s+(\S+)$/i.exec(String(req.headers.authorization || '')); return m ? m[1] : ''; };
 
@@ -37,6 +39,12 @@ function createHarbor(ctx) {
     return keepers.find((k) => k.hash.length === h.length && crypto.timingSafeEqual(Buffer.from(k.hash), Buffer.from(h))) || null;
   };
   const event = (k, d) => ctx.first.event(k, d);
+  const worldFile = path.join(ctx.stateDir, 'harbor-world.json');
+  let world = { lands: {} };
+  try { world = JSON.parse(fs.readFileSync(worldFile, 'utf8')); if (!world || typeof world.lands !== 'object') world = { lands: {} }; } catch { world = { lands: {} }; }
+  const saveWorld = () => { fs.writeFileSync(worldFile + '.tmp', JSON.stringify(world, null, 1)); fs.renameSync(worldFile + '.tmp', worldFile); };
+  const landOf = (id, first) => (LANDS.includes(world.lands[id]) ? world.lands[id] : first ? 'tropics' : LANDS[parseInt(sha(id).slice(0, 6), 16) % LANDS.length]);
+  const setLand = (id, land) => { if (!LANDS.includes(land)) throw fail(400, `A land is one of: ${LANDS.join(', ')}.`); world.lands[id] = land; saveWorld(); };
   const clean = (s) => String(s || '').replace(/[\x00-\x1f<>]/g, '').trim().slice(0, 60);
   const fail = (status, error) => Object.assign(new Error(error), { status });
 
@@ -56,14 +64,14 @@ function createHarbor(ctx) {
       const e = ctx.entryOf(r.id);
       const up = res.remote ? await res.up() : true;
       return {
-        id: r.id, name: r.name, port: r.port, run: r.run, first: r.first, hostShell: r.hostShell,
+        id: r.id, name: r.name, port: r.port, run: r.run, first: r.first, hostShell: r.hostShell, land: landOf(r.id, r.first),
         ...(r.run === 'service' ? { access: e.access || 'person' } : {}),
         up, home: atHost ? res.root : undefined,
         ferries: res.remote ? null : res.devices().length,
         created: e.created || null,
       };
     }));
-    return { harbor: { name: ctx.first.name, version: ctx.version, platform: process.platform }, atHost, islands, reef: ctx.waiting(), keepers: keepers.length };
+    return { harbor: { name: ctx.first.name, version: ctx.version, platform: process.platform }, atHost, islands, reef: ctx.waiting(), keepers: keepers.length, lands: LANDS };
   }
 
   /** Handles /host/harbor and below. Resolves true if it was one of these. */
@@ -122,7 +130,9 @@ function createHarbor(ctx) {
     try {
       if (p === '/host/harbor/pin') { send(res, 200, { pin: ctx.pins.newPin(), minutes: 10 }); return true; }
       if (p === '/host/harbor/islands') {
+        if (b.land !== undefined && !LANDS.includes(b.land)) throw fail(400, `A land is one of: ${LANDS.join(', ')}.`);
         const r = ctx.addResident({ id: b.id, name: b.name, root: b.root || undefined, local: true, run: b.run, access: b.access, hostShell: b.hostShell }, `the harbor (${k.name})`);
+        if (b.land !== undefined) setLand(r.id, b.land);
         send(res, 200, { id: r.id }); return true;
       }
       const im = /^\/host\/harbor\/islands\/([a-z0-9-]+)(?:\/(service\/install|service\/remove|ferries\/([A-Za-z0-9]+)\/release))?$/.exec(p);
@@ -140,6 +150,7 @@ function createHarbor(ctx) {
           if (r.remote) throw fail(409, 'Her ferries are released at her own address, while she runs on her own.');
           send(res, 200, { released: !!r.revoke(im[3]) }); return true;
         }
+        if (b.land !== undefined) { if (!ctx.resident(id)) throw fail(404, `No island "${id}".`); setLand(id, b.land); }
         if (b.run !== undefined) await ctx.setRun(id, b.run);
         if (b.access !== undefined) await ctx.setAccess(id, b.access);
         if (b.hostShell !== undefined) await ctx.setHostShell(id, !!b.hostShell);

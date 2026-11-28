@@ -84,10 +84,10 @@ try {
   ok(await until(() => !(dbFile('sessions') || []).some((s) => s.id === idA)) && !!(await until(async () => !(await titles(B.page)).includes('From the laptop'))), 'a chat removed on one device is gone from both');
 
   // ---------- her settings: shared; her keys and each device's model address: not ----------
-  await A.page.evaluate(() => { S.temperature = 0.37; S.groqKey = 'made-up-key-on-laptop'; S.secrets = { TOKEN: 'made-up-secret-on-laptop' }; S.host ='http://localhost:11434'; saveSettings(); });
+  await A.page.evaluate(() => { S.temperature = 0.37; S.groqKey = 'made-up-key-on-laptop'; S.secrets = { TOKEN: 'made-up-secret-on-laptop' }; S.abToken = 'made-up-backup-token'; S.host ='http://localhost:11434'; saveSettings(); });
   await new Promise((r) => setTimeout(r, 600));
   const hs = store.settings();
-  ok(hs.temperature === 0.37 && !('groqKey' in hs) && !('secrets' in hs) && !('host' in hs), 'her settings go to the host; her API keys, her secrets and this device\'s model address do not');
+  ok(hs.temperature === 0.37 && !('groqKey' in hs) && !('secrets' in hs) && !('abToken' in hs) && !('host' in hs), 'her settings go to the host; her API keys, her secrets and this device\'s model address do not');
   ok((await browserOwn(A.page)).settings.groqKey === 'made-up-key-on-laptop', 'the laptop keeps its own key, as before');
   await B.page.reload(); await ready(B.page);
   const bS = await B.page.evaluate(() => ({ t: S.temperature, k: S.groqKey }));

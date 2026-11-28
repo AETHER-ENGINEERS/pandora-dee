@@ -999,7 +999,13 @@
           <ul class="plain">${t.bridges.length ? t.bridges.map((b2) => `<li><span><b>${esc(b2.name)}</b><br><small class="note">${b2.url ? 'lit' : 'not set up'} · key ${b2.tokenSet ? 'hung up' : 'not given'}</small></span></li>`).join('') : '<li>No bridges set up yet.</li>'}</ul>
           ${t.bridges.length ? `<label class="small">Give a bridge its key (written once, never shown)</label><div class="row"><select class="line" id="bkName" style="width:auto">${t.bridges.map((b2) => `<option>${esc(b2.name)}</option>`).join('')}</select><input class="line" id="bkKey" type="password" autocomplete="off" placeholder="its key" style="flex:1"><button class="ghost" id="bkSet"${host ? '' : ' disabled'}>Hang it up</button></div>` : ''}`;
       } else if (pk === 'chest') {
-        h += `<p class="note">Her things: what was brought in from a backup, and when. Bringing things in or taking them out happens in her Atelier's "Her things" for now.</p>
+        const B = (t.house || {}).backup || {};
+        h += `<p class="note">Her things: her scheduled backup, and what was brought in from a backup. Bringing things in or taking them out happens in her Atelier's "Her things" for now.</p>
+          <div class="kv"><span>Her scheduled backup</span><span>${B.on ? 'on' : 'off (her Atelier’s Settings → Backup)'}</span><span>Last good one</span><span>${B.last ? esc(ago(new Date(B.last).toISOString())) : 'none yet'}</span>${B.note ? `<span>Last word</span><span>${esc(B.note)}</span>` : ''}</div>
+          <label class="small">Her backup server's token, or its passphrase (written once, never shown)</label>
+          <div class="row"><select class="line" id="abName" style="width:auto"><option value="abToken">token</option><option value="abPass">passphrase</option></select><input class="line" id="abKey" type="password" autocomplete="off" placeholder="its value" style="flex:1"><button class="ghost" id="abSet"${host ? '' : ' disabled'}>Hang it up</button></div>
+          <p class="row" style="margin-top:10px"><button class="ghost" id="abNow"${host ? '' : ' disabled'}>Back her up now</button></p>`;
+        h += `
           <ul class="plain">${t.imports.length ? t.imports.map((m) => `<li><span><b>${esc(m.name)}</b><br><small class="note">${esc(m.kind)} · ${esc(ago(m.at))}${m.undone ? ' · undone' : ''}</small></span></li>`).join('') : '<li>Nothing brought in yet.</li>'}</ul>`;
       } else if (pk === 'well') {
         const M = t.models || {};
@@ -1044,6 +1050,8 @@
       el.querySelectorAll('input[data-sw]').forEach((c) => (c.onchange = () => tendAct('settings', { patch: { switches: { [c.dataset.sw]: c.checked } } }, null)));
       if ($('#resume')) $('#resume').onclick = () => tendAct('resume', {}, 'Back on, what the tide had turned off.');
       if ($('#bkSet')) $('#bkSet').onclick = () => { const key = $('#bkKey').value; $('#bkKey').value = ''; tendAct('bridgeKey', { bridge: $('#bkName').value, key }, 'Hung up. The host uses it after its next restart.'); };
+      if ($('#abSet')) $('#abSet').onclick = () => { const key = $('#abKey').value; $('#abKey').value = ''; tendAct('backupKey', { name: $('#abName').value, key }, 'Hung up.'); };
+      if ($('#abNow')) $('#abNow').onclick = async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/tend/backupNow`, 'POST', {}); bottle(r2 && r2.ok ? 'Her backup went to her backup server.' : 'Not backed up: ' + ((r2 && r2.msg) || 'the host’s log says why')); await loadTend(); drawPanel(i, false); } catch (e) { bottle(e.message); } };
       if ($('#mkSet')) $('#mkSet').onclick = () => { const key = $('#mkKey').value; $('#mkKey').value = ''; tendAct('modelKey', { provider: $('#mkName').value, key }, 'Hung up.'); };
       if ($('#mCheck')) $('#mCheck').onclick = async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/tend/modelCheck`, 'POST', {}); bottle(r2.ok ? 'Her model answers.' : r2.ok === false ? 'Her model didn\u2019t answer: the host\u2019s trace says why.' : (r2.note || 'Nothing to try.')); } catch (e) { bottle(e.message); } };
     };

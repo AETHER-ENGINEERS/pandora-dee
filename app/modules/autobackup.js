@@ -87,6 +87,7 @@ async function abRestore(name) {
 }
 function abTick() {
   abRenderStatus(); const c = abCfg();
+  if (typeof HOST_RUNS_PROMPTS !== 'undefined' && HOST_RUNS_PROMPTS) return; // her loop is on the home host, which runs this
   if (!c.on || AB.running || running || (typeof compacting !== 'undefined' && compacting) || (typeof CU !== 'undefined' && CU.running)) return;
   const last = ls.get('abLast', 0); if (Date.now() < last + c.hours * 3600e3 || Date.now() < ls.get('abRetryAt', 0)) return;
   if (!c.url || !c.token) return;

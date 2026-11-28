@@ -60,7 +60,7 @@
   // model addresses (a "localhost" means this device), and the caches the page rebuilds on its own.
   var DEVICE_LS = { lastSession: 1, draft: 1, setTab: 1, noteMode: 1, openDirs: 1, hist: 1, diskHint: 1, jadeLinkVer: 1 };
   var DEVICE_SETTINGS = ['host', 'lcppHost', 'ollayaHost', 'oaiHost', 'engine', 'voiceName', 'voicePitch', 'voiceRate', 'jadeFrame', 'jadeShow',
-    'jadeVoice', 'jadeCompact', 'bbUrl', 'ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'secrets'];
+    'jadeVoice', 'jadeCompact', 'bbUrl', 'ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'secrets', 'abToken', 'abPass'];
   // (her secrets reach the host only through the import's box, into its write-only key file: never through settings)
   function dbLocal(k) { return k === 'vfs' || k === 'vfs-migrated' || /^vfs-before-folder/.test(k) || /^mpy:/.test(k) || k === 'vaultParse' || k === 'settingsCopy' || k === 'pendingSettings'; }
   var cache = {}, revs = {}, changeFns = [], mergedFns = [], errorFns = [];

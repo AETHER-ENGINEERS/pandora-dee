@@ -175,6 +175,47 @@
     onError: function (f) { errorFns.push(f); }
   };
   window.PandoraDesk.state = state;
+
+  // her device tools (parity step 4, host/devices.cjs): this device says which it has, then asks the host for its next
+  // call (a long poll, so old devices can take part), runs it here, and answers. serve({ list() → [tool defs],
+  // run(name, args) → Promise<text> }); what it has is said again whenever it changes (checked every 5 seconds; sent only when it has).
+  var devServing = null;
+  window.PandoraDesk.devices = {
+    serve: function (o) {
+      if (devServing || !window.fetch) return;
+      devServing = o;
+      var said = '', stop = false;
+      var hdr = function (json) { var h = { 'Authorization': 'Bearer ' + token, 'X-Page': page }; if (json) h['Content-Type'] = 'application/json'; return h; };
+      var tell = function (force) {
+        var list = []; try { list = o.list() || []; } catch (e) { list = []; }
+        var s = JSON.stringify(list);
+        if (!force && s === said) return Promise.resolve();
+        return window.fetch('/host/devices/offer', { method: 'PUT', headers: hdr(true), body: '{"tools":' + s + '}' })
+          .then(function (r) { if (r.status === 401) stop = true; else if (r.ok) said = s; });
+      };
+      var answer = function (c) {
+        var done = function (ok, out) {
+          return window.fetch('/host/devices/result', { method: 'POST', headers: hdr(true), body: JSON.stringify({ id: c.id, ok: ok, out: String(out == null ? '' : out) }) }).catch(function () { /* the host will say it didn't hear */ });
+        };
+        var p; try { p = Promise.resolve(o.run(c.tool, c.args || {})); } catch (e) { p = Promise.reject(e); }
+        return p.then(function (out) { return done(true, typeof out === 'string' ? out : JSON.stringify(out)); }, function (e) { return done(false, (e && e.message) || String(e)); });
+      };
+      var ask = function () {
+        if (stop || removed) return;
+        window.fetch('/host/devices/next?wait=25000', { headers: hdr(false), cache: 'no-store' })
+          .then(function (r) { if (r.status === 401) { stop = true; return null; } return r.ok ? r.json() : null; })
+          .then(function (c) {
+            if (c && c.offer) { said = ''; return tell(true); }
+            if (c && c.id) answer(c); // runs while the next ask waits, so a long call doesn't hold up others
+          })
+          .catch(function () { /* asked again below */ })
+          .then(function () { if (!stop && !removed) setTimeout(ask, 300); });
+      };
+      tell(true).then(ask, ask);
+      setInterval(function () { if (!stop) tell(false).catch(function () {}); }, 5000);
+      window.addEventListener('pagehide', function () { try { window.fetch('/host/devices/bye', { method: 'POST', headers: hdr(true), body: '{}', keepalive: true }); } catch (e) { /* closing */ } });
+    }
+  };
   // what other devices change, as it happens: this page's cache is refreshed, then the page is told
   function listen() {
     if (removed || !window.fetch) return;

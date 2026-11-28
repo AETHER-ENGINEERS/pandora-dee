@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Her device tools, through the devices that visit.** With her loop on the host, each paired device says which of her
+  device tools it has (the phone's own in her Android app, USB, models on its own chip); her loop offers them, and each
+  call goes to a device that has it, runs there with its own yes, and comes back. In the Harbor, her house's window
+  shows the devices that visit and what each has, and the observatory's telescope her latest calls (facts only). The
+  computer in her house now says rightly what runs on the host.
 - **Her codemode on the host.** With her loop on the host and codemode tools on her tool servers, her loop offers her
   Atelier's own codemode: a script that calls those tools and her own together, with the same helpers and answers. It
   runs in a process of its own with Node's permission system on and nothing of Node's in its hands, stops at its time,

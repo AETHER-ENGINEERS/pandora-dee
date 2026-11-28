@@ -823,7 +823,7 @@
     atoll: { cove: [28, 71], village: [42, 40], springs: [58, 56], stones: [78, 44], grove: [25, 22], cliffs: [78, 19], observatory: [50, 10], reef: [62, 88], islet: [91, 80] },
   };
   const OUTSIDE = () => Object.entries(REGIONS).filter(([, g]) => !g.inside);
-  const BUILDING = { window: 'parity step 4 (device tools through connected devices)', grove: 'parity step 1 (her memory on the host)', scope: 'parity step 4 (device tools through connected devices)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
+  const BUILDING = { grove: 'parity step 1 (her memory on the host)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
   let isle = null; // { id, region, place, tend, tendErr }
 
   const regionsAt = (land) => REGION_AT[land] || REGION_AT.tropics;
@@ -939,7 +939,7 @@
       const pk = isle.place, P = REGIONS[isle.region].places[pk];
       h = `<h3>${icon(REGIONS[isle.region].i)}${esc(P[2])}</h3>`;
       if (BUILDING[pk]) {
-        const what = { grove: 'Her deep memory: Memory.md, her embeddings, searching her chat history. The library in her house keeps her notes; the grove holds what she remembers.', scope: 'What she senses through the devices that visit: phone, camera, screen, voice. Each device lists what it has, and her calls go to it.', boat: 'The crossing to the manor (SEASIDE): she visits as herself, one Pandora in many places, never a twin. Her vault, chats and memory are read through the host.' }[pk];
+        const what = { grove: 'Her deep memory: Memory.md, her embeddings, searching her chat history. The library in her house keeps her notes; the grove holds what she remembers.', boat: 'The crossing to the manor (SEASIDE): she visits as herself, one Pandora in many places, never a twin. Her vault, chats and memory are read through the host.' }[pk];
         h += `<p class="note">${esc(what)}</p><div class="scaffold">Still being built: comes with ${esc(BUILDING[pk])}.</div>`;
       } else if (pk === 'gate') {
         h += `<p class="note">Where she lives, and your way to her.</p><div class="choices" id="sRun"${i.first ? ' hidden' : ''}>${choices('srun', RUNS, i.run, !host)}</div>
@@ -970,7 +970,7 @@
       } else if (pk === 'computer') {
         const H = t.house || {};
         const here = t.brain === 'host';
-        h += `<p class="note">Her rituals, schedules and shell. ${here ? 'Her loop is on the host, so her schedules run here, with her tools, and each run is a chat every device sees. Rituals, playbooks and shell jobs still run in an open Atelier.' : 'Her loop is in the connected Atelier, so her schedules run there while it is open.'}</p>
+        h += `<p class="note">Her rituals, schedules and shell. ${here ? 'Her loop is on the host, so her schedules, rituals and playbooks run here, with her tools, and each run is a chat every device sees. Shell jobs run here when her hands are on this computer; playbooks that drive a browser wait for an open Atelier.' : 'Her loop is in the connected Atelier, so her schedules run there while it is open.'}</p>
           <ul class="plain">${(H.schedules || []).length ? H.schedules.map((x) => `<li><span><b>${esc(x.name)}</b>${x.job ? ' <small class="note">(a job: in the Atelier)</small>' : ''}<br><small class="note">${x.on ? (x.next ? 'next ' + esc(new Date(x.next).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })) : 'on') : 'resting'}${x.status ? ' · ' + esc(x.status) : ''}</small></span></li>`).join('') : '<li>No schedules yet.</li>'}</ul>
           <div class="kv"><span>Her shell on this computer</span><span>${t.resident.hostShell ? 'in her hands' : 'resting'}</span></div>`;
       } else if (pk === 'table') {
@@ -981,6 +981,15 @@
         const H = t.house || {}, so = H.soul || {};
         h += `<p class="note">Who she is: her SOUL, her steer, the people she knows. Hers to write; the keeper looks, and never edits.</p>
           <div class="kv"><span>Her SOUL</span><span>${so.here ? `here, last changed ${esc(ago(so.changed))}` : 'not written yet: hers to write'}</span></div>`;
+      } else if (pk === 'window' || pk === 'scope') {
+        const V = (t && t.senses) || { devices: [], recent: [] };
+        const here = !!t && t.brain === 'host';
+        const TOOLW = { phone: 'the phone (calls, texts, apps, sounds)', screen: 'its screen', senses: 'senses (sensors, camera, microphone)', sentry: 'the watcher (events)', usb: 'USB', browser: 'its own browser', ssh: 'its SSH client', litert: 'LiteRT models', onnx: 'ONNX models' };
+        h += pk === 'window'
+          ? `<p class="note">Through the window: the devices that visit her, and what each lets her sense and do. ${here ? 'Her loop is on the host, so when she reaches for one of these, the call goes to a device that has it (the one she names, or the one seen last), runs there with its own yes, and comes back to her.' : 'Her loop is in the connected Atelier, which uses its own device’s tools directly.'}</p>
+          <ul class="plain">${V.devices.length ? V.devices.map((d) => `<li><span><b>${esc(d.name)}</b><br><small class="note">${d.tools.length ? esc(d.tools.map((n) => TOOLW[n] || n).join(', ')) : 'nothing to sense with here'} · seen ${esc(ago(new Date(d.seen).toISOString()))}</small></span></li>`).join('') : '<li>No device is visiting now. A phone or computer with her Atelier open, served by this host, shows here with what it has.</li>'}</ul>`
+          : `<p class="note">The telescope: what she reached for lately through the devices that visit. Only which tool, where and how it went; never what was asked or seen.</p>
+          <ul class="plain">${V.recent.length ? V.recent.map((r) => `<li><span><b>${esc(TOOLW[r.tool] || r.tool)}</b> <small class="note">on ${esc(r.device)}</small><br><small class="note">${esc(ago(new Date(r.at).toISOString()))} · ${r.ok ? 'done' : 'not done'} · ${Math.max(1, Math.round(r.ms / 1000))} s</small></span></li>`).join('') : '<li>Nothing yet: the sky is quiet.</li>'}</ul>`;
       } else if (pk === 'keys') {
         const ks = Object.values((t.models || {}).providers || {}).filter((p2) => p2.keySet).length, bs = (t.bridges || []).filter((b2) => b2.tokenSet).length;
         h += `<p class="note">Her keys, hung up by the door: written once, never shown again, not even here.</p>

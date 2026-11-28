@@ -33,7 +33,7 @@ rep("localStorage.getItem('pinet:' + k)", "localStorage.getItem('jvault:' + k)")
 rep("localStorage.setItem('pinet:' + k,", "localStorage.setItem('jvault:' + k,")
 rep("indexedDB.open('pi-netrunner', 1)", "indexedDB.open('jade-vault', 1)")
 # her things on the home host (parity step 1): the page's storage asks the host when the host is there
-rep("/* ---------------- settings ---------------- */", rd('hoststate.js') + "/* ---------------- settings ---------------- */")
+rep("/* ---------------- settings ---------------- */", rd('hoststate.js') + rd('hostdevice.js') + "/* ---------------- settings ---------------- */")
 rep("c.o(`Pi Netrunner shell — ", "c.o(`Pandora Dee shell — ")
 rep("<span>π Netrunner</span>", "<span>◆ Pandora</span>")
 rep("out.push('## Netrunner', '', m.content, '')", "out.push('## Pandora', '', m.content, '')")

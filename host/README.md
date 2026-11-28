@@ -489,6 +489,24 @@ sandbox), while her loop is here; an open page steps back from each:
   passphrase stay on each device in her Atelier; on the host the keeper hangs them up write-only at the sea chest,
   where her last backup shows and one can be started now.
 
+**Her device tools, through the devices that visit** (parity step 4, `host/devices.cjs`): a phone or a computer has
+things the host doesn't. With her loop on the host, each paired device served by the host says which of her device
+tools it has (`app/modules/hostdevice.js`):
+- in her Android app: `phone`, `screen`, `senses`, `sentry`, `browser` (its second WebView) and `ssh` (its own client);
+- where the browser has it: `usb`;
+- on any device: `litert` and `onnx` (models on the device's own chip).
+
+Her Atelier's own settings (Config) still decide which she has at all; nothing else travels this way. Her loop offers
+each tool with the devices that have it, and a call goes to the one she names (`device`) or the one seen last. It runs
+there, in her Atelier's own code, with its own checks and the person's own yes where her Atelier asks for one (a call,
+a text), and what happened comes back to her. Her codemode scripts can call them too.
+- The way between them is plain HTTP for old devices: a device offers its tools (`PUT /host/devices/offer`), asks for
+  its next call (`GET /host/devices/next`, a long poll), and answers it (`POST /host/devices/result`). Only a paired
+  device of hers can.
+- A device is here while it asks; one that stops (closed, asleep, off the network) is gone from her list within a few
+  seconds, and a call for it says which of her devices have that tool, or that none is here.
+- A call waits two minutes for its answer (five for the browser, SSH and models), and says so when it doesn't come.
+
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
 is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her
@@ -531,10 +549,12 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
     the library (her notes and folders), the shelves (the host's tools for her, skills set aside, playbooks approved),
     the computer (where her schedules run, each one's next time and how it last went; her shell), the table (her
     apps, and when each was last played), the mirror (whether her SOUL is written and when it
-    changed: hers to write, never edited here), the key hook (how many keys are hung up, never their values); the
-    window stands under scaffolding (piece E);
-  - **the misty grove, the observatory and the islet** stand under scaffolding, saying which step brings them (her
-    memory, device senses, the boat to SEASIDE).
+    changed: hers to write, never edited here), the key hook (how many keys are hung up, never their values), and the
+    window (the devices that visit her now, and what each has);
+  - **the observatory:** the telescope (her latest device calls: which tool, on which device, how it went; never what
+    was asked or seen);
+  - **the misty grove and the islet** stand under scaffolding, saying which step brings them (her memory, the boat to
+    SEASIDE).
 
   The keeper tends her through a narrow view of the host's own settings and facts: never her vault, her chats, a key's
   value, or the words she has the redactor hide. Changes are made at the host itself; an island in her own process or

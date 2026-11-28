@@ -4,6 +4,8 @@
    belongs to one device (which chat is open, a draft, her own API keys, this device's model addresses) stays here.
    Anywhere else (the desktop app, a plain browser, the APK) nothing changes: the browser's own storage, as before. */
 const HOST_STATE = (window.PandoraDesk && window.PandoraDesk.state) || null;
+// her loop runs on the host (its brain is 'host'): the host runs her prompt schedules, with her tools, so the page doesn't
+const HOST_RUNS_PROMPTS = !!(HOST_STATE && window.PandoraDesk.host && window.PandoraDesk.host.brain === 'host');
 if (HOST_STATE) {
   const localLs = { get: ls.get, set: ls.set };
   ls.get = (k, d) => HOST_STATE.lsGet(k, d, localLs);
@@ -25,6 +27,11 @@ if (HOST_STATE) {
       if (e.kind === 'db' && e.key === 'sessions') { await loadSessions(); renderSessions(); }
       else if (e.kind === 'db' && e.key === 'schedules') { Sched.list = (await idb.get('schedules')) || []; renderSchedules(); }
       else if (e.kind === 'db' && cur && e.key === 'session:' + cur.id && !e.deleted) toast('This chat was continued on another device: open it again to see.', 'info');
+      else if (e.kind === 'xdc') {
+        // another device played, or added or removed an app: the table, and an app open here, take it in
+        await xdcRefresh();
+        if (XDC.session && XDC.session.app.id === e.key && !e.deleted) xdcDeliver(XDC.session, await XdcDB.updates(e.key, XDC.session.lastSent || 0));
+      }
       else if (e.kind === 'ls' && e.key === 'settings') toast('Her settings were changed on another device: they apply here after a reload.', 'info');
     } catch {}
   });

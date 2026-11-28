@@ -105,6 +105,35 @@ function createState({ store, dir, log = () => {} }) {
   function runDel(id, page) { if (RUN_ID.test(id)) fs.rmSync(runFile(id), { force: true }); tell({ kind: 'run', key: id, rev: bump('runs'), page, deleted: true }); return { ok: true }; }
   function runClear(page) { fs.rmSync(runsDir, { recursive: true, force: true }); tell({ kind: 'run', key: '*', rev: bump('runs'), page, deleted: true }); return { ok: true }; }
 
+  // ---- her apps on the table (webxdc): each app, and its stream of updates ----
+  const xdcDir = path.join(dir, 'xdc');
+  const appFile = (id) => path.join(xdcDir, 'apps', encodeURIComponent(id) + '.json');
+  const updFile = (id) => path.join(xdcDir, 'updates', encodeURIComponent(id) + '.jsonl');
+  const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+  const writeJson = (f, v) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f + '.tmp', JSON.stringify(v)); fs.renameSync(f + '.tmp', f); };
+  const checkApp = (id) => { if (!RUN_ID.test(String(id || ''))) throw Object.assign(new Error('Not an app the host keeps.'), { status: 400 }); return String(id); };
+  function xdcApps() { let names = []; try { names = fs.readdirSync(path.join(xdcDir, 'apps')); } catch { return []; } return names.filter((n) => n.endsWith('.json')).map((n) => readJson(path.join(xdcDir, 'apps', n))).filter(Boolean); }
+  const xdcApp = (id) => readJson(appFile(checkApp(id)));
+  function xdcUpdates(id, after = 0, limit = 100000) {
+    let lines = []; try { lines = fs.readFileSync(updFile(checkApp(id)), 'utf8').split('\n'); } catch { return []; }
+    const out = []; for (const l of lines) { if (!l) continue; try { const u = JSON.parse(l); if (u.serial > after) out.push(u); } catch { /* a torn line */ } }
+    return out.sort((a, b) => a.serial - b.serial).slice(0, limit);
+  }
+  /** An app, and any updates it sent with it: serials stay in order on the host, even when two devices send at once. */
+  function xdcPut(id, app, updates, page) {
+    checkApp(id);
+    const ups = Array.isArray(updates) ? updates : [];
+    let max = xdcUpdates(id).reduce((m, u) => Math.max(m, u.serial), 0);
+    const kept = [];
+    for (const u of ups) { const v = { ...u, app: id }; if (!(v.serial > max)) v.serial = max + 1; max = v.serial; kept.push(v); }
+    if (kept.length) { fs.mkdirSync(path.dirname(updFile(id)), { recursive: true }); fs.appendFileSync(updFile(id), kept.map((u) => JSON.stringify(u)).join('\n') + '\n'); }
+    if (app) { const a = { ...app, id }; if (kept.length) a.serial = Math.max(a.serial || 0, max); writeJson(appFile(id), a); }
+    tell({ kind: 'xdc', key: id, rev: bump('xdc:' + id), page, updates: kept.length });
+    return { serials: kept.map((u) => u.serial) };
+  }
+  function xdcDel(id, page) { checkApp(id); fs.rmSync(appFile(id), { force: true }); fs.rmSync(updFile(id), { force: true }); tell({ kind: 'xdc', key: id, rev: bump('xdc:' + id), page, deleted: true }); return { ok: true }; }
+  function xdcClear(id, page) { checkApp(id); fs.rmSync(updFile(id), { force: true }); tell({ kind: 'xdc', key: id, rev: bump('xdc:' + id), page }); return { ok: true }; }
+
   /** Facts for the keeper's view of her house: how much there is, never what it says. */
   function facts() {
     const sessions = store.get('sessions'), schedules = store.get('schedules');
@@ -112,14 +141,15 @@ function createState({ store, dir, log = () => {} }) {
     return {
       chats: Array.isArray(sessions) ? sessions.length : 0,
       lastChat: Array.isArray(sessions) && sessions.length ? (sessions.map((x) => x && (x.updated || x.created || x.t)).filter(Boolean).sort().pop() || null) : null,
-      schedules: Array.isArray(schedules) ? schedules.map((x) => ({ name: String((x && (x.name || x.title)) || 'a schedule').slice(0, 60), on: !(x && x.enabled === false) })) : [],
+      schedules: Array.isArray(schedules) ? schedules.map((x) => ({ name: String((x && (x.name || x.title)) || 'a schedule').slice(0, 60), on: !(x && x.enabled === false), job: !!(x && /^(shell|flow|playbook)$/.test(x.kind || '')), status: String((x && x.lastStatus) || '').slice(0, 80), next: (x && x.nextRun) || null })) : [],
       runs: runCount(),
       skillsOff: Array.isArray(st.skillsOff) ? st.skillsOff.length : 0,
       approvals: st.pbApproved && typeof st.pbApproved === 'object' ? Object.keys(st.pbApproved).length : 0,
+      apps: xdcApps().map((a) => ({ name: String(a.name || 'an app').slice(0, 60), lastActive: a.lastActive || a.opened || a.installed || null })),
     };
   }
 
-  return { lsAll, lsSet, dbGet, dbSet, dbDel, dbKeys, dbAll, runPut, runGet, runAll, runCount, runDel, runClear, facts, onChange: (f) => (listeners.add(f), () => listeners.delete(f)), mergeList };
+  return { lsAll, lsSet, dbGet, dbSet, dbDel, dbKeys, dbAll, xdcApps, xdcApp, xdcUpdates, xdcPut, xdcDel, xdcClear, runPut, runGet, runAll, runCount, runDel, runClear, facts, onChange: (f) => (listeners.add(f), () => listeners.delete(f)), mergeList };
 }
 
 module.exports = { createState, MERGED };

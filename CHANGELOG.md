@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Her loop on the host, with her tools (parity steps 2 and 3).** With her loop on the host, her turns use her tools
+  there: her vault (read, write, edit, list, search), her memory, her chat history, a web page, thinking, and the host's
+  own tools. Her prompt schedules run on the host too, each run a chat every device sees, and an open page leaves them
+  to it. Jobs (rituals, playbooks, shell) still run in the Atelier for now.
+- **Her apps on the table, on the host.** Her webxdc apps and their moves are one table for every device; the Harbor's
+  table shows them.
 - **Her things on the host, one copy for every device (parity step 1).** Served by the host, the Atelier keeps her
   chats and branches, schedules, settings, run history and the rest on the host, so every device sees the same her. A
   chat made on the laptop appears on the phone as it happens; two devices writing at once lose neither's new chat; each

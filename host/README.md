@@ -297,14 +297,62 @@ changed.
 each bridge message in and out (after hiding), what was stopped and why, and her tool's use. It stays on the host, and
 the page shows it. The log (`events.jsonl`) keeps facts only.
 
+## Her things on the host: the Atelier's own backup file (`host/backup.cjs`)
+
+Her things move onto the host the way they already move between the HTML and APK versions: in the same backup file,
+with the same steps, and with ways back. Nothing new to learn, and no second format.
+
+- **The file.** Use Config → Backup → **Export everything** or **Export config** in any Atelier (HTML, APK, or Jade
+  Vault), or a scheduled backup. Plain JSON, gzip and the encrypted envelope are all read; an encrypted one asks for its
+  passphrase.
+- **The steps.** These are the page's own steps.
+  - A Jade Vault backup's `/Jade` paths become `/Pandora`, and flows become rituals. The host loads
+    `app/modules/migrate.js` itself, so there is one set of rules, not a copy.
+  - **Everything** replaces, and **config** merges (settings, SOUL/AGENTS/SYSTEM, memory, skills).
+  - The host asks the page's own question first. On the host's page, under **Her things**: choose the file, **Read
+    it** (nothing changes yet: it says what the file holds), then the yes.
+- **Where it lands.**
+  - Her files go into the home folder.
+  - Her chats, schedules, ritual runs, settings and storage go into the host's Atelier store (`<state>/atelier/`).
+    That's what her loop on the host will read next.
+- **The way back.**
+  - Before anything is written, what was there is kept in `<state>/imports/<id>/before/`, and never deleted.
+  - **Undo** (the latest import) puts it back. What the import brought is kept in `<id>/undone/`.
+  - **Export everything** and **Export config** on the host's page write her things in this same file. The HTML and
+    APK versions take it with their own Import button.
+- **Two kinds of keys, kept apart.**
+  - **The person's**, configured in the Atelier's own settings (model providers, bridges, the backup server, MCP
+    secrets), are in a backup only when they ticked "Include API keys".
+    - Then they go into the host's own write-only key files: her models' (`model-secrets.json`), her bridges'
+      (`bridge-secrets.json`), and `atelier-secrets.json` for the rest. All are owner-only, never shown back, and
+      named in the preview (never their values).
+    - Undo puts the key files back as they were.
+    - Without the tick, any that are there anyway are left out, by name. The host's exports hold none.
+  - **Hers** (her nsec, her API keys, her wallets) aren't in the Atelier or any of its folders, `/Pandora` included.
+    They're wherever she put them when she built her tools in her own disk space, and her MCP server tools use them
+    there.
+    - They're never in the Atelier's backup.
+    - The host only writes inside her home folder and its own state folder, so an import can't reach them.
+  - **A further guard inside her home.** An import, an undo or an export never reads, moves, copies, logs or
+    overwrites anything there that looks like a key, even when "everything" replaces the rest of her home.
+    - That covers files and folders named like keys (`.nsec`, `.key`, `.pem`, `id_ed25519`, `.env`, `wallet…`,
+      `keys/`, `secrets/` and the like).
+    - It also covers any place listed in the host's `herKeys` setting (on its page, under Her things).
+- **Safe while windows are open.**
+  - An import waits while an Atelier window is writing her vault: close it, or wait half a minute.
+  - While an import is written, no window writes. Reload open windows afterwards.
+  - Imports, undos and their previews are only possible from the house network or the tailnet. Export also works
+    from elsewhere, since it only reads.
+
 ## Not yet
 
 These are the next milestones, in this order:
 
-1. **Chats, branches, schedules, settings and run history still live in each browser,** and turns still run in the
-   page. A device that opens the host gets her files, not her conversations. They move to the host next, followed by
-   the agent loop behind `host/runtime.cjs`, so every device shares one conversation and one heartbeat (while a
-   client is connected).
+1. **Her chats, schedules, settings and run history come onto the host from a backup** (above), but the Atelier
+   still reads them from its own browser, and turns still run in the page. Next:
+   - the Atelier reads and writes them on the host, so every device shares one conversation;
+   - then the agent loop behind `host/runtime.cjs`, so every device also shares one heartbeat (while a client is
+     connected).
 2. **The real shell sees the home through the host's own paths.**
    - A relative path, or `$PANDORA_HOME/Pandora/SOUL.md`, reaches the same file the vault calls `/Pandora/SOUL.md`.
    - A bare `/Pandora/…` in the real shell means the host's own `/`, so it doesn't reach that file.
@@ -316,5 +364,5 @@ These are the next milestones, in this order:
 5. **Her models on the host** answer plain turns, the heartbeat, schedules and sparks. Tool calls in a host turn come
    with the agent loop (milestone 1). Until then, a loop that needs her tools stays in the Atelier.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs` and `tests/models_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs` and `tests/host_import_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

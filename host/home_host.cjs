@@ -30,6 +30,7 @@ const { createRedactor } = require('./redact.cjs');
 const { createRuntime } = require('./runtime.cjs');
 const { requestPlace, mayChange } = require('./places.cjs');
 const { createModels } = require('./models.cjs');
+const backup = require('./backup.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -38,6 +39,7 @@ const LOCK_MS = 5 * 60 * 1000;
 const WRITER_MS = 30 * 1000;         // a writer page silent this long gives up the vault to the next
 const DISK_BODY_MAX = 16 * 1048576;  // a disk call's body: a 3 MB piece, base64, with room to spare
 const SHELL_OUT_MAX = 1048576;
+const IMPORT_MAX = 1024 * 1048576;   // a backup file, whole (a big vault with its chats)
 const WRITES = new Set(['put', 'mkdir', 'del', 'move', 'touch', 'clear', 'useShared']);
 
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -121,6 +123,33 @@ function createHomeHost(opts) {
   const models = createModels({ settings, secretsFile: path.join(stateDir, 'model-secrets.json'), log: event });
   // what waited, on disk (host/queue.cjs)
   const queue = createQueue(path.join(stateDir, 'bridge-queue.jsonl'), { log: event, warnAt: Number(settings.get().queueWarnAt) || undefined });
+  // her Atelier's own things (settings, storage, chats, schedules), brought here from a backup (host/backup.cjs)
+  const store = backup.atelierStore(path.join(stateDir, 'atelier'));
+  // the person's configured keys from a backup whose box was ticked: into the host's own write-only key files, each
+  // where the host looks for it (her models, her bridges), the rest owner-only in atelier-secrets.json; never shown
+  const MODEL_KEYS = { ollamaKey: 'cloud', groqKey: 'groq', oaiKey: 'openai', lcppKey: 'llamacpp' };
+  const BRIDGE_KEYS = { dcToken: 'discord', vecToken: 'vector' };
+  const keyFiles = [path.join(stateDir, 'model-secrets.json'), secretsFile, path.join(stateDir, 'atelier-secrets.json')];
+  const keySink = {
+    apply(keys) {
+      const done = []; const rest = (() => { try { return JSON.parse(fs.readFileSync(keyFiles[2], 'utf8')); } catch { return {}; } })(); let restN = 0;
+      for (const [k, v] of Object.entries(keys)) {
+        if (MODEL_KEYS[k] && typeof v === 'string') { models.setKey(MODEL_KEYS[k], v); done.push(`${k} → her models (${MODEL_KEYS[k]})`); }
+        else if (BRIDGE_KEYS[k] && typeof v === 'string') { setBridgeToken(BRIDGE_KEYS[k], v); done.push(`${k} → the ${BRIDGE_KEYS[k]} bridge`); }
+        else { rest[k] = v; restN++; done.push(`${k} → kept for the Atelier`); }
+      }
+      if (restN) { fs.writeFileSync(keyFiles[2] + '.tmp', JSON.stringify(rest), { mode: 0o600 }); fs.renameSync(keyFiles[2] + '.tmp', keyFiles[2]); }
+      return done;
+    },
+    // what the key files held before, kept owner-only beside the import, so an undo puts them back
+    snapshot(dir) { fs.mkdirSync(dir, { recursive: true }); for (const f of keyFiles) if (fs.existsSync(f)) { const to = path.join(dir, path.basename(f)); fs.copyFileSync(f, to); try { fs.chmodSync(to, 0o600); } catch {} } },
+    restore(dir) { for (const f of keyFiles) { const from = path.join(dir, path.basename(f)); if (fs.existsSync(from)) { fs.copyFileSync(from, f); try { fs.chmodSync(f, 0o600); } catch {} } else fs.rmSync(f, { force: true }); } },
+  };
+  // her own keys are with her tools, outside the home, where nothing here writes; anything key-like inside the home
+  // (named like a key, or listed by the person) is also never read, moved, copied, logged or overwritten
+  const isHers = () => backup.herKeys(settings.get().herKeys);
+  const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event, isHers, keySink });
+  let importing = false; // while an import is written or undone, no window writes the vault
   let runtime = null; // started with startRuntime()
   let pin = null; // { code, until }
   let wrong = 0, lockedUntil = 0;
@@ -277,6 +306,12 @@ function createHomeHost(opts) {
     req.on('end', () => resolve(Buffer.concat(parts).toString('utf8')));
     req.on('error', reject);
   });
+  const readRaw = (req, max) => new Promise((resolve, reject) => {
+    const parts = []; let n = 0;
+    req.on('data', (d) => { n += d.length; if (n > max) { reject(Object.assign(new Error('too big'), { status: 413 })); req.destroy(); } else parts.push(d); });
+    req.on('end', () => resolve(Buffer.concat(parts)));
+    req.on('error', reject);
+  });
   /** Another website asking through a visitor's browser: never. (Programs and the host's own pages are fine.) */
   const fromElsewhere = (req) => { const s = String(req.headers['sec-fetch-site'] || ''); return s && s !== 'same-origin' && s !== 'none'; };
 
@@ -326,6 +361,7 @@ function createHomeHost(opts) {
         let call; try { call = JSON.parse(await readBody(req, DISK_BODY_MAX)); } catch (e) { return send(res, e.status || 400, 'ERR:' + (e.status ? 'that piece is too big' : 'not a disk call')); }
         const name = String(call?.name || ''); const page = String(req.headers['x-page'] || '');
         if (WRITES.has(name)) {
+          if (importing) return send(res, 200, 'ERR:Her things are being brought onto the host right now. Reload this window in a moment.');
           if (!mayWrite(page, dev)) return send(res, 200, 'ERR:Another window is writing this vault right now, so this one only reads. Close the other one (or wait half a minute) to write here.');
         } else touchWriter(page);
         if (name === 'clear') event('disk.clear', { device: dev.id });
@@ -366,6 +402,8 @@ function createHomeHost(opts) {
           nap: nap.state(), ...settings.state(),
           you: { place: where.place, mayChange: mayChange(where) },
           models: models.state(),
+          atelier: (() => { const s = store.get('sessions'), c = store.get('schedules'); return { chats: Array.isArray(s) ? s.length : 0, schedules: Array.isArray(c) ? c.length : 0 }; })(),
+          imports: imports.records().slice(0, 10).map(({ id, at, by, name, kind, exportedAt, written, skipped, keysSet, keysLeftOut, hersLeftAlone, fromJadeVault, undone }) => ({ id, at, by, name, kind, exportedAt, written, skipped: skipped.length, keysSet: keysSet || [], keysLeftOut, hersLeftAlone: hersLeftAlone || 0, fromJadeVault, undone })),
           waiting: runtime ? { ...runtime.waiting(), messages: runtime.waiting().messages.map(({ raw, text, ...m }) => ({ ...m, preview: String(text).slice(0, 140) })) } : { count: 0, messages: [] },
           brain: runtime ? runtime.brain : null,
           bridges: bridgeInfo(),
@@ -381,6 +419,35 @@ function createHomeHost(opts) {
           let b; try { b = JSON.parse(await readBody(req, 65536)); } catch { return send(res, 400, { error: 'Settings are a JSON object.' }); }
           return send(res, 200, settings.set(b, dev.name));
         }
+      }
+      // ---- her things onto the host: the Atelier's own backup file, its own steps, and a way back (host/backup.cjs) ----
+      if (p === '/host/import' && req.method === 'POST') {
+        if (homeOnly()) return;
+        let bytes; try { bytes = await readRaw(req, IMPORT_MAX); } catch (e) { return send(res, e.status || 400, { error: e.status === 413 ? 'That file is bigger than the host takes in one go (1 GB).' : 'The file did not arrive.' }); }
+        const pass = String(req.headers['x-backup-pass'] || '');
+        if (backup.encrypted(bytes) && !pass) return send(res, 422, { needsPass: true, error: 'This backup is encrypted: a passphrase is needed.' });
+        try { const r = imports.preview(bytes, { name: decodeURIComponent(String(req.headers['x-backup-name'] || 'backup')), pass }); event('import.preview', { device: dev.id, kind: r.kind, files: r.files, chats: r.chats }); return send(res, 200, r); }
+        catch (e) { return send(res, e.code === 'PASS' ? 422 : 400, { error: e.message, needsPass: e.code === 'PASS' }); }
+      }
+      const im = /^\/host\/import\/([A-Za-z0-9_-]+)\/(apply|undo)$/.exec(p);
+      if (im && req.method === 'POST') {
+        if (homeOnly()) return;
+        let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
+        if (b.confirm !== true) return send(res, 400, { error: 'Nothing was changed: this needs the person’s yes ({"confirm": true}).' });
+        if (writer && now() - writer.at <= writerMs) return send(res, 409, { error: `An Atelier window is writing her vault right now (${(devices.find((d) => d.id === writer.device) || {}).name || 'a device'}). Close it first, or wait half a minute.` });
+        importing = true;
+        try { const r = im[2] === 'apply' ? imports.apply(im[1], dev.name) : imports.undo(im[1], dev.name); writer = null; return send(res, 200, r); }
+        catch (e) { return send(res, e.status || 500, { error: e.message }); }
+        finally { importing = false; }
+      }
+      if (p === '/host/imports' && req.method === 'GET') return send(res, 200, imports.records().map(({ added, replaced, skipped, ...r }) => ({ ...r, added: added.length, replaced: replaced.length, skipped })));
+      if (p === '/host/export' && req.method === 'GET') {
+        const kind = url.searchParams.get('kind') === 'config' ? 'config' : 'full';
+        const data = backup.build({ root, store, kind, isHers: isHers() });
+        event('export', { device: dev.id, kind, files: Object.keys(data.vault.files).length });
+        const name = `pandora-dee-${kind === 'full' ? 'backup' : 'config'}-${new Date().toISOString().slice(0, 10)}.json`;
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+        return res.end(JSON.stringify(data, null, 1));
       }
       if (p === '/host/switches/resume' && req.method === 'POST') return homeOnly() || send(res, 200, settings.resume(dev.name));
       const bk = /^\/host\/bridges\/([a-z0-9_-]+)\/key$/.exec(p);
@@ -475,7 +542,7 @@ function createHomeHost(opts) {
 
   const server = http.createServer((req, res) => { handle(req, res); });
   return {
-    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact, models,
+    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, imports,
     /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
     startRuntime(o = {}) {
       // brain 'host': her models as set up here, each job on its own chain; and "Try the model again" asks them

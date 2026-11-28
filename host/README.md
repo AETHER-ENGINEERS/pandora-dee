@@ -434,8 +434,22 @@ her heartbeat, her schedules, her sparks) can use her tools, run here on her hom
 - **Her tool servers** (`/Pandora/mcp.json`, `host/mcp_client.cjs`): streamable HTTP servers as in her Atelier, with
   `${NAME}` header values filled from her MCP secrets on the host (never shown or logged), and, on the host only,
   servers the host starts itself (`command`, `args`: stdio). Those, and `!command` header values, need her hands on
-  this computer (host_shell). Exposure as in her Atelier: `direct` tools are declared up front; `deferred` (and
-  `codemode`, until codemode reaches the host) are found with `tool_search` and hers from her next step; `hidden` never.
+  this computer (host_shell). Exposure as in her Atelier: `direct` tools are declared up front; `codemode` ones are
+  called from her codemode scripts (below); `deferred` ones (and, on the host, `codemode` ones too) are found with
+  `tool_search` and hers from her next step; `hidden` never.
+- **Her codemode** (`host/codemode.cjs`), when she has codemode tools (unless her mcp.json says
+  `autoEnableCodemode: false`): her Atelier's own codemode, a script of hers that calls her tool servers' codemode and
+  direct tools and her own tools together (`await tools.<name>(args)`), with the same helpers (`searchTools`,
+  `describeTool`, `describeNamespace`, `ALL_TOOLS`, `text`, `image`, `store`/`load`) and the same answers.
+  - It runs in a process of its own (`host/codemode_child.cjs`) with Node's permission system on (no files, no child
+    processes, no workers) and, inside, a fresh context with nothing of Node's: no require, process, fetch, timers or
+    modules. Everything it is given crosses as JSON text; it reaches the world only through `tools`, and each call is
+    run here as her loop runs it, with the same checks.
+  - Only what it prints, returns or shows reaches her. Images it shows are kept under `/attachments/mcp`; output too
+    long to hand back is cut, and the whole of it kept under `/tmp`, as in her Atelier.
+  - It stops after 60 seconds, or the time on its first line (`// @options {"timeout": N}`, up to 600).
+  - `store`/`load` keep JSON between scripts in the same conversation (on the host, in her small things, for her 40
+    latest conversations).
 - **A helper:** `delegate` hands a self-contained task to a helper with a fresh mind and her tools; a helper can't hand
   work on again.
 

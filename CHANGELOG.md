@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Her codemode on the host.** With her loop on the host and codemode tools on her tool servers, her loop offers her
+  Atelier's own codemode: a script that calls those tools and her own together, with the same helpers and answers. It
+  runs in a process of its own with Node's permission system on and nothing of Node's in its hands, stops at its time,
+  and keeps images and long output in her vault as her Atelier does.
 - **Her rhythms on the host.** With her loop on the host: her Atelier's own tree-of-thought think, her rituals'
   triggers (a schedule, a note changing), her curiosity wake-ups (chosen, measured and learned from as in her Atelier),
   and her scheduled backup to her backup server (never with keys). An open page steps back from each. Her backup

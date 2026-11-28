@@ -98,11 +98,14 @@ function createMcp(opts) {
   const root = path.resolve(opts.root);
   const log = opts.log || (() => {});
   let loaded = '', servers = new Map();
-  function config() {
+  function file() {
     const f = ['Pandora', 'Jade'].map((d) => path.join(root, d, 'mcp.json')).find((x) => fs.existsSync(x));
     if (!f) return {};
-    try { const j = JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\s*\/\/.*$/gm, '')); return j.mcpServers || j.servers || {}; } catch { log('mcp.config.invalid', {}); return {}; }
+    try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\s*\/\/.*$/gm, '')) || {}; } catch { log('mcp.config.invalid', {}); return {}; }
   }
+  function config() { const j = file(); return j.mcpServers || j.servers || {}; }
+  /** Her codemode is offered when she has codemode tools, unless her mcp.json says autoEnableCodemode: false. */
+  const autoCodemode = () => file().autoEnableCodemode !== false;
   /** Her servers, connected again when her mcp.json changes. */
   function current() {
     const cfg = config(); const key = JSON.stringify(cfg);
@@ -131,13 +134,22 @@ function createMcp(opts) {
     const text = ((r && r.content) || []).map((c) => (c.type === 'text' ? c.text : c.type === 'image' ? '[an image]' : c.type === 'resource' ? (c.resource && c.resource.text) || '[a resource]' : '')).filter(Boolean).join('\n');
     return (r && r.isError ? 'The tool said no: ' : '') + (text || JSON.stringify((r && r.structuredContent) || r || {}));
   }
+  /** A tool's own answer, as her codemode scripts get it: { content, structuredContent, isError }. */
+  async function callRaw(name, args) {
+    const m = /^mcp__([A-Za-z0-9_-]+)__(.+)$/.exec(name); if (!m) throw new Error('not a tool server tool');
+    const s = current().get(m[1]); if (!s) throw new Error(`no tool server called ${m[1]}`);
+    const r = (await s.call(m[2], args)) || {};
+    return { content: Array.isArray(r.content) ? r.content : [], ...(r.structuredContent !== undefined ? { structuredContent: r.structuredContent } : {}), isError: !!r.isError };
+  }
+  /** Her servers, for codemode's describeNamespace. */
+  const servers2 = () => [...current().values()].map((s) => ({ name: s.name, description: String((s.cfg && s.cfg.description) || '') }));
   /** tool_search: words → the best matching tools of hers (deferred and codemode ones too), to declare next. */
   async function search(query, limit = 8) {
     const q = String(query || '').toLowerCase().split(/\W+/).filter((w) => w.length > 2);
     const all = await catalog();
     return all.map((t) => ({ t, n: q.reduce((a, w) => a + ((t.name + ' ' + t.description).toLowerCase().includes(w) ? 1 : 0), 0) })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, limit).map((x) => x.t);
   }
-  return { catalog, call, search, def, close: () => { for (const s of servers.values()) s.close(); servers = new Map(); loaded = ''; } };
+  return { catalog, call, callRaw, servers: servers2, autoCodemode, search, def, close: () => { for (const s of servers.values()) s.close(); servers = new Map(); loaded = ''; } };
 }
 
 module.exports = { createMcp, exposureFor };

@@ -10,11 +10,14 @@
 //   web_fetch                         a web page as text (http and https only)
 //   think                             a moment to think, kept in the trace
 // and the host's own tools for her (host_shell when it's in her hands, waiting_messages, away_notices, host_info).
+// Her tool servers (MCP): direct tools declared; deferred and codemode ones found with tool_search; and codemode, her
+// Atelier's own, a script that calls them and her other tools together (host/codemode.cjs), when she has codemode ones.
 //
 // What she is: her SOUL, AGENTS and the end of her Memory.md, as her system prompt, with the time.
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const { runCodemode, codemodeDef } = require('./codemode.cjs');
 
 const MAX_ROUNDS = 12;
 const READ_MAX = 200 * 1024;
@@ -142,6 +145,7 @@ function createLoop(opts) {
         if (ctx.loaded) for (const t of found) ctx.loaded.set(t.name, t);
         return found.length ? `Found (yours from your next step):\n${found.map((t) => `- ${t.name}: ${t.description.slice(0, 200)}`).join('\n')}` : 'No tool of your tool servers matches that.';
       }
+      if (name === 'codemode') return await codemode(args || {}, ctx);
       if (name === 'delegate') {
         if ((ctx.depth || 0) >= 1) return 'A helper can\'t hand work on again: do it yourself.';
         const task = String((args && args.task) || '').trim(); if (!task) return 'Say what the helper should do.';
@@ -155,6 +159,84 @@ function createLoop(opts) {
       if (!own && !host) return `There is no tool called ${name}.`;
       const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out);
     } catch (e) { return `Not done: ${e && e.message ? e.message : e}`; }
+  }
+
+  // ---- her codemode: a script of hers that calls her tool servers' codemode and direct tools and her own tools ----
+  const STORE_KEY = 'codemodeStore', STORE_CHATS = 40, STORE_MAX = 64 * 1024;
+  const chatKey = (why) => String(why || 'chat').slice(0, 200);
+  function storeOf(why) { try { const all = (opts.state && opts.state.lsAll().values[STORE_KEY]) || {}; const v = all[chatKey(why)]; return v && typeof v === 'object' ? v.data || {} : {}; } catch { return {}; } }
+  function keepStore(why, data) {
+    if (!opts.state) return;
+    try {
+      if (JSON.stringify(data).length > STORE_MAX) throw new Error('too big');
+      const all = { ...((opts.state.lsAll().values[STORE_KEY]) || {}) };
+      all[chatKey(why)] = { at: Date.now(), data };
+      const keys = Object.keys(all).sort((a, b) => (all[b].at || 0) - (all[a].at || 0));
+      for (const k of keys.slice(STORE_CHATS)) delete all[k];
+      opts.state.lsSet(STORE_KEY, all, 'her codemode', 'host');
+    } catch { log('her.codemode.store.full', {}); }
+  }
+  /** Her tool servers' tools that codemode scripts call (codemode and direct ones), and whether codemode is offered. */
+  async function codemodeTools(ctx) {
+    if (ctx && ctx.mcpAll) return ctx.mcpAll;
+    let all = []; try { all = opts.mcp ? await opts.mcp.catalog() : []; } catch { all = []; }
+    if (ctx) ctx.mcpAll = all;
+    return all;
+  }
+  function offerCodemode(all) {
+    if (!opts.mcp || !all.some((t) => t.exposure === 'codemode')) return null;
+    try { if (opts.mcp.autoCodemode && !opts.mcp.autoCodemode()) return null; } catch { /* offered */ }
+    const cm = all.filter((t) => t.exposure === 'codemode' || t.exposure === 'direct');
+    const servers = [...new Set(cm.map((t) => t.server))];
+    const desc = Object.fromEntries(((opts.mcp.servers && opts.mcp.servers()) || []).map((x) => [x.name, x.description]));
+    return codemodeDef(servers.map((s) => `- mcp__${s} (${cm.filter((t) => t.server === s).length} tools)${desc[s] ? ': ' + desc[s] : ''}`).join('\n'));
+  }
+  const NOT_IN_SCRIPTS = ['codemode', 'tool_search'];
+  function builtinDefs(depth) {
+    const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate') && !extra.some((x) => x.def.function.name === t.function.name));
+    return [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)].map((t) => t.function).filter((f) => !NOT_IN_SCRIPTS.includes(f.name) && !/^mcp__/.test(f.name));
+  }
+  /** A file her script made (an image, or output too long to hand back), written in her vault as her Atelier does. */
+  function keepFile(vpBase, ext, data) {
+    writable();
+    let vp = `${vpBase}.${ext}`, i = 2; while (fs.existsSync(at(vp).full)) vp = `${vpBase}-${i++}.${ext}`;
+    const f = at(vp); fs.mkdirSync(path.dirname(f.full), { recursive: true }); fs.writeFileSync(f.full, data); log('her.write', { path: f.vp }); return f.vp;
+  }
+  async function codemode(args, ctx) {
+    const code = String(args.code ?? args.script ?? '');
+    const all = await codemodeTools(ctx);
+    const cm = all.filter((t) => t.exposure === 'codemode' || t.exposure === 'direct');
+    const builtins = builtinDefs(ctx.depth || 0);
+    const catalog = [...cm.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema, mcp: true })), ...builtins.map((f) => ({ name: f.name, description: f.description, inputSchema: f.parameters }))];
+    const ns = {};
+    for (const x of ((opts.mcp && opts.mcp.servers && opts.mcp.servers()) || [])) ns['mcp__' + x.name] = { name: x.name, description: x.description || '', instructions: '', tools: cm.filter((t) => t.server === x.name).map((t) => t.name) };
+    const why = ctx.why || 'chat';
+    const data = storeOf(why);
+    trace('her.codemode', { why, code });
+    const today = new Date().toISOString().slice(0, 10);
+    return await runCodemode({
+      code, catalog, ns, store: data,
+      onStore: (k, v) => { data[k] = v; keepStore(why, data); },
+      call: async (name, a) => {
+        trace('her.codemode.call', { why, name, args: a });
+        if (/^mcp__/.test(name)) {
+          if (!catalog.some((t) => t.name === name)) {
+            const pre = String(name).split('__').slice(0, 2).join('__') + '__'; const near = catalog.map((t) => t.name).filter((n) => n.startsWith(pre)).slice(0, 8);
+            throw new Error(all.some((t) => t.name === name) ? `${name} is a deferred tool: load it with tool_search instead of codemode` : `no tool named ${name}${near.length ? '. Tools on that server: ' + near.join(', ') : '. Use searchTools("…")'}`);
+          }
+          return await opts.mcp.callRaw(name, a);
+        }
+        if (builtins.some((f) => f.name === name)) {
+          const out = await callTool(name, a, { ...ctx, depth: ctx.depth || 0 });
+          if (/^Not done: /.test(out)) throw new Error(out.replace(/^Not done: /, ''));
+          return out;
+        }
+        const near = catalog.map((t) => t.name).filter((n) => n.includes(String(name).split('__').pop())).slice(0, 5);
+        throw new Error(`no tool named ${name}${near.length ? '. Did you mean ' + near.join(', ') + '?' : '. Use searchTools("…").'}`);
+      },
+      saveImage: (b64, mime) => keepFile(`/attachments/mcp/${today}-codemode`, (String(mime || '').split('/')[1] || 'bin').replace('jpeg', 'jpg').replace(/[^a-z0-9]/gi, '') || 'bin', Buffer.from(String(b64 || ''), 'base64')),
+      saveLong: (text) => keepFile(`/tmp/codemode-${Date.now().toString(36)}`, 'txt', text),
+    });
   }
 
   // ---- the context guard: when a conversation is about to outgrow her context, the older part becomes a summary ----
@@ -182,12 +264,15 @@ function createLoop(opts) {
   async function turn({ messages, role = 'chat', why = '', depth = 0 }) {
     let msgs = messages.some((m) => m.role === 'system') ? [...messages] : [{ role: 'system', content: system() }, ...messages];
     const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate') && !extra.some((x) => x.def.function.name === t.function.name));
-    let direct = []; try { direct = opts.mcp ? (await opts.mcp.catalog()).filter((t) => t.exposure === 'direct') : []; } catch { direct = []; }
+    const tctx = { depth, why };
+    const mcpAll = await codemodeTools(tctx);
+    const direct = mcpAll.filter((t) => t.exposure === 'direct');
+    const cmDef = offerCodemode(mcpAll);
     const loaded = new Map(); // tools found with tool_search, declared from the next step
     const used = [];
     for (let round = 1; round <= MAX_ROUNDS; round++) {
       msgs = await guard(msgs, why);
-      const tools = [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
+      const tools = [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...(cmDef ? [cmDef] : []), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
       const r = await opts.chat(role, { messages: msgs, tools });
       const calls = Array.isArray(r.tool_calls) ? r.tool_calls : [];
       if (!calls.length) return { content: r.content, rounds: round, tools: used };
@@ -196,7 +281,7 @@ function createLoop(opts) {
         const name = c.function && c.function.name; let args = c.function && c.function.arguments;
         if (typeof args === 'string') { try { args = JSON.parse(args || '{}'); } catch { args = {}; } }
         trace('her.tool', { why, name, args });
-        const out = await callTool(name, args, { loaded, depth, why });
+        const out = await callTool(name, args, { ...tctx, loaded });
         trace('her.tool.result', { why, name, out: out.slice(0, 4000) });
         used.push(name);
         msgs.push({ role: 'tool', tool_call_id: c.id, name, content: out });

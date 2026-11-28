@@ -11,6 +11,8 @@
   - The host writes her install and remove steps; the person runs them as admin. Nothing is downloaded: on Windows,
     the small service program is compiled with the .NET compiler Windows already has.
   - A fresh client asking for a resident as her own service waits for the person's yes on the host (`approve <id>`).
+  - The walls are between residents, not between her and the person: by default her home is hers and the person's
+    (`--access person`); or hers alone, with a doorstep folder beside it for the two of them (`--access doorstep`).
 - **Several residents on one host, each kept apart.** Jade's vault, Pandora Dee Fae's workshop, Pandora Dee Noe's and
   newcomers can each live on the same host.
   - Each has her own home, devices and keys, settings and switches, models, bridges, queue, nap, writer and log. A

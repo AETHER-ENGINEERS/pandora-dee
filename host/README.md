@@ -365,8 +365,18 @@ moves her; `--run` says where new ones go.
   - **Linux:** her own system user `pdee-<id>` (no login, no home of its own) and a systemd unit; without systemd, an
     init.d script.
   - **macOS:** her own hidden service user `_pdee_<id>`, like `_www`, and a LaunchDaemon.
-  - Her home and records folder become hers alone (and the computer's administrators'). The program she runs (`host/`,
-    `desktop/`, node, the page) is made readable to her.
+  - The walls are between residents, not between her and the person. Two ways, chosen per resident (`--access`, or
+    `access <id> person|doorstep` before her install):
+    - **`person`** (the default): her home is hers **and the person's**. The person opens it, drops things in and
+      edits as always; no other resident gets in. Her records folder (her key is there) is hers alone.
+    - **`doorstep`**: her home is hers alone, and a folder beside it, `<home> (doorstep)`, is the two of theirs, for
+      leaving things for each other. For when she's fully local.
+  - The person is whoever runs the host, as the computer names their account; the steps name it, and stay on this
+    computer. On Linux the person gets in through an ACL entry (or her group, where there are no ACLs); on macOS, an
+    ACL entry.
+  - The program she runs (`host/`, `desktop/`, node, the page) is made readable to her.
+  - Anything that reaches her through the host (the Atelier, the host's page, the person's tools) can always write
+    her home, whichever way is chosen: her own process does the writing.
 - **Installing is the person's step, as admin.** The host writes her install and remove steps in its records folder
   (`services/<id>/`, or `service <id>` to see where), and the person reads them and runs install as admin (on Windows,
   right-click `install.cmd`, "Run as administrator"; elsewhere `sudo sh install.sh`). `remove` takes the service away
@@ -376,6 +386,10 @@ moves her; `--run` says where new ones go.
   - The client asks `GET /host/residents/wait?ticket=…` (the ticket it was given) until she runs, and is then paired
     with her. A ticket is good for a day.
 - **For old systems:** XP and Vista have no service identities like these, so a resident there runs as `process`.
+- **The first resident still runs inside the host, as the person's account.** So with `person` access, her
+  `host_shell` reaches the homes the person reaches. And her own home is walled only by its folder's ordinary
+  permissions: on a second drive, Windows often lets every account in, service identities too. Moving the first
+  resident into her own service as well comes next.
 - **What isn't walled off by this:** the program files themselves belong to whoever installed them. For the strongest
   wall, keep the host's code where only administrators write (like Program Files, or `/opt`).
 

@@ -629,6 +629,10 @@ function createHomeHost(opts) {
   const homes = opts.homes ? path.resolve(opts.homes) : null;
   const basePort = Number(opts.port) > 0 ? Number(opts.port) : null;
   const defaultRun = separate.RUNS.includes(opts.run) ? opts.run : 'inside';
+  // as her own service: 'person' (her home is hers and the person's) or 'doorstep' (hers alone, and a folder beside it
+  // for the two of them to leave things in); see services.cjs
+  const ACCESS = ['person', 'doorstep'];
+  const defaultAccess = ACCESS.includes(opts.access) ? opts.access : 'person';
   const spawnThem = opts.spawn !== false; // tests and the host window start run: 'process' residents; a service, the computer does
   const regFile = path.join(first.stateDir, 'residents.json');
   const keyDir = path.join(first.stateDir, 'residents');
@@ -674,7 +678,8 @@ function createHomeHost(opts) {
     const dir = path.join(first.stateDir, 'services', e.id);
     return services().writePlan(dir, services().plan({
       entry: { ...e, state: stateOf(e), root: path.resolve(e.root) }, configFile: path.join(stateOf(e), 'resident.json'),
-      page: opts.page ? path.resolve(opts.page) : null, dir,
+      page: opts.page ? path.resolve(opts.page) : null, dir, access: e.access || defaultAccess,
+      ...(opts.person !== undefined ? { person: opts.person } : {}),
     }));
   };
 
@@ -705,7 +710,7 @@ function createHomeHost(opts) {
    * run: 'inside' (in the host's own process, as before), 'process' (her own process, the host's account), or
    * 'service' (her own service under her own identity: the person installs it as admin; see services.cjs).
    */
-  function addResident({ id, name, root, hostShell, local = false, run } = {}, by = 'the host') {
+  function addResident({ id, name, root, hostShell, local = false, run, access } = {}, by = 'the host') {
     id = String(id || '').trim().toLowerCase();
     run = separate.RUNS.includes(run) ? run : defaultRun;
     let home;
@@ -723,6 +728,7 @@ function createHomeHost(opts) {
       hostShell: run === 'service' ? hostShell !== false : local ? hostShell !== false : false,
       run, created: new Date().toISOString(), by: cleanName(by) || 'a device',
     };
+    if (run === 'service') entry.access = ACCESS.includes(access) ? access : defaultAccess;
     let r;
     if (run === 'inside') { r = createResident({ ...common, ...entry }, shared); entry.state = r.stateDir; }
     else {
@@ -772,7 +778,7 @@ function createHomeHost(opts) {
     const was = e.run || 'inside';
     e.run = run;
     // as her own service, her shell is walled off from the other homes: so she has it (the person can turn it off)
-    if (run === 'service') e.hostShell = true;
+    if (run === 'service') { e.hostShell = true; if (!ACCESS.includes(e.access)) e.access = defaultAccess; }
     let r;
     if (run === 'inside') r = createResident({ ...common, ...e }, shared);
     else { e.state = stateOf(e); keysFor(e); configFor(e); if (run === 'service') e.plan = planFor(e).dir; r = remoteResident(e); }
@@ -782,8 +788,20 @@ function createHomeHost(opts) {
     tell(r, e, 'moved');
     return r;
   }
+  /** How the person reaches a service resident's home: through it ('person'), or a doorstep beside it. Before install. */
+  async function setAccess(rid, access) {
+    const e = reg.find((x) => x.id === rid);
+    if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`);
+    if (!ACCESS.includes(access)) throw fail(400, 'person or doorstep.');
+    if (await residents.get(rid).up()) throw fail(409, `${e.name}'s service is running: run its remove step first (as admin), then change this and install again.`);
+    const was = e.access; e.access = access;
+    const p = planFor(e);
+    if (!p.written) { e.access = was; throw fail(409, p.why); }
+    saveReg(); first.event('resident.access', { id: rid, access });
+    return p;
+  }
   const entryOf = (rid) => reg.find((e) => e.id === rid) || {};
-  const residentList = () => [...residents.values()].map((r) => ({ id: r.id, name: r.name, port: r.livePort || entryOf(r.id).port || (r === first ? basePort : null), hostShell: r.hostShell, run: r === first ? 'inside' : entryOf(r.id).run || 'inside', first: r === first }));
+  const residentList = () => [...residents.values()].map((r) => ({ id: r.id, name: r.name, port: r.livePort || entryOf(r.id).port || (r === first ? basePort : null), hostShell: r.hostShell, run: r === first ? 'inside' : entryOf(r.id).run || 'inside', ...(entryOf(r.id).access ? { access: entryOf(r.id).access } : {}), first: r === first }));
 
   // ---- a fresh client asking for a resident that will run as her own service: the person says yes on the host ----
   const tickets = new Map(); // ticket → { id, name, device, state: waiting|approved|declined, at }
@@ -935,6 +953,7 @@ function createHomeHost(opts) {
     addResident,
     setHostShell,
     setRun,
+    setAccess,
     /** Fresh clients waiting for the person's yes to a resident as her own service; and that yes (or no). */
     waiting,
     approve: (rid) => answer(rid, true),

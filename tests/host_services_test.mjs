@@ -35,7 +35,8 @@ const disk = (base, token, name, args) => call(base, '/host/disk', { token, meth
 const FAE = path.join(tmp, 'fae-home'), HOMES = path.join(tmp, 'homes'), FAE_STATE = path.join(tmp, 'fae-state');
 fs.mkdirSync(path.join(FAE, 'Pandora'), { recursive: true }); fs.writeFileSync(path.join(FAE, 'Pandora', 'SOUL.md'), '# SOUL\n\nmade-up Fae stand-in\n');
 const P = await freeRun(4);
-const make = (run) => createHomeHost({ root: FAE, state: FAE_STATE, id: 'fae', name: 'Fae (test)', homes: HOMES, port: P, run, page: process.env.JV_WEB, napGraceMs: 0, writerMs: 300 });
+const PERSON = 'TESTPC\\someone'; // a stand-in for the person's account, so no real name is in a test
+const make = (run) => createHomeHost({ root: FAE, state: FAE_STATE, id: 'fae', name: 'Fae (test)', homes: HOMES, port: P, run, page: process.env.JV_WEB, napGraceMs: 0, writerMs: 300, person: PERSON });
 const base = `http://127.0.0.1:${P}`;
 const listen = (h) => new Promise((r) => h.server.listen(P, '127.0.0.1', r));
 const kids = [];
@@ -123,6 +124,19 @@ try {
   const ann = host.approve('ann');
   const plan = host.servicePlan('ann');
   ok(ann.remote && ann.run === 'service' && ann.hostShell, 'yes: she is made, set to run as her own service, with host_shell (her shell is walled off)');
+  ok(host.residents().find((x) => x.id === 'ann').access === 'person', "by default her home will be hers and the person's");
+  {
+    const winP = services.plan({ entry: { id: 'ann', name: 'Ann', root: 'C:/homes/ann', state: 'C:/homes/ann (host)' }, configFile: 'C:/c.json', platform: 'win32', node: 'C:/n/node.exe', dir: 'C:/p', person: PERSON });
+    const lines = winP.files['install.cmd'].split('\r\n').filter((l) => l.includes('/inheritance:r'));
+    const home = lines.find((l) => l.includes('"C:/homes/ann"')), rec = lines.find((l) => l.includes('ann (host)'));
+    ok(home.includes(`"${PERSON}:(OI)(CI)F"`) && home.includes('NT SERVICE\\pdee-ann') && !rec.includes(PERSON), 'the person gets into her home; her records (where her key is) stay hers alone');
+    const door = services.plan({ entry: { id: 'ann', name: 'Ann', root: 'C:/homes/ann', state: 'C:/homes/ann (host)' }, configFile: 'C:/c.json', platform: 'win32', node: 'C:/n/node.exe', dir: 'C:/p', person: PERSON, access: 'doorstep' });
+    const dl = door.files['install.cmd'].split('\r\n').filter((l) => l.includes('/inheritance:r'));
+    ok(!dl.find((l) => l.includes('"C:/homes/ann"')).includes(PERSON) && dl.find((l) => l.includes('(doorstep)')).includes(PERSON) && door.files['remove.cmd'].includes('(doorstep)'), 'with a doorstep: her home is hers alone, and the doorstep is the two of theirs (remove gives it back too)');
+    const lin = services.plan({ entry: { id: 'ann', name: 'Ann', root: '/srv/ann', state: '/srv/ann (host)' }, configFile: '/c.json', platform: 'linux', node: '/usr/bin/node', person: 'someone' });
+    const mc = services.plan({ entry: { id: 'ann', name: 'Ann', root: '/srv/ann', state: '/srv/ann (host)' }, configFile: '/c.json', platform: 'darwin', node: '/usr/bin/node', person: 'someone', access: 'doorstep', dir: '/p' });
+    ok(lin.files['install.sh'].includes('setfacl -R -m "u:$P:rwX"') && !lin.files['install.sh'].includes("(host)' -m") && mc.files['install.sh'].includes("'/srv/ann (doorstep)'") && /chmod -R \+a 'someone allow[^']*' '\/srv\/ann \(doorstep\)'/.test(mc.files['install.sh']), 'Linux and macOS: the same, with ACLs (or her group, where there are none)');
+  }
   const files = fs.readdirSync(plan.dir);
   ok(files.includes(plan.install) && files.includes(plan.remove), 'her install and remove steps are written for the person to run');
   if (process.platform === 'win32') {
@@ -130,6 +144,10 @@ try {
     ok(inst.includes('obj= "NT SERVICE\\pdee-ann"') && inst.includes('/inheritance:r') && inst.includes(ann.root) && inst.includes('*S-1-5-32-544'), 'on Windows: her own service identity, and her home hers alone');
     ok(!/https?:\/\//.test(inst) && inst.includes('csc.exe'), 'its service program is built here, with nothing downloaded');
   }
+  let ap = await host.setAccess('ann', 'doorstep');
+  ok(ap.written && fs.readFileSync(ap.installFile, 'utf8').includes('(doorstep)') && JSON.parse(fs.readFileSync(path.join(FAE_STATE, 'residents.json'), 'utf8')).find((e) => e.id === 'ann').access === 'doorstep', 'before she is installed, the person can choose a doorstep instead; her steps are written again, and it is kept');
+  ap = await host.setAccess('ann', 'person');
+  ok(!fs.readFileSync(ap.installFile, 'utf8').includes('(doorstep)'), 'and back');
   r = await call(base, '/host/residents/wait?ticket=' + ticket);
   ok(r.status === 202 && /service/.test(r.json?.waiting || ''), 'until her service runs, the client waits');
   // the computer's part: start her process the way her service would

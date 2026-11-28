@@ -166,13 +166,13 @@
   <section id="bring">
     <h2>Her things on the host</h2>
     <p class="muted">The same backup file the HTML and APK versions use (Config → Backup → Export everything, Export config, or a scheduled backup), with the same steps: a Jade Vault backup's paths become Pandora's, "everything" replaces, "config" merges. What was here before is kept beside her home, so an import can be undone.</p>
-    <p class="muted">Keys: the ones you configured in the Atelier come along only when you ticked "Include API keys" on the export; they go into the host's own write-only key files (her models, her bridges) and are never shown back. Her own keys (her nsec, API keys, wallets) live on disk in her home: an import or export never reads, moves, copies or overwrites them. Files and folders named like keys are hers; list any other place of hers below.</p>
+    <p class="muted">Keys: the ones you configured in the Atelier come along only when you ticked "Include API keys" on the export; they go into the host's own write-only key files (her models, her bridges) and are never shown back. Her own keys (her nsec, API keys, wallets) aren't in the Atelier at all: they're with the tools she built, outside her home, and nothing here writes there. Inside her home too, anything named like a key, or listed below, is never read, moved, copied or overwritten by an import or export.</p>
     <div data-change>
       <div class="row"><label class="f"><span>A backup file</span><input type="file" id="impFile" accept=".json,.gz,application/json,application/gzip"></label>
         <label class="f" id="impPassRow" hidden><span>Its passphrase</span><input type="password" id="impPass" autocomplete="off"></label>
         <button type="button" id="impRead">Read it</button></div>
       <div id="impPreview" hidden></div>
-      <label class="f"><span>Her own keys' places, besides anything named like a key (vault paths, one per line)</span><textarea data-set="herKeys" data-lines rows="2" placeholder="/Pandora/Vault Tree"></textarea></label>
+      <label class="f"><span>Places in her home to leave alone as well, besides anything named like a key (vault paths, one per line)</span><textarea data-set="herKeys" data-lines rows="2" placeholder="/Pandora/Vault Tree"></textarea></label>
     </div>
     <h3 class="hi">Imports</h3>
     <div data-change><table><thead><tr><th>When</th><th>File</th><th>Kind</th><th>Files</th><th>Keys</th><th></th></tr></thead><tbody id="impRows"></tbody></table></div>
@@ -353,7 +353,7 @@
     staged = j; $('#impPass').value = '';
     $('#impPreview').hidden = false;
     $('#impPreview').innerHTML = `<p><span class="hi">${esc(j.name)}</span>: ${j.kind === 'full' ? 'everything' : 'config'} from ${esc(String(j.exportedAt).slice(0, 10))} · ${j.files} files${j.kind === 'full' ? `, ${j.chats} chats, ${j.schedules} schedules` : ''}${j.fromJadeVault ? ` · from Jade Vault: ${j.movedPaths} paths move to /Pandora` : ''}</p>
-      <p>${j.keysToHost.length ? `Your configured keys (you ticked "Include API keys"): ${esc(j.keysToHost.join(', '))}. They go into the host's write-only key files.` : 'None of your configured keys are in it (the box was not ticked).'}${j.keysLeftOut.length ? ` Left out: ${esc(j.keysLeftOut.join(', '))}.` : ''} Her own keys on disk are not touched.</p>
+      <p>${j.keysToHost.length ? `Your configured keys (you ticked "Include API keys"): ${esc(j.keysToHost.join(', '))}. They go into the host's write-only key files.` : 'None of your configured keys are in it (the box was not ticked).'}${j.keysLeftOut.length ? ` Left out: ${esc(j.keysLeftOut.join(', '))}.` : ''} Her own keys, with her tools, are not touched.</p>
       <p class="hi">${esc(j.question)}</p><button type="button" id="impApply">${j.kind === 'full' ? 'Replace everything here' : 'Merge it in'}</button> <button type="button" id="impCancel">Cancel</button>`;
     note('Read. Nothing has changed yet.');
   });

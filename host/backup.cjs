@@ -15,10 +15,12 @@
 //     server...). A backup carries them only when they ticked "Include API keys". Then, and only then, they go into
 //     the host's own write-only key files (her models', her bridges', and atelier-secrets.json for the rest), never
 //     shown back. Without the tick, any that are there anyway are left out, by name.
-//   - Hers: her nsec, her API keys, her wallets. They live on disk, in her home, resident to her, and are never in the
-//     Atelier's backup. An import or export never reads, moves, copies, logs or overwrites them: files and folders
-//     named like keys (herKeys() below), and any places the person lists (the host's herKeys setting), stay where
-//     they are, as they are.
+//   - Hers: her nsec, her API keys, her wallets. They aren't in the Atelier or its folders (not even /Pandora): they
+//     are wherever she put them when she built her tools in her own disk space, and her MCP server tools use them
+//     there. They're never in the Atelier's backup, and the host only ever writes inside her home folder and its own
+//     state folder, so an import can't reach them. As a further guard, anything inside the home that is named like a
+//     key (herKeys() below), or that the person lists (the host's herKeys setting), is never read, moved, copied,
+//     logged or overwritten by an import, an undo or an export either.
 
 'use strict';
 const fs = require('node:fs');

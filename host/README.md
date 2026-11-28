@@ -328,9 +328,13 @@ with the same steps, and with ways back. Nothing new to learn, and no second for
       named in the preview (never their values).
     - Undo puts the key files back as they were.
     - Without the tick, any that are there anyway are left out, by name. The host's exports hold none.
-  - **Hers** (her nsec, her API keys, her wallets) live on disk in her home, resident to her, and are never in the
-    Atelier's backup. An import, an undo or an export never reads, moves, copies, logs or overwrites them, even when
-    "everything" replaces the rest of her home.
+  - **Hers** (her nsec, her API keys, her wallets) aren't in the Atelier or any of its folders, `/Pandora` included.
+    They're wherever she put them when she built her tools in her own disk space, and her MCP server tools use them
+    there.
+    - They're never in the Atelier's backup.
+    - The host only writes inside her home folder and its own state folder, so an import can't reach them.
+  - **A further guard inside her home.** An import, an undo or an export never reads, moves, copies, logs or
+    overwrites anything there that looks like a key, even when "everything" replaces the rest of her home.
     - That covers files and folders named like keys (`.nsec`, `.key`, `.pem`, `id_ed25519`, `.env`, `wallet…`,
       `keys/`, `secrets/` and the like).
     - It also covers any place listed in the host's `herKeys` setting (on its page, under Her things).

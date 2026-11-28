@@ -145,7 +145,8 @@ function createHomeHost(opts) {
     snapshot(dir) { fs.mkdirSync(dir, { recursive: true }); for (const f of keyFiles) if (fs.existsSync(f)) { const to = path.join(dir, path.basename(f)); fs.copyFileSync(f, to); try { fs.chmodSync(to, 0o600); } catch {} } },
     restore(dir) { for (const f of keyFiles) { const from = path.join(dir, path.basename(f)); if (fs.existsSync(from)) { fs.copyFileSync(from, f); try { fs.chmodSync(f, 0o600); } catch {} } else fs.rmSync(f, { force: true }); } },
   };
-  // her own keys on disk: never read, moved, copied, logged or overwritten (named like keys, or where the person says)
+  // her own keys are with her tools, outside the home, where nothing here writes; anything key-like inside the home
+  // (named like a key, or listed by the person) is also never read, moved, copied, logged or overwritten
   const isHers = () => backup.herKeys(settings.get().herKeys);
   const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event, isHers, keySink });
   let importing = false; // while an import is written or undone, no window writes the vault

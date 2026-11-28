@@ -3,8 +3,9 @@
 // "config" merges, the same question first), what was there kept so an import can be undone, keys left out, and the
 // host's things exported in that same file, which the page's own Import button takes. Synthetic homes and backups only.
 // Keys (Mrrowr-murrr, 2026-11-27): the ones the person configured in the Atelier come along only when they ticked
-// "Include API keys", and go into the host's write-only key files; her own keys live on disk in her home and are
-// never read, moved, copied, logged or overwritten by an import, an undo or an export.
+// "Include API keys", and go into the host's write-only key files. Her own keys aren't in the Atelier at all: they're
+// with the tools she built, outside her home, and stay untouched. As a further guard, anything key-like inside her
+// home is never read, moved, copied, logged or overwritten by an import, an undo or an export either.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -26,12 +27,18 @@ const has = vp => fs.existsSync(path.join(HOME, ...vp.split('/').filter(Boolean)
 const get = vp => fs.readFileSync(path.join(HOME, ...vp.split('/').filter(Boolean)), 'utf8');
 // every made-up key in the backups ends in this, so a search for it finds any that got through
 const SECRET = 'for-this-test-only';
+const grepDir = (dir, t) => { const hits = []; const go = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) go(f); else if (fs.readFileSync(f).includes(t)) hits.push(f); } }; if (fs.existsSync(dir)) go(dir); return hits; };
 const findSecret = (dir) => { const hits = []; const go = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) go(f); else if (fs.readFileSync(f).includes(SECRET)) hits.push(f); } }; go(dir); return hits; };
 
 // ---------- the home, before ----------
 put('/Old/kept.md', 'what was here before the import\n');
 put('/Pandora/SOUL.md', '# SOUL\n\nthe soul that was here\n');
-// her own keys, on disk (made up): named like keys, or in a place the person lists
+// her own keys (made up): with the tools she built, outside her home, where her MCP server tools use them
+const TOOLS = path.join(tmp, 'her-tools'); fs.mkdirSync(path.join(TOOLS, 'nostr'), { recursive: true });
+fs.writeFileSync(path.join(TOOLS, 'nostr', 'config.json'), '{"nsec":"nsec1-her-own-made-up"}');
+const toolsState = () => fs.readFileSync(path.join(TOOLS, 'nostr', 'config.json'), 'utf8') + '@' + fs.statSync(path.join(TOOLS, 'nostr', 'config.json')).mtimeMs;
+const TOOLS_BEFORE = toolsState();
+// and, as a further guard, things inside her home that look like keys (named like keys, or in a place the person lists)
 const HERS = 'hers-alone-' + 'made-up';
 const HER_FILES = { '/Pandora/Keys/nostr.nsec': 'nsec1' + HERS, '/Pandora/wallet.json': '{"seed":"' + HERS + '"}', '/Pandora/Vault Tree/notes on keys.txt': HERS, '/Pandora/Vault Tree/deep/x.bin': HERS };
 for (const [vp, t] of Object.entries(HER_FILES)) put(vp, t);
@@ -85,7 +92,7 @@ fs.rmSync(path.join(HOME, 'Scratch'), { recursive: true, force: true });
 r = await api(`/host/import/${prev.id}/apply`, 'POST', { confirm: true });
 const rec = r.json;
 ok(r.status === 200 && rec.written === 5 && !rec.skipped.length, 'with the yes: brought in, 4 files and her migration log');
-ok(herState() === HER_BEFORE, '"everything" replaced her home, but her own keys on disk are exactly as they were (contents and times): the backup\'s nsec did not land');
+ok(herState() === HER_BEFORE, '"everything" replaced her home, but the key-like things in it are exactly as they were (contents and times): the backup\'s nsec did not land');
 ok(!findHers(host.stateDir).length, 'and nothing of them was copied or moved anywhere, nor written in a log: ' + findHers(host.stateDir).join(', '));
 ok(get('/Pandora/SOUL.md').includes('from the backup') && has('/Pandora/Rituals/Morning.ritual.json') && !has('/Jade') && get('/Notes/hello.md') === 'hello from the backup\n', "a Jade Vault backup lands in /Pandora by the page's own rules: SOUL, flows as rituals, notes where they were");
 ok(Buffer.compare(fs.readFileSync(path.join(HOME, 'Pictures', 'dot.png')), PNG) === 0 && fs.statSync(path.join(HOME, 'Empty')).isDirectory(), 'binary files byte for byte, empty folders too');
@@ -112,7 +119,7 @@ ok(r.status === 403 && has('/Notes/hello.md'), 'from elsewhere it cannot be undo
 r = await api(`/host/import/${prev.id}/undo`, 'POST', { confirm: true });
 ok(r.status === 200 && r.json.undone && get('/Old/kept.md').includes('before the import') && get('/Pandora/SOUL.md').includes('the soul that was here') && !has('/Notes/hello.md'), 'undo: what was here before is back, exactly');
 ok(KEY_FILES.every(f => !fs.existsSync(path.join(host.stateDir, f))) && !(await api('/host/status')).json.models.providers.cloud.keySet, 'and the key files are as they were before it (there were none)');
-ok(herState() === HER_BEFORE && !findHers(host.stateDir).length, 'her own keys are still exactly as they were, and still nowhere else');
+ok(herState() === HER_BEFORE && !findHers(host.stateDir).length, 'the key-like things in her home are still exactly as they were, and still nowhere else');
 ok(fs.existsSync(path.join(host.stateDir, 'imports', prev.id, 'undone', 'home', 'Notes', 'hello.md')) && host.store.get('sessions') === undefined, 'and what the import brought is kept too, out of the way; the chats it brought are gone from the host');
 r = await api(`/host/import/${prev.id}/undo`, 'POST', { confirm: true });
 ok(r.status === 409, 'an import is undone once');
@@ -135,7 +142,7 @@ ok(c.status === 200 && get('/Pandora/SOUL.md').includes('from the config') && ha
 ok(host.store.settings().personName === 'Changed Person' && host.store.settings().temperature === 0.7, 'settings merge too: the backup\'s win, the rest stay');
 r = await api(`/host/import/${c.json.id}/undo`, 'POST', { confirm: true });
 ok(r.status === 200 && get('/Pandora/SOUL.md').includes('the soul that was here') && !has('/Pandora/skills/sing/SKILL.md') && host.store.settings().personName === 'Test Person', 'undo puts the replaced file back and takes the added one away (kept aside)');
-ok(herState() === HER_BEFORE, 'config merging and undoing leave her own keys alone too');
+ok(herState() === HER_BEFORE, 'config merging and undoing leave the key-like things in her home alone too');
 
 // ---------- an encrypted scheduled backup, as the page encrypts it (AES-GCM, PBKDF2) ----------
 async function encryptLikeThePage(u8, pass) {
@@ -160,6 +167,7 @@ const exText = await ex.text(); const out = JSON.parse(exText);
 ok(ex.status === 200 && /attachment; filename="pandora-dee-backup-\d{4}-\d\d-\d\d\.json"/.test(ex.headers.get('content-disposition')), 'the host exports everything as a download, named as the page names its own');
 ok(out.app === 'jade-vault' && out.format === 1 && out.kind === 'full' && out.includesKeys === false && out.vault.files['/Pandora/SOUL.md'].includes('from the backup') && out.vault.files['/Pictures/dot.png'].base64 === PNG.toString('base64') && out.db.sessions[0].id === 's1', "in the page's own format: files (binary as base64), folders, chats, schedules, settings");
 ok(!exText.includes(SECRET), 'with none of the person\'s keys in it');
+ok(toolsState() === TOOLS_BEFORE && !exText.includes('her-own-made-up') && !grepDir(host.stateDir, 'her-own-made-up').length && !grepDir(HOME, 'her-own-made-up').length, 'her own keys, with her tools outside her home, were never touched, copied or exported through all of it');
 ok(!exText.includes(HERS) && !/nostr\.nsec|wallet\.json|Vault Tree/.test(exText) && herState() === HER_BEFORE, 'and none of hers: her key files are not read for it, and not named in it');
 const exCfg = JSON.parse(await (await fetch(base + '/host/export?kind=config', { headers: { Authorization: 'Bearer ' + T } })).text());
 ok(exCfg.kind === 'config' && exCfg.vault.files['/Pandora/SOUL.md'] && !exCfg.vault.files['/Notes/hello.md'] && !exCfg.db, 'and config alone, as Export config is');

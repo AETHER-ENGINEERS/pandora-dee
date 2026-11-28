@@ -31,6 +31,7 @@ const { createRuntime } = require('./runtime.cjs');
 const { requestPlace, mayChange } = require('./places.cjs');
 const { createModels } = require('./models.cjs');
 const separate = require('./separate.cjs');
+const { createHarbor } = require('./harbor.cjs');
 const backup = require('./backup.cjs');
 
 const VERSION = '0.1.0';
@@ -838,11 +839,20 @@ function createHomeHost(opts) {
   const fromElsewhere = (req) => { const s = String(req.headers['sec-fetch-site'] || ''); return s && s !== 'same-origin' && s !== 'none'; };
   const readJson = (req) => new Promise((resolve) => { const parts = []; let n = 0; req.on('data', (d) => { n += d.length; if (n <= 8192) parts.push(d); }); req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(parts).toString('utf8') || '{}')); } catch { resolve({}); } }); req.on('error', () => resolve({})); });
 
+  const servicePlan = (rid) => { const e = reg.find((x) => x.id === rid); if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`); return planFor(e); };
+  // the host's own page for everything its window does (harbor.cjs): the front only
+  const harbor = front ? null : createHarbor({
+    first, stateDir: first.stateDir, pins, version: VERSION, residents: () => residentList(), resident: (rid) => residents.get(rid) || null,
+    entryOf, addResident, setRun, setHostShell, setAccess, waiting, answer, servicePlan, send, readJson, fromElsewhere,
+    trustNets: shared.trustNets, elevate: opts.elevate,
+  });
+
   async function route(defaultId, req, res) {
     const url = new URL(req.url || '/', 'http://host');
     const p = url.pathname;
     const here = residents.get(defaultId) || first;
     try {
+      if (harbor && (defaultId === first.id) && await harbor(req, res, url)) return;
       // ---- between the front and a resident in her own process: this machine only, with her key ----
       if (p === '/host/front/pin' && req.method === 'POST' && !front) {
         const b = await readJson(req);
@@ -959,7 +969,7 @@ function createHomeHost(opts) {
     approve: (rid) => answer(rid, true),
     decline: (rid) => { answer(rid, false); },
     /** Her service's install and remove steps, written again (the person runs them as admin). */
-    servicePlan: (rid) => { const e = reg.find((x) => x.id === rid); if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`); return planFor(e); },
+    servicePlan,
     serverFor,
     /** Called with (resident, entry, 'new' | 'moved') for each resident made or moved while the host runs. */
     onResident: (f) => listeners.push(f),

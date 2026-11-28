@@ -393,6 +393,38 @@ moves her; `--run` says where new ones go.
 - **What isn't walled off by this:** the program files themselves belong to whoever installed them. For the strongest
   wall, keep the host's code where only administrators write (like Program Files, or `/opt`).
 
+## The Harbor: the host's own page for everything (`/host/harbor`)
+
+Everything typed into the host's window has a place here too, in Pandora's ISLANDS words: the host is the
+**harbor**, each resident an **island**, devices are **ferries**, and a fresh client asking for a home waits at the
+**reef**. The technical name follows in parentheses wherever precision matters.
+
+- **The archipelago:** every island on the sea, with where she lives (in the harbor's waters, her own cove, or her
+  own island: `inside`, `process` and `service`), and her tide (high: awake; low: not running).
+- **Her island** (click one): the painting grows from where it sat on the sea into her island, with signposts on
+  the island itself (the cottage, the jetty, the palm, the beach…). Each opens what it looks after: move her, choose your way to her (walk her shore, or a tide pool between you:
+  `person` or `doorstep`), her hands on this shore (`host_shell`), and raising her island. Raising asks the computer
+  for the keeper's hand: the administrator prompt appears on the host's own screen, and saying yes there is the
+  person's step. The install and remove steps can be read first.
+- **A new island:** a journey from a seed. Name her, then her garden (a new home, or one already on this computer),
+  where she lives, your way to her, and she joins the archipelago. Each step goes a little further out, from a seed
+  to the stars.
+- **Ferries:** light a PIN to moor one (pair a device), and release one.
+- **The reef:** welcome a fresh client's resident, or turn her back.
+
+**Who may do what:**
+- **The keeper's ferry** pairs once, at the host itself, with the PIN the host shows ("light the lantern"). Keepers
+  are kept apart from every resident's devices (`keepers.json`, SHA-256s only). A keeper's key opens no resident, and
+  no resident's device opens the harbor.
+- **Seeing the harbor:** a keeper's ferry, from this machine, home or the tailnet. Folders show only at the host.
+- **Changing anything:** at the host itself only, straight from this machine, as with the host's window.
+
+The paintings (`host/harbor-art/`) were made for this page with an image model on the house's own Mac, then lifted
+off their paper so they float on the page's sea in light and dark. Each island's painting shows where she lives.
+
+It's plain HTML, CSS and a little script, with nothing loaded from elsewhere. It has light and dark themes, follows the
+system's choice, and keeps still when the system asks for reduced motion.
+
 ## Her things on the host: the Atelier's own backup file (`host/backup.cjs`)
 
 Her things move onto the host the way they already move between the HTML and APK versions: in the same backup file,
@@ -464,9 +496,9 @@ These are the next milestones, in this order:
      yet.
    - Each platform's client installing once per resident (on Android, its own application id) comes with the
      clients.
-   - A resident as her own service needs the person to run her install step as admin. Doing that from the host's
-     settings page, and checking the installed service from there, comes later.
+   - A resident as her own service needs the person's yes as admin; the Harbor asks for it on the host's screen
+     (Windows), and shows the command to run elsewhere.
    - The Linux and macOS steps are written and checked, but not yet run on those systems.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs` and `tests/host_services_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs`, `tests/host_services_test.mjs` and `tests/host_harbor_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

@@ -92,6 +92,7 @@ host.server.listen(port, listen, () => {
   console.log('  settings change only from this machine, the LAN or the tailnet');
   console.log(`  naps:   when no client has been connected for ${host.nap.graceMs / 1000} s: her switches turn off`);
   if (host.residents().length > 1) console.log(`  residents: ${host.residents().map((r) => `${r.name} (${r.id})`).join(', ')}`);
+  console.log(`  harbor: http://127.0.0.1:${port}/host/harbor   (the host's own page for everything typed here: open it on this computer)`);
   console.log(`  bridges: ${firstRun.own.length ? firstRun.own.map((l) => l.name).join(', ') : 'none set up yet'}   settings: http://${listen === '0.0.0.0' ? '127.0.0.1' : listen}:${port}/host/`);
   const where = listen === '0.0.0.0'
     ? Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4').map((i) => `http://${i.address}:${port}/`)

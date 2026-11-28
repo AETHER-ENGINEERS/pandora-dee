@@ -407,6 +407,24 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
   to step ashore. The harbor town's own places: the **lighthouse** (the keeper's), the **ferry office** (PINs), the
   **shipyard** (a new island), the **drydock** (raising islands as their own); the **reef** lies offshore. The whole
   world plan, region by region, is the harbor's map (B to F: her island's regions, her house, the boat to SEASIDE).
+- **Her island (stepping ashore):** her whole land, painted, with a signpost on each of its nine regions. Choosing one
+  glides toward it on her land and settles into the region's own scene, where its places are:
+  - **the cove:** the jetty (her ferries: release one, light a PIN), the campfire (her bridges: listening and speaking,
+    which are lit, a key hung up for one), the sea chest (what was brought in);
+  - **the village terrace:** her house (her Atelier; stepping inside comes with parity step 1, and her own address
+    opens from here meanwhile) and the garden gate (where she lives, your way to her, raising her island, her hands);
+  - **the springs:** the well of her voice (where her loop runs, each job's model, providers, a key hung up, trying her
+    model);
+  - **the standing stones:** her logbook (what was done, as facts only);
+  - **the cliffs:** the lighthouse (her tide: nap, every switch and why it rests, turning back on what the tide turned
+    off);
+  - **her reef:** her boundary (what was turned away lately);
+  - **the misty grove, the observatory and the islet** stand under scaffolding, saying which step brings them (her
+    memory, device senses, the boat to SEASIDE).
+
+  The keeper tends her through a narrow view of the host's own settings and facts: never her vault, her chats, a key's
+  value, or the words she has the redactor hide. Changes are made at the host itself; an island in her own process or
+  service is tended over this machine with her key (`/host/front/tend`).
 - **The chart:** the same archipelago as a plain list, one click away, for old devices, screen readers, or speed. The
   page remembers which you prefer.
 - **The archipelago (on the chart):** every island, with where she lives (in the harbor's waters, her own cove, or her

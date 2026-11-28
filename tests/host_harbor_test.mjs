@@ -124,6 +124,31 @@ try {
   r = await call(base, '/host/harbor/art/seamap.jpg');
   ok(r.status === 200, 'the open sea is painted');
 
+  // ---------- tending an island: her host settings and facts, never her vault, chats or a key ----------
+  host.resident('jade').settings.set({ redactWords: ['made-up-secret-word'] }, 'test');
+  host.resident('jade').models.setKey('groq', 'made-up-provider-key');
+  r = await call(base, '/host/harbor/islands/jade/tend', { token: K });
+  const tj = JSON.stringify(r.json || {});
+  ok(r.status === 200 && r.json.switches && r.json.models && Array.isArray(r.json.devices) && Array.isArray(r.json.log), 'the keeper sees her switches, models, ferries and logbook');
+  ok(r.json.models.providers.groq.keySet === true && !tj.includes('made-up-provider-key') && !tj.includes('made-up-secret-word'), 'a key shows only as hung up, never its value; the words she hides stay hidden');
+  r = await call(base, '/host/harbor/islands/jade/tend/settings', { token: K, method: 'POST', body: { patch: { switches: { heartbeat: false } } } });
+  ok(r.status === 200 && host.resident('jade').settings.state().switches.heartbeat.wanted === false, 'at the host, the keeper turns a switch at her lighthouse');
+  r = await call(base, '/host/harbor/islands/jade/tend/settings', { token: K, method: 'POST', body: { patch: { switches: { heartbeat: true } } }, headers: LAN });
+  ok(r.status === 403 && host.resident('jade').settings.state().switches.heartbeat.wanted === false, 'never from the network');
+  r = await call(base, '/host/harbor/islands/jade/tend/vault', { token: K, method: 'POST', body: {} });
+  ok(r.status === 400, 'only what the keeper tends: no way into her vault');
+  await call(base, '/host/harbor/islands/noe', { token: K, method: 'POST', body: { run: 'process' } });
+  ok(await up('noe') && host.resident('noe').remote, 'Noe back in her own cove (her own process)');
+  r = await call(base, '/host/harbor/islands/noe/tend', { token: K });
+  ok(r.status === 200 && r.json.resident.id === 'noe', 'an island in her own process is tended through her key, over this machine');
+  r = await call(base, '/host/harbor/islands/noe/tend/settings', { token: K, method: 'POST', body: { patch: { switches: { sparks: false } } } });
+  const tn = await call(base, '/host/harbor/islands/noe/tend', { token: K });
+  ok(r.status === 200 && tn.json.switches.sparks.wanted === false, 'and her switches turn there too');
+  r = await call(base, '/host/harbor/islands/ann/tend', { token: K });
+  ok(r.status === 503 && /isn.t running/.test(r.json.error), 'an island whose service isn\'t raised yet says so plainly');
+  r = await call(base, '/host/harbor/islands/jade/tend', { token: faeTok });
+  ok(r.status === 401, 'a resident\'s own device can\'t tend anyone through the harbor');
+
   // ---------- the reef ----------
   const asking = createHomeHost({ root: path.join(tmp, 'h2'), state: path.join(tmp, 'h2-state'), homes: path.join(tmp, 'homes2'), port: P + 10, run: 'service', person: 'TESTPC\\someone', elevate: () => ({ asked: true }) });
   await new Promise((r2) => asking.server.listen(P + 10, '127.0.0.1', r2));

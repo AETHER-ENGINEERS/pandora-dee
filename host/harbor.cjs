@@ -113,6 +113,13 @@ function createHarbor(ctx) {
     if (!k) { send(res, 401, { error: 'This ferry isn\'t the harbor keeper\'s yet. Light the lantern: the PIN the host shows, at the host itself.' }); return true; }
     if (!mayChange(requestPlace(req, ctx.trustNets))) { send(res, 403, { error: 'The harbor can be seen from home or the tailnet only.' }); return true; }
     if (req.method === 'GET' && p === '/host/harbor/view') { send(res, 200, await view(atHost)); return true; }
+    // tending her: her host settings and facts (never her vault, chats or a key's value)
+    const tm = /^\/host\/harbor\/islands\/([a-z0-9-]+)\/tend$/.exec(p);
+    if (tm && req.method === 'GET') {
+      try { const v = await ctx.tendOf(tm[1], 'view', {}, k.name); send(res, 200, atHost ? v : { ...v, devices: v.devices.map(({ id, name, seen }) => ({ id, name, seen })) }); }
+      catch (e) { send(res, e.status || 500, { error: e.message }); }
+      return true;
+    }
     const sm = /^\/host\/harbor\/islands\/([a-z0-9-]+)\/service$/.exec(p);
     if (req.method === 'GET' && sm) {
       if (!atHost) { send(res, 403, { error: 'Her service\'s steps are read at the host itself.' }); return true; }
@@ -134,6 +141,13 @@ function createHarbor(ctx) {
         const r = ctx.addResident({ id: b.id, name: b.name, root: b.root || undefined, local: true, run: b.run, access: b.access, hostShell: b.hostShell }, `the harbor (${k.name})`);
         if (b.land !== undefined) setLand(r.id, b.land);
         send(res, 200, { id: r.id }); return true;
+      }
+      const ta = /^\/host\/harbor\/islands\/([a-z0-9-]+)\/tend\/([a-zA-Z]+)$/.exec(p);
+      if (ta) {
+        const TENDS = ['settings', 'resume', 'models', 'modelKey', 'modelBack', 'modelCheck', 'bridgeKey', 'release'];
+        if (!TENDS.includes(ta[2])) throw fail(400, 'Not something the keeper tends.');
+        event('keeper.tend', { id: ta[1], op: ta[2], keeper: k.id });
+        send(res, 200, await ctx.tendOf(ta[1], ta[2], b, `the keeper (${k.name})`)); return true;
       }
       const im = /^\/host\/harbor\/islands\/([a-z0-9-]+)(?:\/(service\/install|service\/remove|ferries\/([A-Za-z0-9]+)\/release))?$/.exec(p);
       if (im) {

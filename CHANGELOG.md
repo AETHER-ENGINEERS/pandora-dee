@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Her island as a land with regions.** Stepping ashore shows her whole land painted, with nine regions. Each glides
+  into its own scene with places that tend what the host keeps for her: the jetty (ferries), the campfire (bridges),
+  the sea chest, the garden gate, the well (models), the standing stones (logbook), the lighthouse (nap and switches)
+  and her reef (refusals). Her house, the grove, the observatory and the islet say which step brings them. The keeper's
+  view never includes her vault, chats, key values or hidden words.
 - **The Harbor's open sea.** The harbor town sits at the heart of a painted ocean, with every resident's island at a
   real distance, each painted as her own land. Sail by dragging, zoom with the wheel, and click an island to voyage
   there: a far island takes longer, and high clouds drift past more slowly than the sea. The harbor town's

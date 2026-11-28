@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **The Harbor: the host's own page for everything its window does** (`/host/harbor`). Every island on the sea, her
+  shore (where she lives, your way to her, her hands, raising her island with the keeper's hand), a journey for a
+  new island from a seed to the stars, ferries and PINs, and the reef. In Pandora's ISLANDS words, light and dark,
+  with gentle transitions. The keeper's ferry pairs at the host itself and holds no key to any resident; changes are
+  made at the host itself only.
 - **Each resident in her own process, or as her own service.** `run <id> process|service` (or `--run`) moves a
   resident out of the host's own process.
   - The host stays the front: the one PIN, the list, `/r/<id>/…`. It passes each request on to her at her own port, and

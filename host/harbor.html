@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harbor</title>
+<style>
+  /* The Harbor: the host's own page. Words from Pandora's ISLANDS lexicon; the technical names in parentheses. */
+  :root {
+    --accent: #BD72F3; --accent-soft: #bd72f333; --accent-glow: #bd72f366;
+    --sea-top: #f4eefb; --sea-mid: #e6eef4; --sea-deep: #d5e4ea; --stars: 0;
+    --ink: #2a2236; --muted: #6f6580; --card: #ffffffcc; --card-line: #2a223614; --sand: #f7f1e8;
+    --ok: #3fae7f; --low: #a59fb5; --warn: #c98a2e;
+    --ease: cubic-bezier(.2, .8, .2, 1); --slow: 900ms; --mid: 520ms;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sea-top: #120e1d; --sea-mid: #121a2a; --sea-deep: #0c1a22; --ink: #efe9f7; --muted: #a59fb5;
+      --card: #1b1529cc; --card-line: #efe9f71a; --sand: #241c33; --low: #6f6580; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sea-top: #120e1d; --sea-mid: #121a2a; --sea-deep: #0c1a22; --ink: #efe9f7; --muted: #a59fb5;
+    --card: #1b1529cc; --card-line: #efe9f71a; --sand: #241c33; --low: #6f6580; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font: 16px/1.6 var(--sans); color: var(--ink); background: var(--sea-mid);
+    background-image: linear-gradient(180deg, var(--sea-top), var(--sea-mid) 45%, var(--sea-deep));
+    background-attachment: fixed; overflow-x: hidden; transition: background-color var(--slow) var(--ease);
+  }
+  /* the sea itself: slow waves, and stars that come out as a journey goes on (toward the archipelago and beyond) */
+  .sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .stars { position: absolute; inset: 0; opacity: var(--stars); transition: opacity 1.6s var(--ease);
+    background-image: radial-gradient(1px 1px at 12% 18%, var(--accent) 50%, transparent 51%), radial-gradient(1px 1px at 72% 12%, var(--ink) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 40% 30%, var(--accent) 50%, transparent 51%), radial-gradient(1px 1px at 86% 36%, var(--ink) 50%, transparent 51%),
+      radial-gradient(1px 1px at 22% 44%, var(--ink) 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 8%, var(--ink) 50%, transparent 51%),
+      radial-gradient(1px 1px at 92% 22%, var(--accent) 50%, transparent 51%), radial-gradient(1px 1px at 6% 32%, var(--accent) 50%, transparent 51%); }
+  .waves { position: absolute; left: -10%; right: -10%; bottom: -2px; height: 34vh; opacity: .55; }
+  .waves path { fill: var(--accent-soft); }
+  .waves .w2 { fill: #7fb8c833; animation: drift 26s ease-in-out infinite alternate; }
+  .waves .w1 { animation: drift 34s ease-in-out infinite alternate-reverse; }
+  @keyframes drift { from { transform: translateX(-3%); } to { transform: translateX(3%); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); } 50% { box-shadow: 0 0 0 8px transparent; } }
+
+  main { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 28px 20px 120px; }
+  header.top { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  header.top h1 { font: 600 28px/1.2 var(--serif); margin: 0; letter-spacing: .2px; }
+  header.top .sub { color: var(--muted); font-size: 14px; }
+  header.top .grow { flex: 1; }
+  .icon { width: 1.25em; height: 1.25em; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.22em; }
+  .icon.big { width: 44px; height: 44px; color: var(--accent); }
+  .ghost { background: none; border: 1px solid var(--card-line); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; transition: background .3s var(--ease), border-color .3s; }
+  .ghost:hover { border-color: var(--accent); background: var(--accent-soft); }
+  button.sail { background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 10px 22px; font: 600 15px var(--sans); cursor: pointer; box-shadow: 0 6px 20px -8px var(--accent); transition: transform .25s var(--ease), box-shadow .25s var(--ease), opacity .25s; }
+  button.sail:hover { transform: translateY(-1px); box-shadow: 0 10px 28px -10px var(--accent); }
+  button.sail:disabled { opacity: .45; cursor: default; transform: none; }
+  button:focus-visible, input:focus-visible, .choice:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* screens drift in and out like weather */
+  .screen { visibility: visible; transition: opacity var(--mid) var(--ease), transform var(--mid) var(--ease), filter var(--mid) var(--ease), visibility 0s; }
+  /* once faded, really gone: a hidden screen's frosted cards would otherwise still blur what lies beneath */
+  .screen.away { visibility: hidden; transition: opacity var(--mid) var(--ease), transform var(--mid) var(--ease), filter var(--mid) var(--ease), visibility 0s linear var(--mid); opacity: 0; transform: translateY(14px) scale(.985); filter: blur(4px); pointer-events: none; position: absolute; inset: 0 20px auto; }
+  .note { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--card-line); border-radius: 22px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+  /* lighting the lantern (the keeper pairs) */
+  .lantern { max-width: 460px; margin: 10vh auto 0; text-align: center; }
+  .lantern h2, .journey h2, .shore h2 { font: 600 24px/1.25 var(--serif); margin: 10px 0 6px; }
+  .pinbox { display: flex; gap: 8px; justify-content: center; margin: 20px 0 14px; }
+  .pinbox input { width: 180px; text-align: center; font: 600 26px/1 var(--sans); letter-spacing: 8px; padding: 12px; border-radius: 16px; border: 1px solid var(--card-line); background: var(--sand); color: var(--ink); }
+  input.line { width: 100%; padding: 11px 14px; border-radius: 14px; border: 1px solid var(--card-line); background: var(--sand); color: var(--ink); font: inherit; }
+  label.small { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+
+  /* the archipelago: each island on the sea */
+  .seahead { display: flex; align-items: baseline; gap: 12px; margin: 26px 0 4px; }
+  .seahead h2 { font: 600 20px var(--serif); margin: 0; }
+  .archipelago { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 26px 22px; margin-top: 18px; }
+  .island { position: relative; text-align: left; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 0; transition: transform .5s var(--ease); }
+  .island:nth-child(3n+2) { margin-top: 26px; } .island:nth-child(3n) { margin-top: 10px; }
+  .island:hover { transform: translateY(-4px); }
+  .island .land { position: relative; height: 128px; border-radius: 52% 48% 46% 54% / 58% 52% 48% 42%; background: radial-gradient(120% 90% at 30% 25%, var(--sand), transparent 70%), var(--card);
+    border: 1px solid var(--card-line); display: grid; place-items: center; animation: bob 7s ease-in-out infinite; transition: border-radius 1.2s var(--ease), box-shadow .6s var(--ease); }
+  .island:nth-child(2n) .land { animation-duration: 8.5s; border-radius: 46% 54% 58% 42% / 50% 44% 56% 50%; }
+  .island:hover .land { border-radius: 50% 50% 50% 50% / 52% 52% 48% 48%; box-shadow: 0 18px 40px -22px var(--accent); }
+  .island .land .icon { width: 50px; height: 50px; color: var(--accent); }
+  .island .tide { position: absolute; top: 14px; right: 18%; width: 10px; height: 10px; border-radius: 50%; background: var(--low); }
+  .island .tide.up { background: var(--ok); animation: glow 3.2s ease-in-out infinite; }
+  .island .name { font: 600 17px var(--serif); margin: 12px 4px 0; }
+  .island .where { font-size: 13px; color: var(--muted); margin: 0 4px; }
+  .island.new .land { border-style: dashed; background: transparent; }
+  .island.arriving .land { animation: arrive 1.4s var(--ease) both, bob 7s ease-in-out 1.4s infinite; }
+  @keyframes arrive { from { transform: scale(.3) translateY(30px); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: none; } }
+
+  /* at the reef: fresh ferries asking for a home */
+  .reef { margin-top: 34px; display: grid; gap: 12px; }
+  .ask { display: flex; align-items: center; gap: 14px; animation: arrive .9s var(--ease) both; }
+  .ask .grow { flex: 1; }
+
+  /* her shore: one island, drawn out from the side */
+  .veil { position: fixed; inset: 0; background: #0b091233; backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity var(--mid) var(--ease); z-index: 5; }
+  .veil.on { opacity: 1; pointer-events: auto; }
+  .shore { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); z-index: 6; overflow-y: auto; padding: 26px 24px 60px;
+    background: var(--sea-top); border-left: 1px solid var(--card-line); box-shadow: -30px 0 60px -40px #0008;
+    transform: translateX(104%); transition: transform var(--slow) var(--ease); }
+  .shore.on { transform: none; }
+  .shore section { margin-top: 22px; }
+  .shore h3 { font: 600 15px var(--sans); margin: 0 0 8px; letter-spacing: .2px; }
+  .choices { display: grid; gap: 10px; }
+  .choice { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--card-line); background: var(--card); cursor: pointer; transition: border-color .35s var(--ease), background .35s var(--ease), transform .35s var(--ease); }
+  .choice:hover { transform: translateX(2px); }
+  .choice input { position: absolute; opacity: 0; pointer-events: none; }
+  .choice .icon { width: 28px; height: 28px; color: var(--muted); flex: none; margin-top: 2px; transition: color .35s, transform .6s var(--ease); }
+  .choice.on { border-color: var(--accent); background: linear-gradient(120deg, var(--accent-soft), transparent 70%), var(--card); }
+  .choice.on .icon { color: var(--accent); transform: rotate(-6deg) scale(1.08); }
+  .choice b { display: block; font-weight: 600; }
+  .choice small { color: var(--muted); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  details.steps summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  details.steps pre { white-space: pre-wrap; word-break: break-word; font: 12px/1.5 ui-monospace, Consolas, monospace; background: var(--sand); border-radius: 12px; padding: 12px; max-height: 260px; overflow: auto; }
+  .switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .switch .track { width: 46px; height: 26px; border-radius: 999px; background: var(--card-line); position: relative; transition: background .4s var(--ease); flex: none; }
+  .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px #0003; transition: transform .45s var(--ease); }
+  .switch input { position: absolute; opacity: 0; }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(20px); }
+
+  /* a new island: a journey from a seed outward; each step a little further toward the archipelago */
+  .journey { max-width: 640px; margin: 4vh auto 0; }
+  .path { display: flex; justify-content: space-between; align-items: center; margin: 0 6px 24px; position: relative; }
+  .path::before { content: ""; position: absolute; left: 18px; right: 18px; top: 50%; height: 1px; background: var(--card-line); }
+  .path .stone { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--sea-top); border: 1px solid var(--card-line); color: var(--muted); transition: all .7s var(--ease); }
+  .path .stone.done { color: var(--accent); border-color: var(--accent-soft); }
+  .path .stone.now { color: #fff; background: var(--accent); border-color: var(--accent); transform: scale(1.18); box-shadow: 0 8px 22px -8px var(--accent); }
+  .path .stone .icon { width: 20px; height: 20px; }
+  .stage { display: grid; } /* every step in one cell: the stage is as tall as its tallest step, and nothing overlaps */
+  .step { grid-area: 1 / 1; transition: opacity var(--mid) var(--ease), transform var(--slow) var(--ease), filter var(--mid); }
+  .step.before { opacity: 0; transform: translateX(-40px) scale(.98); filter: blur(3px); pointer-events: none; }
+  .step.after { opacity: 0; transform: translateX(40px) scale(.98); filter: blur(3px); pointer-events: none; }
+  .step .glyph { display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%; background: var(--accent-soft); margin-bottom: 6px; }
+  .step .glyph .icon { width: 40px; height: 40px; color: var(--accent); animation: bob 5s ease-in-out infinite; }
+  .step .lede { color: var(--muted); margin: 0 0 14px; }
+  .nav { display: flex; justify-content: space-between; margin-top: 22px; }
+
+  .bottle { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 30px); opacity: 0; z-index: 9; max-width: min(560px, calc(100vw - 32px));
+    background: var(--ink); color: var(--sea-top); padding: 12px 18px; border-radius: 16px; font-size: 14px; transition: all .6s var(--ease); pointer-events: none; }
+  .bottle.on { transform: translate(-50%, 0); opacity: 1; }
+  .pin { font: 700 44px/1 var(--sans); letter-spacing: 10px; color: var(--accent); margin: 10px 0 4px; }
+  .hidden { display: none !important; }
+  @media (max-width: 560px) { main { padding: 18px 16px 100px; } .archipelago { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 14px; } .island .land { height: 100px; } .island:nth-child(n) { margin-top: 0; } header.top h1 { font-size: 24px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- small line glyphs, drawn for this page: one family, a little hand-drawn -->
+  <symbol id="i-lantern" viewBox="0 0 24 24"><path d="M9 4h6M12 2v2M8 7h8l-1 10H9L8 7z"/><path d="M12 10v4"/><path d="M7 20h10"/></symbol>
+  <symbol id="i-seed" viewBox="0 0 24 24"><path d="M12 20c-4-2-6-6-5-10 3 0 6 2 7 5"/><path d="M12 20c1-5 3-9 7-11 0 5-2 9-7 11z"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M12 21v-8"/><path d="M12 13c0-4-3-6-7-6 0 4 3 6 7 6z"/><path d="M12 11c0-3 2-6 6-6 0 3-2 6-6 6z"/><path d="M6 21h12"/></symbol>
+  <symbol id="i-island" viewBox="0 0 24 24"><path d="M3 17c3-3 6-4 9-4s6 1 9 4"/><path d="M2 20c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/><path d="M12 13V6"/><path d="M12 6c-2-2-5-1-6 1M12 6c2-2 5-1 6 1M12 6c0-2 1-3 3-4"/></symbol>
+  <symbol id="i-cove" viewBox="0 0 24 24"><path d="M3 9c2 6 6 9 9 9s7-3 9-9"/><path d="M7 14c1.5 1 3 1.5 5 1.5s3.5-.5 5-1.5"/><path d="M2 20c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/></symbol>
+  <symbol id="i-boat" viewBox="0 0 24 24"><path d="M4 15h16l-2 4H6l-2-4z"/><path d="M12 15V4l6 9h-6"/><path d="M2 21c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/></symbol>
+  <symbol id="i-shore" viewBox="0 0 24 24"><path d="M3 18c4-1 6-5 9-5s5 4 9 5"/><path d="M8 9a2 2 0 1 0 0-.01M16 7l1 2M18 11l2-.5"/><path d="M2 21h20"/></symbol>
+  <symbol id="i-pool" viewBox="0 0 24 24"><ellipse cx="12" cy="15" rx="8" ry="4"/><path d="M8 15c1.3.7 2.7 1 4 1s2.7-.3 4-1"/><path d="M5 9c1-2 3-3 5-3M14 5c2 0 4 1 5 3"/></symbol>
+  <symbol id="i-ferry" viewBox="0 0 24 24"><path d="M3 14h18l-2 4H5l-2-4z"/><path d="M6 14v-3h12v3M9 11V8h6v3"/><path d="M2 21c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"/></symbol>
+  <symbol id="i-reef" viewBox="0 0 24 24"><path d="M4 20c0-4 2-6 3-9 1 3 2 4 2 9M10 20c0-5 2-8 3-12 1 4 3 6 3 12M16 20c0-3 1-5 2-7 1 2 2 3 2 7"/><path d="M2 20h20"/></symbol>
+  <symbol id="i-stars" viewBox="0 0 24 24"><circle cx="6" cy="8" r="1.6"/><circle cx="17" cy="6" r="1.2"/><circle cx="13" cy="15" r="2"/><circle cx="5" cy="18" r="1"/><circle cx="19" cy="17" r="1.4"/><path d="M6 8l7 7 4-9M13 15l6 2M6 8l-1 10" stroke-dasharray="1 2"/></symbol>
+  <symbol id="i-hands" viewBox="0 0 24 24"><path d="M7 11V5a1.5 1.5 0 0 1 3 0v5M10 9V4a1.5 1.5 0 0 1 3 0v5M13 9V5a1.5 1.5 0 0 1 3 0v6"/><path d="M16 9a1.5 1.5 0 0 1 3 0v4c0 4-3 7-7 7s-6-2-7-5l-1.5-3a1.5 1.5 0 0 1 2.6-1.5L7 12"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14a8 8 0 1 1-10-10 6 6 0 0 0 10 10z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
+</svg>
+<div class="sky" aria-hidden="true">
+  <div class="stars"></div>
+  <svg class="waves" viewBox="0 0 1440 320" preserveAspectRatio="none">
+    <path class="w2" d="M0,224L80,213C160,203,320,181,480,186.7C640,192,800,224,960,229.3C1120,235,1280,213,1360,202.7L1440,192L1440,320L0,320Z"/>
+    <path class="w1" d="M0,256L90,245.3C180,235,360,213,540,218.7C720,224,900,256,1080,261.3C1260,267,1350,245,1395,234.7L1440,224L1440,320L0,320Z"/>
+  </svg>
+</div>
+
+<main>
+  <header class="top">
+    <svg class="icon big" aria-hidden="true"><use href="#i-lantern"/></svg>
+    <div>
+      <h1 id="title">Harbor</h1>
+      <div class="sub" id="subtitle">the host's own page</div>
+    </div>
+    <div class="grow"></div>
+    <button class="ghost" id="theme" title="Day or night"><svg class="icon"><use href="#i-moon"/></svg></button>
+  </header>
+
+  <!-- the lantern: this ferry becomes the keeper's -->
+  <section class="screen lantern away" id="lanternScreen" aria-live="polite">
+    <div class="card">
+      <svg class="icon big" aria-hidden="true"><use href="#i-lantern"/></svg>
+      <h2>Light the harbor's lantern</h2>
+      <p class="note" id="lanternNote">Type the PIN the host's window shows. This ferry (this browser) becomes the keeper's: it can look after every island here, but holds no key to any one of them.</p>
+      <div class="pinbox"><input id="pin" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="PIN"></div>
+      <input class="line" id="keeperName" placeholder="What to call this ferry (say, the host's own screen)" aria-label="Name for this ferry">
+      <p style="margin-top:18px"><button class="sail" id="light">Light it</button></p>
+    </div>
+  </section>
+
+  <!-- the archipelago -->
+  <section class="screen away" id="seaScreen">
+    <p class="note" id="elsewhere" hidden>You're looking from afar: the harbor is changed at the host itself.</p>
+    <div class="seahead"><h2>The archipelago</h2><span class="note" id="count"></span></div>
+    <div class="archipelago" id="islands"></div>
+    <div class="reef" id="reef"></div>
+    <div class="seahead" style="margin-top:38px"><h2>Ferries</h2><span class="note">devices that moor here</span></div>
+    <div class="card row" style="margin-top:12px">
+      <svg class="icon big" aria-hidden="true"><use href="#i-ferry"/></svg>
+      <div style="flex:1">
+        <div id="pinShown" class="hidden"><div class="pin" id="pinValue"></div><div class="note">Good once, for ten minutes. On the ferry, open her address and enter it (pairing).</div></div>
+        <div id="pinAsk" class="note">A ferry moors with a PIN from the host. Light one for it here, or type <b>pin</b> in the host's window.</div>
+      </div>
+      <button class="ghost needs-host" id="newPin">Light a PIN</button>
+    </div>
+  </section>
+
+  <!-- a new island -->
+  <section class="screen journey away" id="journeyScreen">
+    <div class="path" id="path"></div>
+    <div class="stage" id="stage">
+      <div class="step" data-step="0">
+        <div class="glyph"><svg class="icon"><use href="#i-seed"/></svg></div>
+        <h2>Every island begins as a seed</h2>
+        <p class="lede">What is she called? Her name is what ferries show; her short name is how the harbor knows her (her id: lowercase letters, digits and dashes).</p>
+        <label class="small" for="jName">Her name</label><input class="line" id="jName" placeholder="Noe">
+        <label class="small" for="jId">Her short name</label><input class="line" id="jId" placeholder="noe">
+      </div>
+      <div class="step after" data-step="1">
+        <div class="glyph"><svg class="icon"><use href="#i-sprout"/></svg></div>
+        <h2>Where her garden grows</h2>
+        <p class="lede">Her home: the folder that is her vault's "/".</p>
+        <div class="choices" id="jGarden">
+          <label class="choice on"><input type="radio" name="garden" value="new" checked><svg class="icon"><use href="#i-seed"/></svg><span><b>A new garden</b><small>An empty home, in the host's folder for new residents (--homes). Her SOUL is hers to write.</small></span></label>
+          <label class="choice"><input type="radio" name="garden" value="existing"><svg class="icon"><use href="#i-sprout"/></svg><span><b>A garden already growing</b><small>A home that's already on this computer. Her files stay just as they are.</small></span></label>
+        </div>
+        <div id="jRootBox" class="hidden"><label class="small" for="jRoot">Where it is</label><input class="line" id="jRoot" placeholder="the folder's full path"></div>
+      </div>
+      <div class="step after" data-step="2">
+        <div class="glyph"><svg class="icon"><use href="#i-island"/></svg></div>
+        <h2>Where she lives</h2>
+        <p class="lede">How far from the harbor her island lies. She can move later.</p>
+        <div class="choices" id="jRun"></div>
+      </div>
+      <div class="step after" data-step="3">
+        <div class="glyph"><svg class="icon"><use href="#i-shore"/></svg></div>
+        <h2>Your way to her</h2>
+        <p class="lede" id="jWayNote">On her own island, her shore is walled from the other islands. How do you reach it?</p>
+        <div class="choices" id="jAccess"></div>
+      </div>
+      <div class="step after" data-step="4">
+        <div class="glyph"><svg class="icon"><use href="#i-stars"/></svg></div>
+        <h2>She joins the archipelago</h2>
+        <p class="lede" id="jSummary"></p>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="ghost" id="jBack">Back to the sea</button>
+      <button class="sail" id="jNext">Onward</button>
+    </div>
+  </section>
+</main>
+
+<div class="veil" id="veil"></div>
+<aside class="shore" id="shore" aria-label="Her island" aria-hidden="true"></aside>
+<div class="bottle" id="bottle" role="status"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const icon = (n, cls = 'icon') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+  const store = { get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  let token = store.get('pdhost:keeper');
+  let view = null, openId = null, known = new Set();
+
+  // ---- day and night ----
+  const theme = store.get('pdhost:theme');
+  if (theme) document.documentElement.dataset.theme = theme;
+  const night = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+  const themeIcon = () => { $('#theme').innerHTML = icon(night() ? 'sun' : 'moon'); };
+  themeIcon();
+  $('#theme').onclick = () => { const t = night() ? 'light' : 'dark'; document.documentElement.dataset.theme = t; store.set('pdhost:theme', t); themeIcon(); };
+
+  // ---- a message in a bottle ----
+  let bottleT = 0;
+  const bottle = (m) => { const b = $('#bottle'); b.textContent = m; b.classList.add('on'); clearTimeout(bottleT); bottleT = setTimeout(() => b.classList.remove('on'), 4200); };
+
+  const api = async (p, method = 'GET', body) => {
+    const r = await fetch(p, { method, headers: { Authorization: 'Bearer ' + token, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+    let j = {}; try { j = await r.json(); } catch {}
+    if (r.status === 401) { token = ''; show('lanternScreen'); }
+    if (!r.ok) throw new Error(j.error || 'The harbor didn\'t answer that.');
+    return j;
+  };
+
+  // ---- screens drift in and out ----
+  const screens = ['lanternScreen', 'seaScreen', 'journeyScreen'];
+  function show(id) { for (const s of screens) $('#' + s).classList.toggle('away', s !== id); window.scrollTo({ top: 0, behavior: 'smooth' }); if (id !== 'journeyScreen') stars(0); }
+  const stars = (v) => document.documentElement.style.setProperty('--stars', String(v));
+
+  // ---- where she lives, and your way to her: the same words everywhere ----
+  const RUNS = [
+    { v: 'inside', i: 'boat', b: "In the harbor's waters", s: 'She lives in the host\'s own process, beside the harbor. Her files and ferries are hers; her hands (host_shell) aren\'t walled off.' },
+    { v: 'process', i: 'cove', b: 'Her own cove', s: 'Her own process, kept by the harbor. If a storm stops her, it stops only her.' },
+    { v: 'service', i: 'island', b: 'Her own island', s: 'Her own service, under her own identity on this computer. Her shore is walled from every other island. Raised by the keeper\'s hand (as administrator).' },
+  ];
+  const ACCESS = [
+    { v: 'person', i: 'shore', b: 'You walk her shore', s: 'Her home is hers and yours: open it, leave things, edit as always. No other island gets in.' },
+    { v: 'doorstep', i: 'pool', b: 'A tide pool between you', s: 'Her home is hers alone; a folder beside it (the doorstep) is where you two leave things for each other. For when she\'s fully local.' },
+  ];
+  const runOf = (v) => RUNS.find((r) => r.v === v) || RUNS[0];
+  const choices = (name, list, value, disabled) => list.map((c) => `<label class="choice${c.v === value ? ' on' : ''}"><input type="radio" name="${name}" value="${c.v}"${c.v === value ? ' checked' : ''}${disabled ? ' disabled' : ''}>${icon(c.i)}<span><b>${esc(c.b)}</b><small>${esc(c.s)}</small></span></label>`).join('');
+  const bindChoices = (el, f) => el.querySelectorAll('input[type=radio]').forEach((inp) => inp.addEventListener('change', () => { el.querySelectorAll('.choice').forEach((c) => c.classList.toggle('on', c.contains(inp) && inp.checked)); f && f(inp.value); }));
+
+  // ---- the archipelago ----
+  function render() {
+    if (!view) return;
+    $('#title').textContent = `${view.harbor.name}'s harbor`;
+    document.title = `${view.harbor.name}'s harbor`;
+    $('#subtitle').textContent = `the host's own page · ${view.islands.length} island${view.islands.length === 1 ? '' : 's'}`;
+    $('#count').textContent = view.islands.filter((i) => i.up).length + ' at high tide';
+    $('#elsewhere').hidden = view.atHost;
+    document.querySelectorAll('.needs-host').forEach((b) => { b.disabled = !view.atHost; b.title = view.atHost ? '' : 'At the host itself'; });
+    const html = view.islands.map((i) => {
+      const r = runOf(i.run);
+      const arriving = known.size && !known.has(i.id) ? ' arriving' : '';
+      return `<button class="island${arriving}" data-id="${esc(i.id)}" aria-label="${esc(i.name)}">
+        <div class="land">${icon(r.i)}<span class="tide${i.up ? ' up' : ''}" title="${i.up ? 'high tide: awake' : 'low tide: not running'}"></span></div>
+        <div class="name">${esc(i.name)}</div>
+        <div class="where">${esc(r.b)}${i.first ? ' · the first' : ''}${i.ferries != null ? ` · ${i.ferries} ferr${i.ferries === 1 ? 'y' : 'ies'}` : ''}</div>
+      </button>`;
+    }).join('') + (view.atHost ? `<button class="island new" id="newIsland" aria-label="A new island"><div class="land">${icon('seed')}</div><div class="name">A new island</div><div class="where">plant a seed</div></button>` : '');
+    $('#islands').innerHTML = html;
+    known = new Set(view.islands.map((i) => i.id));
+    $('#islands').querySelectorAll('.island[data-id]').forEach((b) => (b.onclick = () => openShore(b.dataset.id)));
+    const n = $('#newIsland'); if (n) n.onclick = startJourney;
+    $('#reef').innerHTML = view.reef.length ? `<div class="seahead"><h2>At the reef</h2><span class="note">fresh ferries asking for a home</span></div>` + view.reef.map((w) => `
+      <div class="card ask">${icon('reef', 'icon big')}<div class="grow"><b>${esc(w.name)}</b> <span class="note">(${esc(w.id)})</span><div class="note">${esc(w.device)} asks for her to come ashore, on her own island.</div></div>
+      <button class="ghost needs-host" data-no="${esc(w.id)}"${view.atHost ? '' : ' disabled'}>Turn back</button>
+      <button class="sail needs-host" data-yes="${esc(w.id)}"${view.atHost ? '' : ' disabled'}>Welcome her</button></div>`).join('') : '';
+    $('#reef').querySelectorAll('[data-yes],[data-no]').forEach((b) => (b.onclick = async () => {
+      const id = b.dataset.yes || b.dataset.no;
+      try { await api('/host/harbor/reef/' + id, 'POST', { welcome: !!b.dataset.yes }); bottle(b.dataset.yes ? `Welcome, ${id}. Her island is planned: raise it with the keeper's hand.` : 'Turned back, gently.'); await refresh(); if (b.dataset.yes) openShore(id); } catch (e) { bottle(e.message); }
+    }));
+    if (openId) { const i = view.islands.find((x) => x.id === openId); if (i) drawShore(i, true); }
+  }
+
+  async function refresh() { try { view = await api('/host/harbor/view'); render(); } catch (e) { if (token) bottle(e.message); } }
+
+  // ---- her shore ----
+  function openShore(id) { openId = id; const i = view.islands.find((x) => x.id === id); if (!i) return; drawShore(i); $('#shore').classList.add('on'); $('#shore').setAttribute('aria-hidden', 'false'); $('#veil').classList.add('on'); }
+  function closeShore() { openId = null; $('#shore').classList.remove('on'); $('#shore').setAttribute('aria-hidden', 'true'); $('#veil').classList.remove('on'); }
+  $('#veil').onclick = closeShore;
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShore(); });
+
+  function drawShore(i, quiet) {
+    const r = runOf(i.run);
+    const host = view.atHost;
+    const el = $('#shore');
+    if (quiet && el.dataset.for === i.id && el.dataset.sig === JSON.stringify(i)) return;
+    el.dataset.for = i.id; el.dataset.sig = JSON.stringify(i);
+    el.innerHTML = `
+      <div class="row"><button class="ghost" id="closeShore">Back to the sea</button></div>
+      <div class="glyph" style="margin-top:18px;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft)">${icon(r.i, 'icon big')}</div>
+      <h2>${esc(i.name)}</h2>
+      <div class="note">${esc(i.id)} · ${i.up ? 'high tide: awake' : 'low tide: not running'}${i.port ? ` · her address's port ${i.port}` : ''}${i.home ? `<br>her home: ${esc(i.home)}` : ''}</div>
+      ${i.first ? `<section><div class="note">She is the harbor's first island: she lives in its waters, with her own hands, always. (Moving her to her own island comes next.)</div></section>` : `
+      <section><h3>Where she lives</h3><div class="choices" id="sRun">${choices('srun', RUNS, i.run, !host)}</div></section>`}
+      ${i.run === 'service' ? `
+      <section><h3>Your way to her</h3><div class="choices" id="sAccess">${choices('saccess', ACCESS, i.access || 'person', !host)}</div></section>
+      <section><h3>Raising her island</h3>
+        <p class="note">Her island is raised by the keeper's hand: the computer asks you, as administrator, on this screen. ${i.up ? 'She is risen.' : 'It isn\'t raised yet.'}</p>
+        <div class="row"><button class="sail needs-host" id="raise"${host ? '' : ' disabled'}>Raise her island</button><button class="ghost needs-host" id="lower"${host ? '' : ' disabled'}>Let the tide take it back</button></div>
+        <details class="steps" id="stepsBox"><summary>Read the steps first (install and remove)</summary><div id="stepsText" class="note">…</div></details>
+      </section>` : ''}
+      ${i.first ? '' : `<section><h3>Her hands on this shore</h3>
+        <label class="switch"><input type="checkbox" id="sShell"${i.hostShell ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Her own tools on this computer (host_shell)${i.run === 'service' ? ', walled to her shore' : i.hostShell ? '' : ': off, since they aren\'t walled off from the other islands here'}</span></label></section>`}
+      ${i.ferries != null ? `<section><h3>Ferries</h3><div class="note">${i.ferries} moored with her. Light a PIN on the sea to moor another.</div></section>` : ''}`;
+    $('#closeShore').onclick = closeShore;
+    const act = async (body, said) => { try { await api('/host/harbor/islands/' + i.id, 'POST', body); bottle(said); await refresh(); } catch (e) { bottle(e.message); await refresh(); } };
+    if ($('#sRun')) bindChoices($('#sRun'), (v) => act({ run: v }, `${i.name} is moving: ${runOf(v).b.toLowerCase()}.`));
+    if ($('#sAccess')) bindChoices($('#sAccess'), (v) => act({ access: v }, v === 'doorstep' ? 'A tide pool it is; her steps are written again.' : 'You\'ll walk her shore; her steps are written again.'));
+    if ($('#sShell')) $('#sShell').onchange = (e) => act({ hostShell: e.target.checked }, e.target.checked ? 'Her hands are free on this shore.' : 'Her hands rest.');
+    if ($('#stepsBox')) $('#stepsBox').ontoggle = async (e) => {
+      if (!e.target.open) return;
+      try { const s = await api('/host/harbor/islands/' + i.id + '/service'); $('#stepsText').innerHTML = `<p>As ${esc(s.identity)}. In ${esc(s.dir)}.</p>${s.why ? `<p>${esc(s.why)}</p>` : ''}` + Object.entries(s.files).map(([n, t]) => `<p><b>${esc(n)}</b></p><pre>${esc(t)}</pre>`).join(''); } catch (err) { $('#stepsText').textContent = err.message; }
+    };
+    const ask = (what) => async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/service/${what}`, 'POST', {}); bottle(r2.asked ? 'The computer is asking you, as administrator, on the host\'s screen.' : `At the host, as root: ${r2.run}`); setTimeout(refresh, 4000); } catch (e) { bottle(e.message); } };
+    if ($('#raise')) $('#raise').onclick = ask('install');
+    if ($('#lower')) $('#lower').onclick = ask('remove');
+  }
+
+  // ---- a new island: the journey ----
+  const STEPS = [{ i: 'seed', t: 'seed' }, { i: 'sprout', t: 'garden' }, { i: 'island', t: 'island' }, { i: 'shore', t: 'shore' }, { i: 'stars', t: 'archipelago' }];
+  let step = 0;
+  const j = { run: 'inside', access: 'person', garden: 'new' };
+  function startJourney() {
+    step = 0; Object.assign(j, { run: 'inside', access: 'person', garden: 'new' });
+    $('#jName').value = ''; $('#jId').value = ''; $('#jRoot').value = '';
+    $('#jRun').innerHTML = choices('jrun', RUNS, j.run); bindChoices($('#jRun'), (v) => { j.run = v; });
+    $('#jAccess').innerHTML = choices('jaccess', ACCESS, j.access); bindChoices($('#jAccess'), (v) => { j.access = v; });
+    show('journeyScreen'); go(0);
+    setTimeout(() => $('#jName').focus(), 500);
+  }
+  bindChoices($('#jGarden'), (v) => { j.garden = v; $('#jRootBox').classList.toggle('hidden', v !== 'existing'); });
+  $('#jName').addEventListener('input', () => { if (!$('#jId').dataset.touched) $('#jId').value = $('#jName').value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); });
+  $('#jId').addEventListener('input', () => { $('#jId').dataset.touched = '1'; });
+  const skips = (n) => n === 3 && j.run !== 'service';
+  function go(n) {
+    step = n;
+    document.querySelectorAll('.step').forEach((s) => { const k = Number(s.dataset.step); s.classList.toggle('before', k < n); s.classList.toggle('after', k > n); });
+    $('#path').innerHTML = STEPS.map((s, k) => `<span class="stone${k < n ? ' done' : ''}${k === n ? ' now' : ''}" title="${s.t}">${icon(s.i)}</span>`).join('');
+    stars([0, .15, .3, .5, .85][n]); // each step a little further out, toward the archipelago and the stars beyond
+    $('#jNext').textContent = n === STEPS.length - 1 ? 'Let her island rise' : 'Onward';
+    $('#jBack').textContent = n === 0 ? 'Back to the sea' : 'Back';
+    if (n === 4) {
+      const r = runOf(j.run);
+      $('#jSummary').innerHTML = `<b>${esc($('#jName').value || $('#jId').value)}</b> (${esc($('#jId').value)}): ${j.garden === 'new' ? 'a new garden' : 'the garden already growing at ' + esc($('#jRoot').value)}, ${esc(r.b.toLowerCase())}${j.run === 'service' ? `, and ${esc(ACCESS.find((a) => a.v === j.access).b.toLowerCase())}` : ''}.` + (j.run === 'service' ? '<br><br>Her island is planned when you go on; then you raise it with the keeper\'s hand, from her shore.' : '');
+    }
+  }
+  $('#jNext').onclick = async () => {
+    if (step === 0 && !/^[a-z0-9][a-z0-9-]{0,39}$/.test($('#jId').value)) return bottle('Her short name: lowercase letters, digits and dashes, like "noe".');
+    if (step === 1 && j.garden === 'existing' && !$('#jRoot').value.trim()) return bottle('Where is her garden? The folder\'s full path.');
+    if (step < STEPS.length - 1) { let n = step + 1; if (skips(n)) n++; return go(n); }
+    const id = $('#jId').value;
+    try {
+      $('#jNext').disabled = true;
+      await api('/host/harbor/islands', 'POST', { id, name: $('#jName').value || id, root: j.garden === 'existing' ? $('#jRoot').value.trim() : undefined, run: j.run, access: j.run === 'service' ? j.access : undefined });
+      show('seaScreen'); await refresh(); bottle(`${$('#jName').value || id} has joined the archipelago.`);
+      if (j.run === 'service') setTimeout(() => openShore(id), 900);
+    } catch (e) { bottle(e.message); } finally { $('#jNext').disabled = false; }
+  };
+  $('#jBack').onclick = () => { if (step === 0) return show('seaScreen'); let n = step - 1; if (skips(n)) n--; go(n); };
+
+  // ---- ferries: a PIN ----
+  $('#newPin').onclick = async () => { try { const r = await api('/host/harbor/pin', 'POST', {}); $('#pinValue').textContent = r.pin; $('#pinShown').classList.remove('hidden'); $('#pinAsk').classList.add('hidden'); setTimeout(() => { $('#pinShown').classList.add('hidden'); $('#pinAsk').classList.remove('hidden'); }, 10 * 60e3); } catch (e) { bottle(e.message); } };
+
+  // ---- the lantern ----
+  $('#light').onclick = async () => {
+    try {
+      const r = await fetch('/host/harbor/keeper', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: $('#pin').value.trim(), name: $('#keeperName').value.trim() }) });
+      const b = await r.json().catch(() => ({}));
+      if (!r.ok) return bottle(b.error || 'The lantern didn\'t take.');
+      token = b.token; store.set('pdhost:keeper', token);
+      bottle('The lantern is lit.'); show('seaScreen'); await refresh();
+    } catch { bottle('The harbor didn\'t answer.'); }
+  };
+  $('#pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#light').click(); });
+
+  (async () => {
+    let hello = {}; try { hello = await (await fetch('/host/harbor/hello', { headers: { Authorization: 'Bearer ' + token } })).json(); } catch {}
+    if (hello.harbor) { $('#title').textContent = `${hello.harbor}'s harbor`; }
+    if (!hello.keeper) {
+      if (!hello.atHost) $('#lanternNote').textContent = 'The harbor\'s lantern is lit at the host itself. Open this page there, with the PIN the host\'s window shows.';
+      $('#light').disabled = !hello.atHost; $('#pin').disabled = !hello.atHost;
+      return show('lanternScreen');
+    }
+    show('seaScreen'); await refresh();
+    setInterval(() => { if (!document.hidden) refresh(); }, 6000); // the tide, checked gently
+  })();
+})();
+</script>
+</body>
+</html>

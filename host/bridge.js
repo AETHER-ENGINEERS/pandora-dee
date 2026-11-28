@@ -50,7 +50,7 @@
   }
   window.PandoraDesk = {
     app: 'pandora-dee-host',
-    host: { version: h.version, device: h.device, brain: h.brain || null }, // brain 'host': her loop (and her prompt schedules) run on the host
+    host: { version: h.version, device: h.device, brain: h.brain || null, hostShell: !!h.hostShell }, // brain 'host': her loop (and her prompt schedules) run on the host
     diskInfo: call('info'), diskScan: call('scan'), diskGet: call('get'), diskPut: call('put'), diskMkdir: call('mkdir'),
     diskDel: call('del'), diskMove: call('move'), diskTouch: call('touch'), diskClear: call('clear'), diskUseShared: call('useShared')
   };
@@ -60,7 +60,8 @@
   // model addresses (a "localhost" means this device), and the caches the page rebuilds on its own.
   var DEVICE_LS = { lastSession: 1, draft: 1, setTab: 1, noteMode: 1, openDirs: 1, hist: 1, diskHint: 1, jadeLinkVer: 1 };
   var DEVICE_SETTINGS = ['host', 'lcppHost', 'ollayaHost', 'oaiHost', 'engine', 'voiceName', 'voicePitch', 'voiceRate', 'jadeFrame', 'jadeShow',
-    'jadeVoice', 'jadeCompact', 'bbUrl', 'ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets'];
+    'jadeVoice', 'jadeCompact', 'bbUrl', 'ollamaKey', 'groqKey', 'oaiKey', 'lcppKey', 'ollayaKey', 'mcpSecrets', 'secrets'];
+  // (her secrets reach the host only through the import's box, into its write-only key file: never through settings)
   function dbLocal(k) { return k === 'vfs' || k === 'vfs-migrated' || /^vfs-before-folder/.test(k) || /^mpy:/.test(k) || k === 'vaultParse' || k === 'settingsCopy' || k === 'pendingSettings'; }
   var cache = {}, revs = {}, changeFns = [], mergedFns = [], errorFns = [];
   function loadAll() {

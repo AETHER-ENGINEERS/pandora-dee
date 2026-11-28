@@ -47,6 +47,7 @@ function createLoop(opts) {
   const trace = opts.trace || (() => {}), log = opts.log || (() => {});
   const fetchFn = opts.fetch || globalThis.fetch;
   const hostTools = opts.hostTools || [];
+  const extra = []; // more of her tools, added after the loop is made (her playbook and ritual: host/engines.cjs)
   const herDir = () => ['Pandora', 'Jade'].find((d) => fs.existsSync(path.join(root, d))) || '';
 
   /** A vault path to a real file in her home, or an error. Never outside her home, never one of her own keys. */
@@ -149,7 +150,7 @@ function createLoop(opts) {
         return `The helper says:\n${r.content}`;
       }
       if (/^mcp__/.test(name)) { if (!opts.mcp) return `There is no tool called ${name}.`; return await opts.mcp.call(name, args || {}); }
-      const own = run[name], host = hostTools.find((t) => t.def.function.name === name);
+      const own = run[name], host = hostTools.find((t) => t.def.function.name === name) || extra.find((t) => t.def.function.name === name);
       if (!own && !host) return `There is no tool called ${name}.`;
       const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out);
     } catch (e) { return `Not done: ${e && e.message ? e.message : e}`; }
@@ -185,7 +186,7 @@ function createLoop(opts) {
     const used = [];
     for (let round = 1; round <= MAX_ROUNDS; round++) {
       msgs = await guard(msgs, why);
-      const tools = [...own, ...hostTools.map((t) => t.def), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
+      const tools = [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
       const r = await opts.chat(role, { messages: msgs, tools });
       const calls = Array.isArray(r.tool_calls) ? r.tool_calls : [];
       if (!calls.length) return { content: r.content, rounds: round, tools: used };
@@ -204,7 +205,11 @@ function createLoop(opts) {
     return { content: 'I did a lot of steps and stopped before finishing: ask me to carry on.', rounds: MAX_ROUNDS, tools: used };
   }
 
-  return { turn, system, TOOLS, callTool };
+  return {
+    turn, system, TOOLS, callTool,
+    addTools: (list) => { for (const t of list) if (!extra.some((x) => x.def.function.name === t.def.function.name)) extra.push(t); },
+    allToolDefs: () => [...TOOLS, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)],
+  };
 }
 
 module.exports = { createLoop, TOOLS };

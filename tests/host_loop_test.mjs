@@ -86,7 +86,7 @@ try {
   const sess = fae.state.dbGet('sessions').value || [];
   const run = sess.find((x) => x.title === 'Tea (test)');
   ok(run && /Done\./.test(fae.state.dbGet('session:' + run.id).value.messages.at(-1).content), 'the run is a chat every device sees');
-  ok(job.lastStatus === undefined && job.nextRun < Date.now(), 'a job (shell, ritual, playbook) is left to the Atelier');
+  ok(/^ok \(on the host\)/.test(job.lastStatus || '') && job.nextRun > Date.now(), 'a shell job runs on the host too, with her hands on this computer (tests/host_jobs_test.mjs has the rest)');
   fae.settings.set({ switches: { schedules: false } }, 'test');
   fae.state.dbSet('schedules', sch.map((x) => (x.id === 'tea' ? { ...x, nextRun: Date.now() - 1000 } : x)), undefined, 'test', 'test');
   await fae.herSchedules();

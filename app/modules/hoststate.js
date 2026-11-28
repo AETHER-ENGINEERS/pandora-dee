@@ -6,6 +6,16 @@
 const HOST_STATE = (window.PandoraDesk && window.PandoraDesk.state) || null;
 // her loop runs on the host (its brain is 'host'): the host runs her prompt schedules, with her tools, so the page doesn't
 const HOST_RUNS_PROMPTS = !!(HOST_STATE && window.PandoraDesk.host && window.PandoraDesk.host.brain === 'host');
+// which of her schedules the host takes (host/home_host.cjs hostTakes asks the same): prompts and rituals; shell jobs
+// when her hands are on the host's computer; playbooks that don't drive the browser. The page runs the rest.
+const hostTakesSchedule = (s) => {
+  if (!HOST_RUNS_PROMPTS) return false;
+  if (!schedIsJob(s)) return true;
+  if (s.kind === 'shell') return !!window.PandoraDesk.host.hostShell;
+  if (s.kind === 'playbook') { try { const pb = pbLoad(String(s.playbook || '')); let b = false; const walk = (ts) => { for (const t of ts || []) { if (t.do && pbModule(t).kind === 'browser') b = true; walk(t.block); walk(t.rescue); walk(t.always); } }; walk(pb.tasks); return !b; } catch { return true; } }
+  return true;
+};
+window.hostTakesSchedule = hostTakesSchedule; // (for tests: who runs which schedule)
 if (HOST_STATE) {
   const localLs = { get: ls.get, set: ls.set };
   ls.get = (k, d) => HOST_STATE.lsGet(k, d, localLs);

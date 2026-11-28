@@ -448,10 +448,27 @@ tools, and says so.
 size, and her own compaction settings), the older part becomes a summary made by her compaction model; the recent turns
 stay whole, and a tool call is never split from its result.
 
+**Her playbooks and rituals, on the host** (`host/engines.cjs`): the very engines her Atelier runs
+(`app/modules/playbook.js`, `app/modules/flows.js`), loaded unchanged into a Node sandbox, so a playbook or ritual does
+the same thing wherever it runs. Her loop offers her `playbook` and `ritual` tools, as in her Atelier.
+- Their tools are her loop's; their vault is her home (never outside it, never her own key files).
+- Their `{{NAME}}` secrets come from the host's write-only key file (only what came in through the import's box), and
+  are hidden in everything recorded, as in her Atelier. (Her Atelier's Config → Secrets stay on each device; they never
+  travel through her shared settings.)
+- A playbook runs only when the person has approved it in her Atelier's Playbooks tab (the approval is kept on the host
+  since step 1); the host never approves one.
+- A shell or JavaScript step runs on this computer, so it needs her hands there (host_shell); an agent, llm or decide
+  step asks her loop and her models; notify goes to her log. Ritual expressions run in a sandbox with no network,
+  stopped after 5 seconds, as in her Atelier.
+- Browser steps need an open Atelier: the host has no browser of hers.
+
 **Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
 (the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
 is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her
-prompt schedules to it, so none runs twice. Jobs (rituals, playbooks, shell) still run in an open Atelier, for now.
+schedules to it, so none runs twice. Her jobs too: rituals, playbooks (unless one drives the browser), and shell jobs
+when her hands are on this computer. The page and the host ask the same question (`hostTakes` / `hostTakesSchedule`),
+so each schedule has exactly one runner; an open page keeps the browser-driving playbooks, and the shell jobs while her
+hands are off. Ritual triggers (a ritual's own schedule or note trigger) still fire in an open Atelier, for now.
 
 **Her apps on the table:** the Atelier's webxdc apps and their updates live on the host too
 (`/host/state/xdc[/<id>[/updates]]`): one table for every device. A move made on the laptop reaches the same app open

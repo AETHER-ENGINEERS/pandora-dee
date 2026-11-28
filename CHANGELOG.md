@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Her playbooks, rituals and jobs on the host.** The very engines her Atelier runs, in a sandbox on the host: her
+  playbook and ritual tools, approved playbooks only, secrets from the host's write-only key file and hidden in every
+  record, shell and JavaScript steps only with her hands on the computer. Her job schedules run there too (rituals,
+  playbooks, shell), with an open page keeping exactly the ones the host leaves. Her Config → Secrets no longer travel
+  through her shared settings.
 - **Her loop on the host: steering, skills, tool servers, a helper, and the context guard.** Her SYSTEM, SOUL, AGENTS
   and skills shape her loop on the host as in her Atelier; her MCP tool servers answer there (HTTP with her secret
   headers, and stdio servers the host starts when her hands are on the computer), with tool search for the ones not

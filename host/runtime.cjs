@@ -292,6 +292,8 @@ ${m.chat}`;
   return {
     brain,
     turn: serial((a) => turn(a)),
+    /** One of her timed things (her own schedules, run on the host): through the loop's and its own switch. */
+    ask: serial((prompt, kind = 'schedules', id = '') => callModel([{ role: 'user', content: String(prompt) }], `${kind}:${id}`, kind)),
     pollOnce: serial(pollOnce), tickOnce: serial(tickOnce), probeOnce: serial(probeOnce),
     clientCall, herTool, notice, checkNotice,
     checkModel: serial((by) => checkModel(by)),

@@ -50,7 +50,7 @@
   }
   window.PandoraDesk = {
     app: 'pandora-dee-host',
-    host: { version: h.version, device: h.device },
+    host: { version: h.version, device: h.device, brain: h.brain || null }, // brain 'host': her loop (and her prompt schedules) run on the host
     diskInfo: call('info'), diskScan: call('scan'), diskGet: call('get'), diskPut: call('put'), diskMkdir: call('mkdir'),
     diskDel: call('del'), diskMove: call('move'), diskTouch: call('touch'), diskClear: call('clear'), diskUseShared: call('useShared')
   };
@@ -133,6 +133,34 @@
       return window.fetch('/host/state/db?all=1', { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' }).then(function (r) { return r.json(); })
         .then(function (all) { var o = {}; for (var k in all) if (!dbLocal(k)) o[k] = all[k]; return o; });
     },
+    // her apps on the table (app/modules/xdc.js XdcDB): the same calls, kept on the host. An app's files are bytes,
+    // which travel as base64 and come back as bytes.
+    xdc: (function () {
+      var u8b64 = function (u) { var s = ''; for (var i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+      var b64u8 = function (b) { var s = atob(b), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+      var pack = function (v) { return JSON.parse(JSON.stringify(v, function (k, x) { if (x instanceof Uint8Array) return { __u8: u8b64(x) }; if (x instanceof ArrayBuffer) return { __u8: u8b64(new Uint8Array(x)) }; return x; })); };
+      var unpack = function (v) { return v == null ? v : JSON.parse(JSON.stringify(v), function (k, x) { return x && typeof x === 'object' && typeof x.__u8 === 'string' && Object.keys(x).length === 1 ? b64u8(x.__u8) : x; }); };
+      var get = function (p) { return window.fetch(p, { headers: { 'Authorization': 'Bearer ' + token }, cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }); };
+      var x = {
+        apps: function () { return get('/host/state/xdc').then(function (l) { return (l || []).map(unpack); }); },
+        app: function (id) { return get('/host/state/xdc/' + enc(id)).then(function (a) { return a ? unpack(a) : undefined; }); },
+        putApp: function (a) { return send('PUT', '/host/state/xdc/' + enc(a.id), function () { return pack(a); }); },
+        edit: function (id, fn) {
+          // read, change and write the app here; the host keeps the updates' serials in order across devices
+          return x.app(id).then(function (a) {
+            if (!a) return null;
+            var ups = []; var out = fn(a, { put: function (u) { ups.push(u); } });
+            return send('POST', '/host/state/xdc/' + enc(id) + '/updates', function () { return { app: pack(a), updates: pack(ups) }; })
+              .then(function (j) { (j && j.serials || []).forEach(function (s2, i) { if (ups[i]) ups[i].serial = s2; }); return out; });
+          });
+        },
+        delApp: function (id) { return send('DELETE', '/host/state/xdc/' + enc(id)); },
+        clearUpdates: function (id) { return send('DELETE', '/host/state/xdc/' + enc(id) + '/updates'); },
+        updates: function (id, after, limit) { return get('/host/state/xdc/' + enc(id) + '/updates?after=' + (after || 0) + (limit ? '&limit=' + limit : '')).then(function (l) { return l || []; }); },
+        putUpdate: function (u) { return send('POST', '/host/state/xdc/' + enc(u.app) + '/updates', function () { return { updates: [pack(u)] }; }); }
+      };
+      return x;
+    })(),
     runs: {
       put: function (rec) { return send('PUT', '/host/state/runs/' + enc(rec && rec.id), rec); },
       get: function (id) { return window.fetch('/host/state/runs/' + enc(id), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.ok ? r.json() : undefined; }); },

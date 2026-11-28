@@ -34,6 +34,8 @@ const separate = require('./separate.cjs');
 const { createHarbor } = require('./harbor.cjs');
 const backup = require('./backup.cjs');
 const { createState } = require('./state.cjs');
+const { createLoop } = require('./loop.cjs');
+const { Cron } = require('./cron.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -369,7 +371,7 @@ function createResident(opts, shared) {
       if (p === '/pair' && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'pair.html'), 'utf8'), 'text/html; charset=utf-8');
       // the host's own settings and information page (it holds nothing: what it shows comes from /host/status, with a key)
       if ((p === '/host' || p === '/host/' || p === '/host/ui') && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'gui.html'), 'utf8'), 'text/html; charset=utf-8');
-      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null }); }
+      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null, ...(d ? { brain: runtime ? runtime.brain : null } : {}) }); }
       if (p === '/host/pair' && req.method === 'POST') {
         let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
         const r = await pair(b.pin, b.name); return send(res, r.status, r.body);
@@ -558,6 +560,21 @@ function createResident(opts, shared) {
         req.on('close', end); res.on('close', end);
         return;
       }
+      // her apps on the table: /host/state/xdc[/<id>[/updates]]
+      const xk = /^\/host\/state\/xdc(?:\/([^/]+)(\/updates)?)?$/.exec(p);
+      if (xk) {
+        const aid = xk[1] ? decodeURIComponent(xk[1]) : ''; const pageId = String(req.headers['x-page'] || '');
+        try {
+          if (!aid && req.method === 'GET') return send(res, 200, state.xdcApps());
+          if (aid && !xk[2] && req.method === 'GET') { const a = state.xdcApp(aid); return a ? send(res, 200, a) : send(res, 404, { error: 'No such app.' }); }
+          if (aid && !xk[2] && req.method === 'PUT') { const b = JSON.parse(await readBody(req, 64 * 1048576) || '{}'); return send(res, 200, state.xdcPut(aid, b, [], pageId)); }
+          if (aid && !xk[2] && req.method === 'DELETE') return send(res, 200, state.xdcDel(aid, pageId));
+          if (aid && xk[2] && req.method === 'GET') return send(res, 200, state.xdcUpdates(aid, Number(url.searchParams.get('after')) || 0, Number(url.searchParams.get('limit')) || 100000));
+          if (aid && xk[2] && req.method === 'POST') { const b = JSON.parse(await readBody(req, 64 * 1048576) || '{}'); return send(res, 200, state.xdcPut(aid, b.app || null, b.updates || [], pageId)); }
+          if (aid && xk[2] && req.method === 'DELETE') return send(res, 200, state.xdcClear(aid, pageId));
+          return send(res, 405, { error: 'Not that way.' });
+        } catch (e) { return send(res, e.status || 400, { error: e.status ? e.message : 'That wasn’t something the host could keep.' }); }
+      }
       const sk = /^\/host\/state\/(ls|db|runs)(?:\/(.+))?$/.exec(p);
       if (sk) {
         const key = sk[2] ? decodeURIComponent(sk[2]) : '';
@@ -619,6 +636,72 @@ function createResident(opts, shared) {
       return buf.toString('utf8').split('\n').filter(Boolean).slice(-n).map((l) => { try { const e = JSON.parse(l); return { at: e.at, kind: e.kind }; } catch { return null; } }).filter(Boolean);
     } catch { return []; }
   }
+  // ---------- her loop on the host (parity step 2) and her own schedules (step 3) ----------
+  const loop = createLoop({
+    root, chat: (role, req) => models.chat(role, req), state,
+    isHers: (vp) => { try { return isHers()(vp); } catch { return false; } },
+    mayWrite: () => (importing ? 'Her things are being brought in right now: try again in a moment.'
+      : writer && now() - writer.at <= writerMs ? 'An Atelier window is writing her vault right now: try again in a moment.' : null),
+    hostTools: toolList().map((t) => ({ def: { type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema || { type: 'object', properties: {} } } }, run: async (a) => { const r = await callTool(t.name, a, { id: 'her-loop' }, null); return (r.content || []).map((c) => c.text).join('\n'); } })),
+    trace, log: event,
+  });
+  async function loopModel({ messages, why }) {
+    const kind = String(why || '').split(':')[0];
+    const role = kind === 'turn' ? 'chat' : models.ROLES.includes(kind) ? kind : 'chat';
+    return (await loop.turn({ messages, role, why })).content;
+  }
+  let rhythms = null, rhythmsBusy = false;
+  const isJob = (x) => x && (x.kind === 'shell' || x.kind === 'flow' || x.kind === 'playbook');
+  const newId = () => crypto.randomBytes(5).toString('hex');
+  /** Write a schedule's run as a chat every device sees (a new one each time, or the same one with chat 'same'). */
+  function keepRunChat(sch, prompt, reply) {
+    const t = Date.now();
+    const sid = sch.chat === 'same' && sch.hostChat ? sch.hostChat : newId();
+    const prev = state.dbGet('session:' + sid).value;
+    const sess = prev && Array.isArray(prev.messages) ? prev : { id: sid, title: sch.name || 'A schedule', messages: [], tasks: [], taskSeq: 0 };
+    sess.messages.push({ role: 'user', content: prompt, t, schedule: sch.id }, { role: 'assistant', content: reply, t: Date.now() });
+    sess.updated = Date.now();
+    state.dbSet('session:' + sid, sess, undefined, 'her schedule', 'host');
+    const l = state.dbGet('sessions');
+    const list = (Array.isArray(l.value) ? l.value : []).filter((x) => x && x.id !== sid);
+    list.unshift({ id: sid, title: sess.title, updated: sess.updated });
+    state.dbSet('sessions', list, l.rev, 'her schedule', 'host');
+    return sid;
+  }
+  function updateSchedule(sid, patch) {
+    const g = state.dbGet('schedules'); const list = Array.isArray(g.value) ? g.value : [];
+    const x = list.find((y) => y && y.id === sid); if (!x) return;
+    Object.assign(x, patch); state.dbSet('schedules', list, g.rev, 'her schedule', 'host');
+  }
+  /** Her prompt schedules, run on the host with her tools while her loop is here (the page leaves these to the host). */
+  async function herSchedules() {
+    if (rhythmsBusy || !runtime || runtime.brain !== 'host') return;
+    rhythmsBusy = true;
+    try {
+      const g = state.dbGet('schedules'); const list = Array.isArray(g.value) ? g.value : [];
+      const t = Date.now(); const due = [];
+      for (const x of list) {
+        if (!x || !x.enabled || isJob(x) || !x.nextRun || t < x.nextRun) continue;
+        const missed = t - x.nextRun > 5 * 60000;
+        if (missed && x.catchUp === false) x.lastStatus = `missed ${new Date(x.nextRun).toLocaleString()}`; else due.push(x.id);
+        if (x.once) { x.done = true; x.enabled = false; x.nextRun = null; } else { try { x.nextRun = Cron.next(x.cron, t); } catch { x.nextRun = null; } }
+      }
+      if (due.length || list.some((x) => x && x.lastStatus && /^missed/.test(x.lastStatus))) state.dbSet('schedules', list, g.rev, 'her schedule', 'host');
+      for (const sid of due) {
+        const x = list.find((y) => y.id === sid);
+        try {
+          const reply = await runtime.ask(x.prompt, 'schedules', sid);
+          const chat = keepRunChat(x, x.prompt, reply);
+          updateSchedule(sid, { lastRun: Date.now(), lastStatus: 'ran on the host', ...(x.chat === 'same' ? { hostChat: chat } : {}) });
+          event('her.schedule.ran', { id: sid });
+        } catch (e) {
+          updateSchedule(sid, { lastRun: Date.now(), lastStatus: e && e.code ? `skipped: ${(e.why || []).join(', ')}` : 'failed on the host (its trace says why)' });
+          event('her.schedule.failed', { id: sid, why: e && e.code ? 'off' : 'error' });
+        }
+      }
+    } finally { rhythmsBusy = false; }
+  }
+
   /** Her library and mirror, as facts: how many notes, whether her SOUL is there and when it changed (never what they say). */
   function libraryFacts() {
     let notes = 0, folders = 0; const stack = [root]; let seen = 0;
@@ -672,17 +755,21 @@ function createResident(opts, shared) {
     get hostShell() { return hostShell; },
     setHostShell(on) { hostShell = !!on; event('host_shell.set', { on: hostShell }); },
     root, stateDir, shell, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, state, imports,
-    /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
+    /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (her loop, here, with her tools). */
     startRuntime(o = {}) {
-      // brain 'host': her models as set up here, each job on its own chain; and "Try the model again" asks them
-      const own = o.brain === 'host' ? { model: models.runtimeModel, probe: () => models.check() } : {};
+      // brain 'host': her loop on the host (host/loop.cjs), along her models' chains; "Try the model again" asks them
+      const own = o.brain === 'host' ? { model: loopModel, probe: () => models.check() } : {};
       runtime = createRuntime({ settings, queue, redact, log: event, trace, home: root, ...own, ...o }).start();
+      if (runtime.brain === 'host') rhythms = setInterval(herSchedules, o.schedulesMs || 10000);
       return runtime;
     },
+    /** Her own schedules, now (for tests and the host window). */
+    herSchedules: () => herSchedules(),
+    loop: () => loop,
     runtime: () => runtime,
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => { if (runtime) runtime.stop(); nap.close(); },
+    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); nap.close(); },
   };
 }
 

@@ -416,6 +416,31 @@ sees the same her (parity step 1):
 Routes: `GET /host/state` (her small things), `PUT /host/state/ls/<key>`, `GET|PUT|DELETE /host/state/db/<key>`
 (`{ value, base }`), `GET /host/state/db?all=1`, `GET|PUT|DELETE /host/state/runs[/<id>]`, `GET /host/state/stream`.
 
+## Her loop on the host, with her tools (`host/loop.cjs`)
+
+When her loop runs on the host (Her models → where her loop runs: the host), each of her turns (from the bridges,
+her heartbeat, her schedules, her sparks) can use her tools, run here on her home, along her models' chains:
+
+- **Her vault:** `read`, `write`, `edit`, `list`, `notes_search`: real files in her home. Never a path outside it,
+  never one of her own key files; a write waits while an Atelier window is writing her vault or her things are being
+  brought in.
+- **Her memory and history:** `memory` (her Memory.md: read it, or add to it), `chat_history` (her chats and branches,
+  kept on the host).
+- **The world:** `web_fetch` (a page as text, http and https only), `think`.
+- **The host's own:** `host_shell` (when it's in her hands), `waiting_messages`, `away_notices`, `host_info`.
+
+Who she is comes from her own files: her SOUL, AGENTS and the end of her Memory.md, with the time. Every tool she uses
+is in the host's trace. A turn stops after twelve rounds of tools, and says so.
+
+**Her schedules, on the host:** while her loop is here, the host runs her prompt schedules from her schedule list
+(the same cron her Atelier reads, `host/cron.cjs`), through the loop's and the schedules' switches (and nap). Each run
+is a chat every device sees; each schedule says how it went and when it's next. A page served by this host leaves her
+prompt schedules to it, so none runs twice. Jobs (rituals, playbooks, shell) still run in an open Atelier, for now.
+
+**Her apps on the table:** the Atelier's webxdc apps and their updates live on the host too
+(`/host/state/xdc[/<id>[/updates]]`): one table for every device. A move made on the laptop reaches the same app open
+on the phone; the host keeps every app's updates in order, even when two devices send at once.
+
 ## The Harbor: the host's own page for everything (`/host/harbor`)
 
 Everything typed into the host's window has a place here too, in Pandora's ISLANDS words: the host is the
@@ -444,9 +469,10 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
   - **her reef:** her boundary (what was turned away lately);
   - **her house** (from the village terrace, "Step inside"): the hearth (her chats and branches: how many, when),
     the library (her notes and folders), the shelves (the host's tools for her, skills set aside, playbooks approved),
-    the computer (her schedules, on or resting; her shell), the mirror (whether her SOUL is written and when it
+    the computer (where her schedules run, each one's next time and how it last went; her shell), the table (her
+    apps, and when each was last played), the mirror (whether her SOUL is written and when it
     changed: hers to write, never edited here), the key hook (how many keys are hung up, never their values); the
-    table and the window stand under scaffolding (pieces D and E);
+    window stands under scaffolding (piece E);
   - **the misty grove, the observatory and the islet** stand under scaffolding, saying which step brings them (her
     memory, device senses, the boat to SEASIDE).
 
@@ -556,5 +582,5 @@ These are the next milestones, in this order:
      (Windows), and shows the command to run elsewhere.
    - The Linux and macOS steps are written and checked, but not yet run on those systems.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs`, `tests/host_services_test.mjs`, `tests/host_harbor_test.mjs` and `tests/host_state_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs`, `tests/host_residents_test.mjs`, `tests/host_services_test.mjs`, `tests/host_harbor_test.mjs`, `tests/host_state_test.mjs` and `tests/host_loop_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

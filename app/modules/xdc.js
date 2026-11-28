@@ -31,6 +31,8 @@ const XdcDB = (() => {
     putUpdate: u => tx('updates', 'readwrite', st => st.put(u)),
   };
 })();
+// served by the home host, her apps and their updates live there: one table for every device
+if (window.PandoraDesk?.state?.xdc) Object.assign(XdcDB, window.PandoraDesk.state.xdc);
 // ---- zip (stored + deflate; no zip64) ----
 async function unzip(bytes) {
   const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);

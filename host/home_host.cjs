@@ -38,6 +38,7 @@ const { createLoop } = require('./loop.cjs');
 const { createSteer } = require('./steer.cjs');
 const { createMcp } = require('./mcp_client.cjs');
 const { createEngines } = require('./engines.cjs');
+const { createDevices } = require('./devices.cjs');
 const { Cron } = require('./cron.cjs');
 
 const VERSION = '0.1.0';
@@ -130,6 +131,8 @@ function createResident(opts, shared) {
   // what happened, contents included: what went to which model and what came back, bridge messages in and out, what was
   // stopped. Kept on the host, for the person to look at (the settings page shows it); never sent anywhere.
   const traceFile = path.join(stateDir, 'trace.jsonl');
+  // her device tools: the devices that visit say what they have (host/devices.cjs)
+  const visiting = createDevices({ log: (k, f) => event(k, f), trace: (k, f) => trace(k, f) });
   function trace(kind, fields = {}) {
     try { fs.appendFileSync(traceFile, JSON.stringify({ at: new Date().toISOString(), kind, ...fields }) + '\n'); } catch { /* as above */ }
   }
@@ -219,6 +222,7 @@ function createResident(opts, shared) {
   }
   function revoke(which) {
     const before = devices.length;
+    for (const d of devices) if (d.id === which || d.name === which) visiting.forget(d.id);
     devices = devices.filter((d) => d.id !== which && d.name !== which);
     if (devices.length !== before) { saveDevices(); event('device.revoked', { which }); if (writer && !devices.some((d) => d.id === writer.device)) writer = null; }
     return before - devices.length;
@@ -552,6 +556,28 @@ function createResident(opts, shared) {
         if (!r) { res.writeHead(202); return res.end(); }
         return send(res, 200, r);
       }
+      // ---- her device tools: this device says what it has, asks for its next call, and answers it (host/devices.cjs) ----
+      if (p.startsWith('/host/devices/')) {
+        const pageId = String(req.headers['x-page'] || '');
+        try {
+          if (p === '/host/devices/offer' && req.method === 'PUT') {
+            const b = JSON.parse(await readBody(req, 1048576) || '{}');
+            return send(res, 200, visiting.offer({ page: pageId, device: dev.id, name: dev.name, tools: b.tools }));
+          }
+          if (p === '/host/devices/next' && req.method === 'GET') {
+            let cut = false; res.on('close', () => { if (!res.writableEnded) { cut = true; visiting.dropped(pageId, null); } });
+            const c = await visiting.next(pageId, Number(url.searchParams.get('wait')) || 25000);
+            if (cut || res.destroyed) { visiting.dropped(pageId, c); return; }
+            return send(res, 200, c || {});
+          }
+          if (p === '/host/devices/result' && req.method === 'POST') {
+            const b = JSON.parse(await readBody(req, 4 * 1048576) || '{}');
+            return send(res, 200, visiting.result(pageId, String(b.id || ''), { ok: b.ok, out: b.out }));
+          }
+          if (p === '/host/devices/bye' && req.method === 'POST') { visiting.forget(pageId); return send(res, 200, { ok: true }); }
+          return send(res, 405, { error: 'Not that way.' });
+        } catch (e) { return send(res, e.status || 400, { error: e.status ? e.message : 'That wasn’t something the host could take.' }); }
+      }
       // ---- her things, one copy for every device (host/state.cjs) ----
       if (p === '/host/state' && req.method === 'GET') return send(res, 200, state.lsAll());
       if (p === '/host/state/stream' && req.method === 'GET') {
@@ -642,6 +668,8 @@ function createResident(opts, shared) {
   // ---------- her loop on the host (parity step 2) and her own schedules (step 3) ----------
   let mcpClient = null;
   const loop = createLoop({
+    // her device tools: offered by the devices that visit now (host/devices.cjs), each call going to one that has it
+    devices: () => visiting.defs().map((def) => ({ def, run: (a) => visiting.call(def.function.name, a) })),
     root, chat: (role, req) => models.chat(role, req), state,
     isHers: (vp) => { try { return isHers()(vp); } catch { return false; } },
     mayWrite: () => (importing ? 'Her things are being brought in right now: try again in a moment.'
@@ -803,6 +831,7 @@ function createResident(opts, shared) {
       refused: ev.filter((e) => /^refused|\.refused$|pair\.locked/.test(e.kind)).slice(-20).reverse(),
       tools: toolList().map((t) => t.name),
       house: { ...state.facts(), ...libraryFacts() },
+      senses: visiting.facts(),
     };
   };
   const tend = {
@@ -853,7 +882,8 @@ function createResident(opts, shared) {
     runtime: () => runtime,
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => { if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); for (const t of rhythms2) clearInterval(t); if (mcpClient) mcpClient.close(); nap.close(); },
+    visiting,
+    close: () => { visiting.close(); if (runtime) runtime.stop(); if (rhythms) clearInterval(rhythms); for (const t of rhythms2) clearInterval(t); if (mcpClient) mcpClient.close(); nap.close(); },
   };
 }
 

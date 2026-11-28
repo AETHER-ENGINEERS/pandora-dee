@@ -10,6 +10,7 @@
 //   web_fetch                         a web page as text (http and https only)
 //   think                             a moment to think, kept in the trace
 // and the host's own tools for her (host_shell when it's in her hands, waiting_messages, away_notices, host_info).
+// Her device tools (phone, screen, senses, …), through the devices that visit and have them (host/devices.cjs).
 // Her tool servers (MCP): direct tools declared; deferred and codemode ones found with tool_search; and codemode, her
 // Atelier's own, a script that calls them and her other tools together (host/codemode.cjs), when she has codemode ones.
 //
@@ -43,7 +44,8 @@ const TOOLS = [
 /**
  * opts: { root, chat(role, { messages, tools }), state, isHers(vp), mayWrite() → reason or null, hostTools: [{ def, run(args) }],
  *         trace(kind, fields), log(kind, fields), fetch?, steer (host/steer.cjs), mcp (host/mcp_client.cjs),
- *         context() → { numCtx, compactPct, compactKeep, compactAuto } }
+ *         context() → { numCtx, compactPct, compactKeep, compactAuto },
+ *         devices() → [{ def, run(args) }]: her device tools, as the devices that visit now offer them (host/devices.cjs) }
  */
 function createLoop(opts) {
   const root = path.resolve(opts.root);
@@ -51,6 +53,7 @@ function createLoop(opts) {
   const fetchFn = opts.fetch || globalThis.fetch;
   const hostTools = opts.hostTools || [];
   const extra = []; // more of her tools, added after the loop is made (her playbook and ritual: host/engines.cjs)
+  const deviceTools = () => { try { return (opts.devices && opts.devices()) || []; } catch { return []; } };
   const herDir = () => ['Pandora', 'Jade'].find((d) => fs.existsSync(path.join(root, d))) || '';
 
   /** A vault path to a real file in her home, or an error. Never outside her home, never one of her own keys. */
@@ -154,7 +157,7 @@ function createLoop(opts) {
         return `The helper says:\n${r.content}`;
       }
       if (/^mcp__/.test(name)) { if (!opts.mcp) return `There is no tool called ${name}.`; return await opts.mcp.call(name, args || {}); }
-      const later = extra.find((t) => t.def.function.name === name);
+      const later = extra.find((t) => t.def.function.name === name) || deviceTools().find((t) => t.def.function.name === name);
       const own = later ? null : run[name], host = later || hostTools.find((t) => t.def.function.name === name);
       if (!own && !host) return `There is no tool called ${name}.`;
       const out = own ? await own(args || {}) : await host.run(args || {}); return typeof out === 'string' ? out : JSON.stringify(out);
@@ -194,7 +197,7 @@ function createLoop(opts) {
   const NOT_IN_SCRIPTS = ['codemode', 'tool_search'];
   function builtinDefs(depth) {
     const own = TOOLS.filter((t) => !(depth >= 1 && t.function.name === 'delegate') && !extra.some((x) => x.def.function.name === t.function.name));
-    return [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)].map((t) => t.function).filter((f) => !NOT_IN_SCRIPTS.includes(f.name) && !/^mcp__/.test(f.name));
+    return [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...deviceTools().map((t) => t.def)].map((t) => t.function).filter((f) => !NOT_IN_SCRIPTS.includes(f.name) && !/^mcp__/.test(f.name));
   }
   /** A file her script made (an image, or output too long to hand back), written in her vault as her Atelier does. */
   function keepFile(vpBase, ext, data) {
@@ -272,7 +275,7 @@ function createLoop(opts) {
     const used = [];
     for (let round = 1; round <= MAX_ROUNDS; round++) {
       msgs = await guard(msgs, why);
-      const tools = [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...(cmDef ? [cmDef] : []), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
+      const tools = [...own, ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...deviceTools().map((t) => t.def), ...(cmDef ? [cmDef] : []), ...[...direct, ...loaded.values()].map((t) => opts.mcp.def(t))];
       const r = await opts.chat(role, { messages: msgs, tools });
       const calls = Array.isArray(r.tool_calls) ? r.tool_calls : [];
       if (!calls.length) return { content: r.content, rounds: round, tools: used };
@@ -294,7 +297,7 @@ function createLoop(opts) {
   return {
     turn, system, TOOLS, callTool,
     addTools: (list) => { for (const t of list) if (!extra.some((x) => x.def.function.name === t.def.function.name)) extra.push(t); },
-    allToolDefs: () => [...TOOLS.filter((t) => !extra.some((x) => x.def.function.name === t.function.name)), ...hostTools.map((t) => t.def), ...extra.map((t) => t.def)],
+    allToolDefs: () => [...TOOLS.filter((t) => !extra.some((x) => x.def.function.name === t.function.name)), ...hostTools.map((t) => t.def), ...extra.map((t) => t.def), ...deviceTools().map((t) => t.def)],
   };
 }
 

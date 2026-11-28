@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Her things on the host, one copy for every device (parity step 1).** Served by the host, the Atelier keeps her
+  chats and branches, schedules, settings, run history and the rest on the host, so every device sees the same her. A
+  chat made on the laptop appears on the phone as it happens; two devices writing at once lose neither's new chat; each
+  device keeps its own API keys, model addresses, drafts and open chat. Elsewhere nothing changed.
+- **Inside her house, in the Harbor.** From the village terrace, step inside: the hearth, library, shelves, computer,
+  mirror and key hook show what the host keeps for her, as facts only.
 - **Her island as a land with regions.** Stepping ashore shows her whole land painted, with nine regions. Each glides
   into its own scene with places that tend what the host keeps for her: the jetty (ferries), the campfire (bridges),
   the sea chest, the garden gate, the well (models), the standing stones (logbook), the lighthouse (nap and switches)

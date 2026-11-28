@@ -38,6 +38,8 @@ const TrajDB = (() => {
     del: id => tx('readwrite', st => st.delete(id)),
   };
 })();
+// served by the home host, her run history lives there too (one log for every device)
+if (window.PandoraDesk?.state?.runs) Object.assign(TrajDB, window.PandoraDesk.state.runs);
 const clone = x => JSON.parse(JSON.stringify(x));
 // one recorder per agent run; a run that gets compacted / trimmed mid-way is split into segments,
 // because each segment must be a conversation the model really saw from its first message

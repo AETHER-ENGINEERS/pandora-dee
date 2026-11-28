@@ -33,6 +33,7 @@ const { createModels } = require('./models.cjs');
 const separate = require('./separate.cjs');
 const { createHarbor } = require('./harbor.cjs');
 const backup = require('./backup.cjs');
+const { createState } = require('./state.cjs');
 
 const VERSION = '0.1.0';
 const PIN_MS = 10 * 60 * 1000;       // a PIN lasts ten minutes, and works once
@@ -161,6 +162,8 @@ function createResident(opts, shared) {
   const queue = createQueue(path.join(stateDir, 'bridge-queue.jsonl'), { log: event, warnAt: Number(settings.get().queueWarnAt) || undefined });
   // her Atelier's own things (settings, storage, chats, schedules), brought here from a backup (host/backup.cjs)
   const store = backup.atelierStore(path.join(stateDir, 'atelier'));
+  // her things, one copy for every device (parity step 1): the store above, with revisions, merging and a live stream
+  const state = createState({ store, dir: path.join(stateDir, 'atelier'), log: event });
   // the person's configured keys from a backup whose box was ticked: into the host's own write-only key files, each
   // where the host looks for it (her models, her bridges), the rest owner-only in atelier-secrets.json; never shown
   const MODEL_KEYS = { ollamaKey: 'cloud', groqKey: 'groq', oaiKey: 'openai', lcppKey: 'llamacpp' };
@@ -544,6 +547,43 @@ function createResident(opts, shared) {
         if (!r) { res.writeHead(202); return res.end(); }
         return send(res, 200, r);
       }
+      // ---- her things, one copy for every device (host/state.cjs) ----
+      if (p === '/host/state' && req.method === 'GET') return send(res, 200, state.lsAll());
+      if (p === '/host/state/stream' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+        res.write(JSON.stringify({ hello: true }) + '\n');
+        const off = state.onChange((e) => res.write(JSON.stringify(e) + '\n'));
+        const beat = setInterval(() => res.write('{}\n'), 25000);
+        const end = () => { clearInterval(beat); off(); };
+        req.on('close', end); res.on('close', end);
+        return;
+      }
+      const sk = /^\/host\/state\/(ls|db|runs)(?:\/(.+))?$/.exec(p);
+      if (sk) {
+        const key = sk[2] ? decodeURIComponent(sk[2]) : '';
+        const pageId = String(req.headers['x-page'] || '');
+        try {
+          if (sk[1] === 'ls' && key && req.method === 'PUT') {
+            if (key === 'settings' && homeOnly()) return; // her settings change from home or the tailnet, as before
+            const b = JSON.parse(await readBody(req, 4 * 1048576) || '{}');
+            return send(res, 200, state.lsSet(key, b.value, dev.name, pageId));
+          }
+          if (sk[1] === 'db') {
+            if (!key && req.method === 'GET') return send(res, 200, url.searchParams.get('all') ? state.dbAll() : state.dbKeys(String(url.searchParams.get('prefix') || '')));
+            if (key && req.method === 'GET') return send(res, 200, state.dbGet(key));
+            if (key && req.method === 'PUT') { const b = JSON.parse(await readBody(req, 64 * 1048576) || '{}'); return send(res, 200, state.dbSet(key, b.value, b.base, dev.name, pageId)); }
+            if (key && req.method === 'DELETE') return send(res, 200, state.dbDel(key, pageId));
+          }
+          if (sk[1] === 'runs') {
+            if (!key && req.method === 'GET') return send(res, 200, url.searchParams.get('count') ? { count: state.runCount() } : state.runAll());
+            if (!key && req.method === 'DELETE') return send(res, 200, state.runClear(pageId));
+            if (key && req.method === 'GET') { const r = state.runGet(key); return r ? send(res, 200, r) : send(res, 404, { error: 'No such run.' }); }
+            if (key && req.method === 'PUT') { const b = JSON.parse(await readBody(req, 64 * 1048576) || '{}'); return send(res, 200, state.runPut(b, pageId)); }
+            if (key && req.method === 'DELETE') return send(res, 200, state.runDel(key, pageId));
+          }
+          return send(res, 405, { error: 'Not that way.' });
+        } catch (e) { return send(res, e.status || 400, { error: e.status ? e.message : 'That wasn\u2019t something the host could keep.' }); }
+      }
       if (p === '/host/client/settings') {
         if (req.method === 'GET') return send(res, 200, dev.settings || {});
         if (req.method === 'PUT') {
@@ -579,6 +619,23 @@ function createResident(opts, shared) {
       return buf.toString('utf8').split('\n').filter(Boolean).slice(-n).map((l) => { try { const e = JSON.parse(l); return { at: e.at, kind: e.kind }; } catch { return null; } }).filter(Boolean);
     } catch { return []; }
   }
+  /** Her library and mirror, as facts: how many notes, whether her SOUL is there and when it changed (never what they say). */
+  function libraryFacts() {
+    let notes = 0, folders = 0; const stack = [root]; let seen = 0;
+    while (stack.length && seen < 20000) {
+      const d = stack.pop(); let list = [];
+      try { list = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+      for (const e of list) {
+        seen++;
+        if (e.name.startsWith('.') || e.isSymbolicLink()) continue;
+        if (e.isDirectory()) { folders++; stack.push(path.join(d, e.name)); } else if (/\.md$/i.test(e.name)) notes++;
+      }
+    }
+    const soulAt = ['Pandora/SOUL.md', 'Jade/SOUL.md', 'SOUL.md'].map((p2) => path.join(root, p2)).find((f) => fs.existsSync(f));
+    let soul = { here: false };
+    if (soulAt) { const st = fs.statSync(soulAt); soul = { here: true, changed: st.mtime.toISOString(), size: st.size }; }
+    return { notes, folders, soul };
+  }
   const tendView = () => {
     const st = settings.state();
     if (st.settings) delete st.settings.redactWords;
@@ -592,6 +649,7 @@ function createResident(opts, shared) {
       log: ev.slice(-40).reverse(),
       refused: ev.filter((e) => /^refused|\.refused$|pair\.locked/.test(e.kind)).slice(-20).reverse(),
       tools: toolList().map((t) => t.name),
+      house: { ...state.facts(), ...libraryFacts() },
     };
   };
   const tend = {
@@ -613,7 +671,7 @@ function createResident(opts, shared) {
     id, name: displayName, handle, deviceOf, pairNow, livePort: null, tend,
     get hostShell() { return hostShell; },
     setHostShell(on) { hostShell = !!on; event('host_shell.set', { on: hostShell }); },
-    root, stateDir, shell, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, imports,
+    root, stateDir, shell, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, state, imports,
     /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
     startRuntime(o = {}) {
       // brain 'host': her models as set up here, each job on its own chain; and "Try the model again" asks them

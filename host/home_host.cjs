@@ -568,8 +568,49 @@ function createResident(opts, shared) {
     }
   }
 
+  /**
+   * Tending (for the Harbor's keeper): her host settings and the facts about her, never her vault, her chats, a key's
+   * value, or the words she has the redactor hide. Changes are the keeper's, at the host itself (the Harbor checks).
+   */
+  function lastEvents(n = 200) {
+    try {
+      const st = fs.statSync(logFile), size = Math.min(st.size, 256 * 1024), fd = fs.openSync(logFile, 'r'), buf = Buffer.alloc(size);
+      fs.readSync(fd, buf, 0, size, st.size - size); fs.closeSync(fd);
+      return buf.toString('utf8').split('\n').filter(Boolean).slice(-n).map((l) => { try { const e = JSON.parse(l); return { at: e.at, kind: e.kind }; } catch { return null; } }).filter(Boolean);
+    } catch { return []; }
+  }
+  const tendView = () => {
+    const st = settings.state();
+    if (st.settings) delete st.settings.redactWords;
+    const ev = lastEvents(400);
+    return {
+      resident: { id, name: displayName, hostShell }, nap: nap.state(), ...st, models: models.state(), brain: runtime ? runtime.brain : null,
+      bridges: bridgeInfo(), waiting: runtime ? runtime.waiting().count : 0,
+      devices: devices.map(({ id: did, name, created, seenAt }) => ({ id: did, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
+      atelier: (() => { const ss = store.get('sessions'), c = store.get('schedules'); return { chats: Array.isArray(ss) ? ss.length : 0, schedules: Array.isArray(c) ? c.length : 0 }; })(),
+      imports: imports.records().slice(0, 5).map(({ id: iid, at, by, name, kind, undone }) => ({ id: iid, at, by, name, kind, undone })),
+      log: ev.slice(-40).reverse(),
+      refused: ev.filter((e) => /^refused|\.refused$|pair\.locked/.test(e.kind)).slice(-20).reverse(),
+      tools: toolList().map((t) => t.name),
+    };
+  };
+  const tend = {
+    view: tendView,
+    async act(op, a = {}, by = 'the keeper') {
+      if (op === 'settings') return settings.set(a.patch || {}, by);
+      if (op === 'resume') return settings.resume(by);
+      if (op === 'models') return models.set(a.patch || {}, by);
+      if (op === 'modelKey') return models.setKey(String(a.provider || ''), typeof a.key === 'string' ? a.key.trim() : '');
+      if (op === 'modelBack') { settings.modelBack(by); return settings.state(); }
+      if (op === 'modelCheck') return runtime ? runtime.checkModel(by) : { ok: null, note: 'No runtime on this host.' };
+      if (op === 'bridgeKey') { setBridgeToken(String(a.bridge || ''), typeof a.key === 'string' ? a.key.trim() : ''); return { ok: true, set: !!a.key, note: 'Restart the host for a bridge to use a new key.' }; }
+      if (op === 'release') return { released: !!revoke(String(a.device || '')) };
+      throw Object.assign(new Error('Not something the keeper tends.'), { status: 400 });
+    },
+  };
+
   return {
-    id, name: displayName, handle, deviceOf, pairNow, livePort: null,
+    id, name: displayName, handle, deviceOf, pairNow, livePort: null, tend,
     get hostShell() { return hostShell; },
     setHostShell(on) { hostShell = !!on; event('host_shell.set', { on: hostShell }); },
     root, stateDir, shell, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, imports,
@@ -839,11 +880,20 @@ function createHomeHost(opts) {
   const fromElsewhere = (req) => { const s = String(req.headers['sec-fetch-site'] || ''); return s && s !== 'same-origin' && s !== 'none'; };
   const readJson = (req) => new Promise((resolve) => { const parts = []; let n = 0; req.on('data', (d) => { n += d.length; if (n <= 8192) parts.push(d); }); req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(parts).toString('utf8') || '{}')); } catch { resolve({}); } }); req.on('error', () => resolve({})); });
 
+  /** Tend a resident: in this process directly, or in hers over this machine with her key. */
+  async function tendOf(rid, op, args, by) {
+    const r = residents.get(rid); if (!r) throw fail(404, `No island "${rid}".`);
+    if (!r.remote) return op === 'view' ? r.tend.view() : r.tend.act(op, args, by);
+    const t = await separate.call(entryOf(rid).port, '/host/front/tend', { op, args, by }, r.key(), 8000);
+    if (t.status === 0) throw fail(503, `${r.name} isn\u2019t running right now.`);
+    if (t.status !== 200) throw fail(t.status, (t.body && t.body.error) || 'She didn\u2019t take that.');
+    return t.body;
+  }
   const servicePlan = (rid) => { const e = reg.find((x) => x.id === rid); if (!e || e.run !== 'service') throw fail(404, `${rid} isn't set to run as her own service (run ${rid} service).`); return planFor(e); };
   // the host's own page for everything its window does (harbor.cjs): the front only
   const harbor = front ? null : createHarbor({
     first, stateDir: first.stateDir, pins, version: VERSION, residents: () => residentList(), resident: (rid) => residents.get(rid) || null,
-    entryOf, addResident, setRun, setHostShell, setAccess, waiting, answer, servicePlan, send, readJson, fromElsewhere,
+    entryOf, addResident, setRun, setHostShell, setAccess, waiting, answer, servicePlan, tendOf, send, readJson, fromElsewhere,
     trustNets: shared.trustNets, elevate: opts.elevate,
   });
 
@@ -860,6 +910,12 @@ function createHomeHost(opts) {
         if (!r || !r.remote || !separate.keyOk(req, r.key())) { first.event('refused.front', { path: p }); return send(res, 403, { error: 'Not for you.' }); }
         const t = pins.take(b.code);
         return t.ok ? send(res, 200, { ok: true }) : send(res, t.status, t.body);
+      }
+      if (p === '/host/front/tend' && req.method === 'POST' && front) {
+        if (!separate.keyOk(req, front.key)) { first.event('refused.front', { path: p }); return send(res, 403, { error: 'Not for you.' }); }
+        const b = await readJson(req);
+        try { return send(res, 200, b.op === 'view' ? first.tend.view() : await first.tend.act(b.op, b.args || {}, String(b.by || 'the keeper').slice(0, 60))); }
+        catch (e) { return send(res, e.status || 500, { error: e.message }); }
       }
       if (p === '/host/front/pair' && req.method === 'POST' && front) {
         if (!separate.keyOk(req, front.key)) { first.event('refused.front', { path: p }); return send(res, 403, { error: 'Not for you.' }); }

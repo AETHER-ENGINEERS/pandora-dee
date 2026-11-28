@@ -211,6 +211,32 @@
   .step .glyph.paint .art { width: 150px; transition: opacity .6s var(--ease), transform .8s var(--ease); animation: bob 6s ease-in-out infinite; }
   .shore .portrait { width: 200px; margin: 10px 0 0 -8px; animation: arrive 1s var(--ease) both, bob 7s ease-in-out 1s infinite; }
   .card .thumb { width: 92px; flex: none; }
+  /* ---- her island: the whole land, its regions, and the places in each ---- */
+  .land-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 24px; align-items: start; margin-top: 10px; }
+  .land-stage { position: relative; aspect-ratio: 1536 / 896; border-radius: 26px; overflow: hidden; background: var(--sand);
+    box-shadow: 0 30px 70px -40px #000a, inset 0 0 0 1px var(--card-line); }
+  .land-view, .region-view { position: absolute; inset: 0; }
+  .land-view img, .region-view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .land-view img { transition: transform 1.15s cubic-bezier(.45, 0, .2, 1), filter 1.15s; transform-origin: 50% 50%; }
+  .land-view.diving img { filter: blur(1.5px) saturate(1.1); }
+  .region-view { opacity: 0; transition: opacity .7s var(--ease); pointer-events: none; }
+  .region-view.on { opacity: 1; pointer-events: auto; }
+  .region-view img { transform: scale(1.12); transition: transform 1.6s var(--ease); }
+  .region-view.on img { transform: none; animation: drift-scene 26s ease-in-out 1.6s infinite alternate; }
+  @keyframes drift-scene { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.05) translate(-1%, -.6%); } }
+  .land-view .sign, .region-view .sign { z-index: 2; }
+  .sign.building { border-style: dashed; }
+  .sign.building::before { background: var(--muted); animation: none; }
+  :root[data-theme="dark"] .land-stage img { filter: brightness(.82) saturate(.95); }
+  .isle-panel .places { display: grid; gap: 8px; margin-top: 12px; }
+  .isle-panel .places button { text-align: left; }
+  .isle-panel .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 8px 0; }
+  .isle-panel .kv span:nth-child(odd) { color: var(--muted); }
+  .isle-panel ul.plain { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; font-size: 14px; }
+  .isle-panel ul.plain li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 12px; background: var(--sand); }
+  .isle-panel .scaffold { border: 1px dashed var(--card-line); border-radius: 14px; padding: 12px 14px; color: var(--muted); font-size: 14px; }
+  .isle-panel input.line { margin-top: 6px; }
+  @media (max-width: 900px) { .land-grid { grid-template-columns: 1fr; } }
   /* ---- the open sea: a world you pan and sail across ---- */
   body[data-screen="worldScreen"] main { max-width: none; padding: 0; }
   body[data-screen="worldScreen"] header.top { position: fixed; left: 0; right: 0; top: 0; z-index: 4; padding: 18px 22px; pointer-events: none; }
@@ -389,15 +415,18 @@
     </div>
   </section>
 
-  <!-- her island, travelled to -->
+  <!-- her island: the whole land, travelled through region by region -->
   <section class="screen away" id="isleScreen">
     <div class="isle-top">
       <button class="ghost" id="isleBack">Back to the sea</button>
       <div><h2 id="isleName"></h2><div class="note" id="isleNote"></div></div>
     </div>
-    <div class="isle-grid">
-      <div class="isle-stage" id="isleStage"><img class="art" id="isleArt" alt=""><div id="signs"></div></div>
-      <div class="isle-panel card" id="islePanel" aria-live="polite"></div>
+    <div class="land-grid">
+      <div class="land-stage" id="landStage">
+        <div class="land-view" id="landView"><img id="ovArt" alt=""><div id="regionSigns"></div></div>
+        <div class="region-view" id="regionView"><img id="rgArt" alt=""><div id="placeSigns"></div></div>
+      </div>
+      <div class="card isle-panel" id="islePanel" aria-live="polite"></div>
     </div>
   </section>
 
@@ -576,7 +605,7 @@
       const id = b.dataset.yes || b.dataset.no;
       try { await api('/host/harbor/reef/' + id, 'POST', { welcome: !!b.dataset.yes }); bottle(b.dataset.yes ? `Welcome, ${id}. Her island is planned: raise it with the keeper's hand.` : 'Turned back, gently.'); await refresh(); if (b.dataset.yes) openShore(id); } catch (e) { bottle(e.message); }
     }));
-    if (isle) { const i = view.islands.find((x) => x.id === isle.id); if (i) drawIsle(i, true); }
+    if (isle) { const i = view.islands.find((x) => x.id === isle.id); if (i) { loadTend().then(() => { if (isle && isle.id === i.id) drawIsle(i, true); }); } }
     drawWorld();
   }
 
@@ -769,106 +798,195 @@
     }
   }
 
-  // ---- her island: travelled to from the sea, with signposts on the island itself ----
-  // Where each signpost stands on each painting (percent of the painting), and what it opens.
-  const SIGNS = {
-    'isl-own': { about: [71, 36], where: [56, 48], hands: [34, 24], raise: [29, 64], way: [66, 70], ferries: [42, 79] }, // tree, cottage, palm, beach, jetty, water
-    'isl-cove': { about: [44, 26], where: [70, 40], hands: [23, 44], ferries: [47, 60] }, // the trees, the boathouse, the rocks, the pool
-    'isl-harbor': { about: [72, 42], where: [47, 34], hands: [42, 62], ferries: [70, 70] }, // the lantern, the sail, the hull, the pier
+  // ================= her island: the whole land, region by region =================
+  // Each region of every land, and the places in each region. The regions (and so her abilities) are the same on every
+  // island; each land paints them in its own way. Percentages are where they stand on the paintings.
+  const REGIONS = {
+    cove: { t: 'The cove', i: 'ferry', places: { jetty: [21, 46, 'The jetty'], campfire: [50, 62, 'The campfire'], chest: [85, 70, 'The sea chest'] } },
+    village: { t: 'The village terrace', i: 'island', places: { house: [53, 36, 'Her house'], gate: [29, 68, 'The garden gate'] } },
+    springs: { t: 'The springs', i: 'pool', places: { well: [50, 50, 'The well of her voice'] } },
+    stones: { t: 'The standing stones', i: 'stars', places: { stones: [50, 40, 'Her logbook'] } },
+    grove: { t: 'The misty grove', i: 'sprout', places: { grove: [50, 56, 'The grove of her memory'] } },
+    cliffs: { t: 'The cliffs', i: 'lantern', places: { lighthouse: [77, 26, 'The lighthouse'] } },
+    observatory: { t: 'The observatory', i: 'stars', places: { scope: [56, 42, 'The telescope'] } },
+    reef: { t: 'Her reef', i: 'reef', places: { reef: [50, 56, 'Her boundary'] } },
+    islet: { t: 'The islet', i: 'boat', places: { boat: [45, 56, 'The boat to the manor'] } },
   };
-  const SIGN_WORDS = {
-    about: { i: 'lantern', t: 'Her tide' }, where: { i: 'island', t: 'Where she lives' }, way: { i: 'shore', t: 'Your way to her' },
-    hands: { i: 'hands', t: 'Her hands' }, raise: { i: 'stars', t: 'Raise her island' }, ferries: { i: 'ferry', t: 'Ferries' },
+  // where each region lies on each land's overview painting
+  const REGION_AT = {
+    tropics: { cove: [31, 76], village: [43, 45], springs: [58, 55], stones: [78, 42], grove: [24, 26], cliffs: [77, 21], observatory: [49, 11], reef: [72, 89], islet: [90, 84] },
+    highlands: { cove: [26, 76], village: [42, 46], springs: [60, 61], stones: [77, 47], grove: [21, 35], cliffs: [78, 13], observatory: [51, 11], reef: [80, 86], islet: [92, 35] },
+    oasis: { cove: [33, 79], village: [43, 51], springs: [59, 60], stones: [75, 46], grove: [19, 30], cliffs: [77, 21], observatory: [50, 11], reef: [84, 74], islet: [90, 88] },
+    fjord: { cove: [31, 81], village: [43, 46], springs: [55, 60], stones: [75, 50], grove: [23, 30], cliffs: [72, 14], observatory: [50, 11], reef: [66, 88], islet: [90, 85] },
+    maple: { cove: [34, 78], village: [43, 47], springs: [57, 60], stones: [76, 45], grove: [24, 25], cliffs: [79, 13], observatory: [50, 9], reef: [70, 85], islet: [92, 82] },
+    atoll: { cove: [28, 71], village: [42, 40], springs: [58, 56], stones: [78, 44], grove: [25, 22], cliffs: [78, 19], observatory: [50, 10], reef: [62, 88], islet: [91, 80] },
   };
-  let isle = null; // { id, sign }
-  const bigArt = (art) => `/host/harbor/art/${art}-big.png`;
+  const BUILDING = { grove: 'parity step 1 (her memory on the host)', scope: 'parity step 4 (device tools through connected devices)', boat: 'the crossing to SEASIDE (piece F, after steps 1 and 2)' };
+  let isle = null; // { id, region, place, tend, tendErr }
 
-  function openShore(id, fromEl) {
+  const regionsAt = (land) => REGION_AT[land] || REGION_AT.tropics;
+  async function loadTend() {
+    if (!isle) return;
+    try { isle.tend = await api(`/host/harbor/islands/${isle.id}/tend`); isle.tendErr = null; }
+    catch (e) { isle.tend = null; isle.tendErr = e.message; }
+  }
+  async function openShore(id) {
     const i = view.islands.find((x) => x.id === id); if (!i) return;
-    const r = runOf(i.run);
-    isle = { id, sign: 'about' };
-    const img = $('#isleArt');
-    img.classList.remove('settled');
-    img.src = bigArt(r.art);
-    img.onerror = () => { img.onerror = null; img.src = `/host/harbor/art/${r.art}.png`; };
+    isle = { id, region: null, place: null, tend: null, tendErr: null };
+    $('#ovArt').src = `/host/harbor/art/ov-${i.land}.jpg`;
+    $('#ovArt').onerror = () => { $('#ovArt').onerror = null; $('#ovArt').src = '/host/harbor/art/ov-tropics.jpg'; };
+    $('#landView').querySelector('img').style.transform = '';
+    $('#regionView').classList.remove('on');
     show('isleScreen');
     drawIsle(i);
-    // the journey there: the painting grows from where it sat on the sea (FLIP)
-    const from = fromEl && fromEl.querySelector('.art');
-    requestAnimationFrame(() => {
-      const to = $('#isleStage').getBoundingClientRect();
-      if (from && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const f = from.getBoundingClientRect();
-        img.style.transition = 'none';
-        img.style.transform = `translate(${f.left - to.left}px, ${f.top - to.top}px) scale(${f.width / to.width})`;
-        img.getBoundingClientRect();
-        img.style.transition = 'transform 1.1s cubic-bezier(.2,.8,.2,1)';
-        img.style.transform = 'none';
-      }
-      setTimeout(() => { img.style.transition = ''; img.style.transform = ''; img.classList.add('settled'); document.querySelectorAll('.sign').forEach((sg, k) => setTimeout(() => sg.classList.add('shown'), 90 * k)); }, 1050);
-    });
+    await loadTend(); if (isle && isle.id === id) drawIsle(i);
   }
   function closeShore() {
     if (!isle) return;
-    const id = isle.id; isle = null;
+    if (isle.region) return leaveRegion();
+    isle = null;
     show(home);
     if (home === 'worldScreen') requestAnimationFrame(placeWorld);
-    const back = document.querySelector(`.island[data-id="${CSS.escape(id)}"] .art`);
-    if (back && back.animate) back.animate([{ transform: 'scale(1.35)', opacity: .4 }, { transform: 'none', opacity: 1 }], { duration: 800, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
   $('#isleBack').onclick = closeShore;
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShore(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.dataset.screen === 'isleScreen') closeShore(); });
+
+  /** Into a region: the land's painting glides toward it, then the region's own scene settles in. */
+  function enterRegion(rk) {
+    const i = view.islands.find((x) => x.id === isle.id); if (!i) return;
+    const at = regionsAt(i.land)[rk] || [50, 50];
+    isle.region = rk; isle.place = Object.keys(REGIONS[rk].places)[0];
+    const img = $('#landView').querySelector('img');
+    img.style.transformOrigin = `${at[0]}% ${at[1]}%`;
+    $('#landView').classList.add('diving');
+    img.style.transform = 'scale(2.6)';
+    document.querySelectorAll('#regionSigns .sign').forEach((s2) => s2.classList.remove('shown'));
+    $('#rgArt').src = `/host/harbor/art/rg-${rk}.jpg`;
+    setTimeout(() => { $('#regionView').classList.add('on'); $('#landView').classList.remove('diving'); drawIsle(i); }, reduce() ? 0 : 750);
+    drawPanel(i, true);
+  }
+  function leaveRegion() {
+    const i = view.islands.find((x) => x.id === isle.id);
+    isle.region = null; isle.place = null;
+    $('#regionView').classList.remove('on');
+    const img = $('#landView').querySelector('img');
+    setTimeout(() => { img.style.transform = ''; }, reduce() ? 0 : 250);
+    setTimeout(() => { if (i) drawIsle(i); }, reduce() ? 0 : 900);
+    if (i) drawPanel(i, true);
+  }
 
   function drawIsle(i, quiet) {
     const r = runOf(i.run);
     $('#isleName').textContent = i.name;
-    $('#isleNote').textContent = `${i.id} · ${i.up ? 'high tide: awake' : 'low tide: not running'} · ${r.b.toLowerCase()}`;
-    const which = ['about', ...(i.first ? [] : ['where']), ...(i.run === 'service' ? ['way', 'raise'] : []), ...(i.first ? [] : ['hands']), ...(i.ferries != null ? ['ferries'] : [])];
-    const at = SIGNS[r.art] || SIGNS['isl-own'];
-    const sig = which.join() + r.art;
-    if ($('#signs').dataset.sig !== sig) {
-      $('#signs').dataset.sig = sig;
-      $('#signs').innerHTML = which.map((w) => { const pos = at[w] || at.about; return `<button class="sign${quiet ? ' shown' : ''}" data-sign="${w}" style="left:${pos[0]}%;top:${pos[1]}%">${icon(SIGN_WORDS[w].i)}${esc(SIGN_WORDS[w].t)}</button>`; }).join('');
-      $('#signs').querySelectorAll('.sign').forEach((b) => (b.onclick = () => { isle.sign = b.dataset.sign; drawPanel(i, true); if (matchMedia('(max-width: 820px)').matches) setTimeout(() => $('#islePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 280); }));
+    $('#isleNote').textContent = `${i.up ? 'running' : 'not running'} · ${r.b.toLowerCase()} · ${LAND_NAMES[i.land] || i.land}`;
+    $('#isleBack').textContent = isle.region ? 'Back to her island' : 'Back to the sea';
+    // the land's regions
+    const at = regionsAt(i.land);
+    const rs = isle.region ? '' : Object.entries(REGIONS).map(([k, g]) => `<button class="sign${quiet ? ' shown' : ''}" data-region="${k}" style="left:${at[k][0]}%;top:${at[k][1]}%">${icon(g.i)}${esc(g.t)}</button>`).join('');
+    if ($('#regionSigns').dataset.sig !== (isle.region || 'land') + i.land) {
+      $('#regionSigns').dataset.sig = (isle.region || 'land') + i.land;
+      $('#regionSigns').innerHTML = rs;
+      $('#regionSigns').querySelectorAll('.sign').forEach((b2) => (b2.onclick = () => enterRegion(b2.dataset.region)));
+      if (!quiet) document.querySelectorAll('#regionSigns .sign').forEach((sg, k) => setTimeout(() => sg.classList.add('shown'), 120 + 70 * k));
     }
-    if (!which.includes(isle.sign)) isle.sign = 'about';
+    // the region's places
+    const ps = isle.region ? Object.entries(REGIONS[isle.region].places).map(([k, v]) => `<button class="sign shown${BUILDING[k] ? ' building' : ''}${isle.place === k ? ' on' : ''}" data-place="${k}" style="left:${v[0]}%;top:${v[1]}%">${esc(v[2])}</button>`).join('') : '';
+    $('#placeSigns').innerHTML = ps;
+    $('#placeSigns').querySelectorAll('.sign').forEach((b2) => (b2.onclick = () => { isle.place = b2.dataset.place; drawIsle(i, true); drawPanel(i, true); if (matchMedia('(max-width: 900px)').matches) setTimeout(() => $('#islePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 280); }));
     drawPanel(i, !quiet);
   }
 
+  const ago = (iso) => { if (!iso) return 'never'; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  const KIND_WORDS = (k) => String(k).replace(/[._-]+/g, ' ');
+
   function drawPanel(i, turn) {
-    const host = view.atHost;
-    const el = $('#islePanel');
-    document.querySelectorAll('.sign').forEach((b) => b.classList.toggle('on', b.dataset.sign === isle.sign));
-    const sigNow = isle.sign + JSON.stringify(i);
+    const host = view.atHost, t = isle.tend, el = $('#islePanel');
+    const sigNow = [isle.region, isle.place, JSON.stringify(i), JSON.stringify(t), isle.tendErr].join('|');
     if (!turn && el.dataset.sig === sigNow) return;
     el.dataset.sig = sigNow;
-    const w = SIGN_WORDS[isle.sign];
-    const body = {
-      about: () => `<p class="note">${i.up ? 'High tide: she is awake.' : 'Low tide: she isn\'t running right now.'}${i.port ? ` Her own address is at port ${i.port}.` : ''}</p>
-        ${i.home ? `<p class="note">Her home (her vault's "/"): ${esc(i.home)}</p>` : ''}
-        ${i.first ? '<p class="note">She is the harbor\'s first island: she lives in its waters, with her own hands, always. (Moving her to her own island comes next.)</p>' : ''}
-        <p class="note">Follow a signpost on her island to look after her.</p>`,
-      where: () => `<p class="note">How far from the harbor her island lies.</p><div class="choices" id="sRun">${choices('srun', RUNS, i.run, !host)}</div>`,
-      way: () => `<p class="note">On her own island her shore is walled from every other island. How do you reach it?</p><div class="choices" id="sAccess">${choices('saccess', ACCESS, i.access || 'person', !host)}</div>`,
-      raise: () => `<p class="note">Her island is raised by the keeper's hand: the computer asks you, as administrator, on this screen. ${i.up ? 'She is risen.' : 'It isn\'t raised yet.'}</p>
-        <div class="row"><button class="sail" id="raise"${host ? '' : ' disabled'}>Raise her island</button><button class="ghost" id="lower"${host ? '' : ' disabled'}>Let the tide take it back</button></div>
-        <details class="steps" id="stepsBox"><summary>Read the steps first (install and remove)</summary><div id="stepsText" class="note">…</div></details>`,
-      hands: () => `<label class="switch"><input type="checkbox" id="sShell"${i.hostShell ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Her own tools on this computer (host_shell)${i.run === 'service' ? ', walled to her shore' : i.hostShell ? '' : ': resting, since they aren\'t walled off from the other islands here'}</span></label>`,
-      ferries: () => `<p class="note">${i.ferries} ferr${i.ferries === 1 ? 'y' : 'ies'} moored with her (paired devices). Light a PIN on the sea to moor another.</p>`,
-    }[isle.sign]();
+    const notHere = `<p class="note">${esc(isle.tendErr || 'Listening for her…')}</p>`;
+    let h = '';
+    if (!isle.region) {
+      h = `<h3>${icon('island')}${esc(i.name)}'s island</h3>
+        <p class="note">${esc(LAND_NAMES[i.land] || i.land)}. Follow a signpost on her land, or choose a place here.</p>
+        <div class="places">${Object.entries(REGIONS).map(([k, g]) => `<button class="ghost" data-go-region="${k}">${icon(g.i)} ${esc(g.t)} <small class="note">· ${Object.values(g.places).map((v) => v[2].toLowerCase()).join(', ')}</small></button>`).join('')}</div>`;
+    } else {
+      const pk = isle.place, P = REGIONS[isle.region].places[pk];
+      h = `<h3>${icon(REGIONS[isle.region].i)}${esc(P[2])}</h3>`;
+      if (BUILDING[pk]) {
+        const what = { grove: 'Her deep memory: Memory.md, her embeddings, searching her chat history. The library in her house keeps her notes; the grove holds what she remembers.', scope: 'What she senses through the devices that visit: phone, camera, screen, voice. Each device lists what it has, and her calls go to it.', boat: 'The crossing to the manor (SEASIDE): she visits as herself, one Pandora in many places, never a twin. Her vault, chats and memory are read through the host.' }[pk];
+        h += `<p class="note">${esc(what)}</p><div class="scaffold">Still being built: comes with ${esc(BUILDING[pk])}.</div>`;
+      } else if (pk === 'gate') {
+        h += `<p class="note">Where she lives, and your way to her.</p><div class="choices" id="sRun"${i.first ? ' hidden' : ''}>${choices('srun', RUNS, i.run, !host)}</div>
+          ${i.first ? '<p class="note">She is the harbor\u2019s first island: she lives in its waters, with her own hands, always. (Moving her to her own island comes later.)</p>' : ''}
+          ${i.run === 'service' ? `<label class="small">Your way to her</label><div class="choices" id="sAccess">${choices('saccess', ACCESS, i.access || 'person', !host)}</div>
+            <label class="small">Raising her island (the drydock)</label><div class="row"><button class="sail" id="raise"${host ? '' : ' disabled'}>Raise her island</button><button class="ghost" id="lower"${host ? '' : ' disabled'}>Let the tide take it back</button></div>
+            <details class="steps" id="stepsBox"><summary>Read the steps first (install and remove)</summary><div id="stepsText" class="note">…</div></details>` : ''}
+          ${i.first ? '' : `<label class="small">Her hands on this shore</label><label class="switch"><input type="checkbox" id="sShell"${i.hostShell ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Her own tools on this computer (host_shell)${i.run === 'service' ? ', walled to her shore' : ''}</span></label>`}`;
+      } else if (pk === 'house') {
+        h += `<p class="note">Her Atelier. Inside: the hearth (her branches and chats), the library (her notes), the shelves (her tools and skills), the table (her apps and games), the computer (rituals, schedules, her shell), a mirror (who she is, hers to write) and the key hook (her secrets, never shown).</p>
+          ${t ? `<div class="kv"><span>Chats kept on the host</span><span>${t.atelier.chats}</span><span>Schedules</span><span>${t.atelier.schedules}</span></div>` : ''}
+          <div class="scaffold">Stepping inside comes with parity step 1, when her chats and settings live on the host. Until then, her own Atelier is open at her own address.</div>
+          ${i.port ? `<p class="row" style="margin-top:12px"><a class="ghost" href="${location.protocol}//${location.hostname}:${i.port}/" target="_blank" rel="noopener">Open her Atelier</a></p>` : ''}`;
+      } else if (!t) h += notHere;
+      else if (pk === 'jetty') {
+        h += `<p class="note">Her ferries (paired devices). A ferry moors with a PIN from the ferry office.</p>
+          <ul class="plain">${t.devices.length ? t.devices.map((d) => `<li><span><b>${esc(d.name)}</b><br><small class="note">seen ${esc(ago(d.seen))}</small></span><button class="ghost" data-release="${esc(d.id)}"${host ? '' : ' disabled'}>Release</button></li>`).join('') : '<li>No ferries moored yet.</li>'}</ul>
+          <p class="row"><button class="ghost" id="pinHere"${host ? '' : ' disabled'}>Light a PIN</button> <span class="pin hidden" id="pinHereV" style="font-size:28px;letter-spacing:6px"></span></p>`;
+      } else if (pk === 'campfire') {
+        const sw = t.switches || {};
+        h += `<p class="note">Vector and Discord: her bridges, kept by the host. ${t.waiting ? `${t.waiting} message${t.waiting === 1 ? '' : 's'} waiting by the fire.` : 'No embers: nothing waiting.'} Provider errors never reach the fire.</p>
+          <label class="switch"><input type="checkbox" data-sw="receive"${sw.receive && sw.receive.wanted ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Listening (receiving)</span></label>
+          <label class="switch" style="margin-top:8px"><input type="checkbox" data-sw="send"${sw.send && sw.send.wanted ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>Speaking (sending)${sw.send && sw.send.why ? ` <small class="note">· ${esc(sw.send.why)}</small>` : ''}</span></label>
+          <ul class="plain">${t.bridges.length ? t.bridges.map((b2) => `<li><span><b>${esc(b2.name)}</b><br><small class="note">${b2.url ? 'lit' : 'not set up'} · key ${b2.tokenSet ? 'hung up' : 'not given'}</small></span></li>`).join('') : '<li>No bridges set up yet.</li>'}</ul>
+          ${t.bridges.length ? `<label class="small">Give a bridge its key (written once, never shown)</label><div class="row"><select class="line" id="bkName" style="width:auto">${t.bridges.map((b2) => `<option>${esc(b2.name)}</option>`).join('')}</select><input class="line" id="bkKey" type="password" autocomplete="off" placeholder="its key" style="flex:1"><button class="ghost" id="bkSet"${host ? '' : ' disabled'}>Hang it up</button></div>` : ''}`;
+      } else if (pk === 'chest') {
+        h += `<p class="note">Her things: what was brought in from a backup, and when. Bringing things in or taking them out happens in her Atelier's "Her things" for now.</p>
+          <ul class="plain">${t.imports.length ? t.imports.map((m) => `<li><span><b>${esc(m.name)}</b><br><small class="note">${esc(m.kind)} · ${esc(ago(m.at))}${m.undone ? ' · undone' : ''}</small></span></li>`).join('') : '<li>Nothing brought in yet.</li>'}</ul>`;
+      } else if (pk === 'well') {
+        const M = t.models || {};
+        h += `<p class="note">Her voice: where her loop runs, and the models the host keeps for her.</p>
+          <div class="kv"><span>Her loop</span><span>${M.brain === 'host' ? 'on the host, with these models' : 'in the connected Atelier, with its own models'}</span>
+          ${Object.entries(M.roles || {}).map(([rk2, ro]) => `<span>${esc((M.roleNames || {})[rk2] || rk2)}</span><span>${ro.model ? esc(ro.provider + ' · ' + ro.model) : '<span class="note">not chosen</span>'}</span>`).join('')}</div>
+          <ul class="plain">${Object.entries(M.providers || {}).map(([pid, pv]) => `<li><span><b>${esc(pv.label || pid)}</b><br><small class="note">${esc(pv.kind)} · ${pv.enabled ? 'open' : 'closed'} · key ${pv.keySet ? 'hung up' : 'none'}${pv.restingFor ? ` · resting ${pv.restingFor}s` : ''}</small></span></li>`).join('')}</ul>
+          <label class="small">Give a provider its key (written once, never shown)</label>
+          <div class="row"><select class="line" id="mkName" style="width:auto">${Object.keys(M.providers || {}).map((pid) => `<option>${esc(pid)}</option>`).join('')}</select><input class="line" id="mkKey" type="password" autocomplete="off" placeholder="its key" style="flex:1"><button class="ghost" id="mkSet"${host ? '' : ' disabled'}>Hang it up</button></div>
+          <p class="row" style="margin-top:10px"><button class="ghost" id="mCheck"${host ? '' : ' disabled'}>Try her model now</button></p>`;
+      } else if (pk === 'stones') {
+        h += `<p class="note">Her logbook: what was done, carved as facts only, never what was said.</p>
+          <ul class="plain">${t.log.slice(0, 25).map((e) => `<li><span>${esc(KIND_WORDS(e.kind))}</span><small class="note">${esc(ago(e.at))}</small></li>`).join('') || '<li>Quiet stones.</li>'}</ul>`;
+      } else if (pk === 'lighthouse') {
+        const sw = t.switches || {}, n = t.nap || {};
+        h += `<p class="note">Her tide. ${n.awake ? `Awake: ${n.clients} visitor${n.clients === 1 ? '' : 's'} here.` : 'Napping: no one has visited for a while, so the switches that need a visitor rest.'}</p>
+          ${Object.entries(sw).map(([k2, v]) => `<label class="switch" style="margin-top:8px"><input type="checkbox" data-sw="${esc(k2)}"${v.wanted ? ' checked' : ''}${host ? '' : ' disabled'}><span class="track"></span><span>${esc(v.name)}${v.offBy ? ` <small class="note">· off since the ${esc(v.offBy === 'nap' ? 'nap' : 'model outage')}</small>` : v.why ? ` <small class="note">· ${esc(v.why)}</small>` : ''}</span></label>`).join('')}
+          <p class="row" style="margin-top:12px"><button class="ghost" id="resume"${host ? '' : ' disabled'}>Turn back on what the tide turned off</button></p>`;
+      } else if (pk === 'reef') {
+        h += `<p class="note">Her boundary: what was turned away, and why. Another website asking through a visitor's browser, a change from outside the house, a wrong PIN.</p>
+          <ul class="plain">${t.refused.length ? t.refused.map((e) => `<li><span>${esc(KIND_WORDS(e.kind))}</span><small class="note">${esc(ago(e.at))}</small></li>`).join('') : '<li>Calm water: nothing turned away lately.</li>'}</ul>`;
+      }
+    }
     const paint = () => {
-      el.innerHTML = `<h3>${icon(w.i)}${esc(w.t)}</h3>${body}`;
+      el.innerHTML = h;
+      el.querySelectorAll('[data-go-region]').forEach((b2) => (b2.onclick = () => enterRegion(b2.dataset.goRegion)));
       const act = async (b2, said) => { try { await api('/host/harbor/islands/' + i.id, 'POST', b2); bottle(said); await refresh(); } catch (e) { bottle(e.message); await refresh(); } };
+      const tendAct = async (op, args, said) => { try { await api(`/host/harbor/islands/${i.id}/tend/${op}`, 'POST', args || {}); if (said) bottle(said); await loadTend(); drawPanel(i, false); } catch (e) { bottle(e.message); } };
       if ($('#sRun')) bindChoices($('#sRun'), (v) => act({ run: v }, `${i.name} is moving: ${runOf(v).b.toLowerCase()}.`));
-      if ($('#sAccess')) bindChoices($('#sAccess'), (v) => act({ access: v }, v === 'doorstep' ? 'A tide pool it is; her steps are written again.' : 'You\'ll walk her shore; her steps are written again.'));
+      if ($('#sAccess')) bindChoices($('#sAccess'), (v) => act({ access: v }, v === 'doorstep' ? 'A tide pool it is; her steps are written again.' : 'You\u2019ll walk her shore; her steps are written again.'));
       if ($('#sShell')) $('#sShell').onchange = (e) => act({ hostShell: e.target.checked }, e.target.checked ? 'Her hands are free on this shore.' : 'Her hands rest.');
       if ($('#stepsBox')) $('#stepsBox').ontoggle = async (e) => {
         if (!e.target.open) return;
-        try { const st = await api('/host/harbor/islands/' + i.id + '/service'); $('#stepsText').innerHTML = `<p>As ${esc(st.identity)}. In ${esc(st.dir)}.</p>${st.why ? `<p>${esc(st.why)}</p>` : ''}` + Object.entries(st.files).map(([n, t]) => `<p><b>${esc(n)}</b></p><pre>${esc(t)}</pre>`).join(''); } catch (err) { $('#stepsText').textContent = err.message; }
+        try { const st = await api('/host/harbor/islands/' + i.id + '/service'); $('#stepsText').innerHTML = `<p>As ${esc(st.identity)}. In ${esc(st.dir)}.</p>${st.why ? `<p>${esc(st.why)}</p>` : ''}` + Object.entries(st.files).map(([n2, tx]) => `<p><b>${esc(n2)}</b></p><pre>${esc(tx)}</pre>`).join(''); } catch (err) { $('#stepsText').textContent = err.message; }
       };
-      const ask = (what) => async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/service/${what}`, 'POST', {}); bottle(r2.asked ? 'The computer is asking you, as administrator, on the host\'s screen.' : `At the host, as root: ${r2.run}`); setTimeout(refresh, 4000); } catch (e) { bottle(e.message); } };
+      const ask = (what) => async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/service/${what}`, 'POST', {}); bottle(r2.asked ? 'The computer is asking you, as administrator, on the host\u2019s screen.' : `At the host, as root: ${r2.run}`); setTimeout(refresh, 4000); } catch (e) { bottle(e.message); } };
       if ($('#raise')) $('#raise').onclick = ask('install');
       if ($('#lower')) $('#lower').onclick = ask('remove');
+      el.querySelectorAll('[data-release]').forEach((b2) => (b2.onclick = () => tendAct('release', { device: b2.dataset.release }, 'Released: that ferry no longer moors here.')));
+      if ($('#pinHere')) $('#pinHere').onclick = async () => { try { const r2 = await api('/host/harbor/pin', 'POST', {}); $('#pinHereV').textContent = r2.pin; $('#pinHereV').classList.remove('hidden'); } catch (e) { bottle(e.message); } };
+      el.querySelectorAll('input[data-sw]').forEach((c) => (c.onchange = () => tendAct('settings', { patch: { switches: { [c.dataset.sw]: c.checked } } }, null)));
+      if ($('#resume')) $('#resume').onclick = () => tendAct('resume', {}, 'Back on, what the tide had turned off.');
+      if ($('#bkSet')) $('#bkSet').onclick = () => { const key = $('#bkKey').value; $('#bkKey').value = ''; tendAct('bridgeKey', { bridge: $('#bkName').value, key }, 'Hung up. The host uses it after its next restart.'); };
+      if ($('#mkSet')) $('#mkSet').onclick = () => { const key = $('#mkKey').value; $('#mkKey').value = ''; tendAct('modelKey', { provider: $('#mkName').value, key }, 'Hung up.'); };
+      if ($('#mCheck')) $('#mCheck').onclick = async () => { try { const r2 = await api(`/host/harbor/islands/${i.id}/tend/modelCheck`, 'POST', {}); bottle(r2.ok ? 'Her model answers.' : r2.ok === false ? 'Her model didn\u2019t answer: the host\u2019s trace says why.' : (r2.note || 'Nothing to try.')); } catch (e) { bottle(e.message); } };
     };
     if (!turn) return paint();
     el.classList.add('turning');

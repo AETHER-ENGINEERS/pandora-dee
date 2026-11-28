@@ -39,6 +39,11 @@ try {
   // ---------- the page, and lighting the lantern ----------
   let r = await call(base, '/host/harbor');
   ok(r.status === 200 && r.text.includes('Light the harbor') && /default-src 'self'/.test(r.headers.get('content-security-policy') || ''), 'the Harbor page is served, and keeps to itself (nothing from elsewhere)');
+  const pic = await fetch(base + '/host/harbor/art/isl-own.png');
+  ok(pic.status === 200 && pic.headers.get('content-type') === 'image/png' && (await pic.arrayBuffer()).byteLength > 1000, 'the page\'s paintings are served to anyone, like the page itself');
+  r = await call(base, '/host/harbor/art/..%2Fharbor.cjs.png');
+  const r2 = await call(base, '/host/harbor/art/no-such.png');
+  ok(r.status !== 200 && r2.status === 404, 'and nothing else from that folder or beyond');
   r = await call(base, '/host/harbor/hello');
   ok(r.status === 200 && r.json.keeper === false && r.json.atHost === true && r.json.harbor === 'Fae (test)', 'a new ferry is not the keeper\'s yet, and is told it is at the host');
   r = await call(base, '/host/harbor/view');

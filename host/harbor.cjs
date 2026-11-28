@@ -77,6 +77,15 @@ function createHarbor(ctx) {
       send(res, 200, fs.readFileSync(path.join(__dirname, 'harbor.html'), 'utf8'), { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" });
       return true;
     }
+    // the page's paintings (host/harbor-art): open to anyone, like the page itself; they hold nothing
+    const art = /^\/host\/harbor\/art\/([a-z0-9-]+)\.png$/.exec(p);
+    if (art && req.method === 'GET') {
+      const f = path.join(__dirname, 'harbor-art', art[1] + '.png');
+      if (!fs.existsSync(f)) { send(res, 404, { error: 'No such painting.' }); return true; }
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+      res.end(fs.readFileSync(f));
+      return true;
+    }
     // lighting the lantern: a keeper's ferry, paired at the host itself with the PIN it shows
     if (p === '/host/harbor/keeper' && req.method === 'POST') {
       if (!atHost) { event('refused.keeper-elsewhere'); send(res, 403, { error: 'The harbor\'s keeper pairs at the host itself.' }); return true; }

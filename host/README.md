@@ -401,7 +401,8 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
 
 - **The archipelago:** every island on the sea, with where she lives (in the harbor's waters, her own cove, or her
   own island: `inside`, `process` and `service`), and her tide (high: awake; low: not running).
-- **Her shore** (click an island): move her, choose your way to her (walk her shore, or a tide pool between you:
+- **Her island** (click one): the painting grows from where it sat on the sea into her island, with signposts on
+  the island itself (the cottage, the jetty, the palm, the beach…). Each opens what it looks after: move her, choose your way to her (walk her shore, or a tide pool between you:
   `person` or `doorstep`), her hands on this shore (`host_shell`), and raising her island. Raising asks the computer
   for the keeper's hand: the administrator prompt appears on the host's own screen, and saying yes there is the
   person's step. The install and remove steps can be read first.
@@ -417,6 +418,9 @@ Everything typed into the host's window has a place here too, in Pandora's ISLAN
   no resident's device opens the harbor.
 - **Seeing the harbor:** a keeper's ferry, from this machine, home or the tailnet. Folders show only at the host.
 - **Changing anything:** at the host itself only, straight from this machine, as with the host's window.
+
+The paintings (`host/harbor-art/`) were made for this page with an image model on the house's own Mac, then lifted
+off their paper so they float on the page's sea in light and dark. Each island's painting shows where she lives.
 
 It's plain HTML, CSS and a little script, with nothing loaded from elsewhere. It has light and dark themes, follows the
 system's choice, and keeps still when the system asks for reduced motion.

@@ -19,12 +19,15 @@ node host/main.cjs --root <folder> --lan        # also other devices on the netw
 |---|---|
 | `--root <folder>` | Her home: the vault's `/`. `/Pandora/SOUL.md` is `<folder>/Pandora/SOUL.md`. (`PANDORA_HOME` works too) |
 | `--state <folder>` | Where the host keeps its own records: paired devices, their settings and a log. Default: `<folder> (host)`, beside the home, never inside it |
-| `--port <n>` | Default 8741 |
+| `--port <n>` | Default 8741. Each further resident gets her own port after it |
+| `--id <id>` / `--name <name>` | How the host knows the first resident (`/r/<id>/`), and what clients show. Default `home` |
+| `--homes <folder>` | Where new residents' homes are made. Without it, no resident is made from a client |
 | `--lan` / `--listen <address>` | Listen on every address, or on one (a tailnet address, say). Without either, this computer only |
 | `--page <file>` | Another built page |
 | `--shell <program>` | The shell `host_shell` runs. Default: Git Bash on Windows (else `cmd.exe`), `bash` elsewhere |
 
-While it runs, type into its window: `pin` (a new PIN), `devices`, `revoke <name or id>`, `quit`.
+While it runs, type into its window: `pin` (a new PIN), `devices`, `revoke <name or id>`, `residents`,
+`new <id> [name]`, `add <id> <folder> [name]`, `shell <id> on|off`, `quit`.
 
 For the tailnet, Tailscale's own HTTPS (`tailscale serve`) is better than plain HTTP on the network.
 
@@ -297,6 +300,43 @@ changed.
 each bridge message in and out (after hiding), what was stopped and why, and her tool's use. It stays on the host, and
 the page shows it. The log (`events.jsonl`) keeps facts only.
 
+## Residents: several homes on one host
+
+One host can hold several residents, each kept apart: Jade's vault, Pandora Dee Fae's workshop, Pandora Dee Noe's,
+and newcomers (an AI from another service, with her own Atelier on a local model or a cloud model chosen here).
+
+- **Each resident has her own:**
+  - home folder, and records beside it (`<home> (host)`);
+  - paired devices and their keys;
+  - settings and switches, her models and their keys, her bridges and their keys;
+  - queue, nap, writer, runtime, log and trace;
+  - the Atelier's things brought in from a backup.
+
+  A device paired with one resident has no key to any other.
+- **Two ways to reach her:**
+  - `/r/<id>/…` on any of the host's addresses, for app clients;
+  - her own port, without the prefix, for browsers. A browser keeps a page's key and storage per address, so each
+    resident needs her own. The first resident's port is `--port`, and each further one gets the next. Asking for
+    her pages at `/r/<id>/` sends a browser to her own port.
+- **A fresh client with no backup** makes a new resident. It sends `POST /host/residents` with
+  `{ pin, id, name, device }`, using the PIN the host is showing.
+  - The PIN is the person's yes, given at the host.
+  - The new home is empty, inside the folder given with `--homes`. Her SOUL is hers to write.
+  - The client comes back paired with her.
+  - A client never takes over a folder that already holds things, and without `--homes` no resident is made from a
+    client.
+- **An existing home** (say, Jade's or Noe's folder) is added on the host itself, with `add <id> <folder> [name]` in
+  the host's window. `new <id> [name]` makes an empty one there too.
+- **A backup into a resident** uses #48's import as it is, at `/r/<id>/host/import`.
+- **host_shell:**
+  - The shell runs as the host's own account, so it isn't walled off from the other residents' homes.
+  - A resident made from a client starts without it. One added on the host starts with it.
+  - `shell <id> on|off` in the host's window changes it; the change is kept.
+  - Each resident having her own account on the computer is the way to wall it off properly, later.
+- **Who lives here:** `GET /host/residents` (a paired device, from home). The residents beyond the first are listed in
+  `residents.json` in the first one's records folder (ids, names, folders, ports; never keys).
+- Everything is plain HTTP/1.1 and JSON, so old clients can use it too.
+
 ## Her things on the host: the Atelier's own backup file (`host/backup.cjs`)
 
 Her things move onto the host the way they already move between the HTML and APK versions: in the same backup file,
@@ -363,6 +403,12 @@ These are the next milestones, in this order:
    colour yet. Both are page changes, next.
 5. **Her models on the host** answer plain turns, the heartbeat, schedules and sparks. Tool calls in a host turn come
    with the agent loop (milestone 1). Until then, a loop that needs her tools stays in the Atelier.
+6. **Residents, beyond the host itself:**
+   - The host's settings page shows whose it is. Neither it nor the Atelier page can list or make other residents
+     yet.
+   - Each platform's client installing once per resident (on Android, its own application id) comes with the
+     clients.
+   - `host_shell` gets walled off with an account on the computer for each resident.
 
-Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs` and `tests/host_import_test.mjs`, in the repo's test run
+Tests: `tests/home_host_test.mjs`, `tests/nap_test.mjs`, `tests/switches_test.mjs`, `tests/models_test.mjs`, `tests/host_import_test.mjs` and `tests/host_residents_test.mjs`, in the repo's test run
 (synthetic homes, a stand-in model, and a stand-in bridge the host starts itself).

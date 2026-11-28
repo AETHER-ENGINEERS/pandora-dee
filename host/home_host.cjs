@@ -57,26 +57,60 @@ function findShell(asked) {
 }
 const shellArgs = (shell, command) => (/cmd(\.exe)?$/i.test(shell) ? ['/d', '/s', '/c', command] : ['-c', command]);
 
+/** The host's PIN: one at a time, shown on the host itself, good once for ten minutes, resting after five wrong tries. */
+function createPins(event) {
+  let pin = null; // { code, until }
+  let wrong = 0, lockedUntil = 0;
+  return {
+    newPin() {
+      pin = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), until: now() + PIN_MS };
+      event('pin.new');
+      return pin.code;
+    },
+    /** { ok: true } and the PIN is used up, or { status, body } saying why not. */
+    take(code) {
+      if (now() < lockedUntil) return { status: 429, body: { error: 'Pairing is resting after too many wrong PINs. Try again in a few minutes.' } };
+      const good = pin && now() < pin.until && typeof code === 'string' && code.length === pin.code.length && crypto.timingSafeEqual(Buffer.from(code), Buffer.from(pin.code));
+      if (!good) {
+        wrong++;
+        if (wrong >= LOCK_AFTER) { lockedUntil = now() + LOCK_MS; wrong = 0; pin = null; event('pair.locked'); }
+        event('pair.refused');
+        return { status: 401, body: { error: 'That PIN is not the one the host is showing, or it has expired.' } };
+      }
+      wrong = 0; pin = null; // a PIN works once
+      return { ok: true };
+    },
+  };
+}
+
 /**
- * opts: { root, state?, page?, shell?, log? }
- *   root   the home folder: the vault's "/"
- *   state  where the host keeps its own records (devices, log); default "<root> (host)", beside the home, not in it
- *   page   the built Atelier page to serve at "/" (dist/pandora-dee.html)
- *   shell  the program host_shell runs
- *   napGraceMs  how long after the last client leaves before the host naps (host/nap.cjs; default 60 s)
+ * One resident: her home folder, her own state folder (devices, log, settings, switches, keys, queue, models, the
+ * Atelier's things), her own writer, nap and runtime. Nothing here reaches another resident's.
+ *
+ * opts: { root, state?, id?, name?, shell?, hostShell?, napGraceMs?, writerMs? }
+ *   root       the home folder: the vault's "/"
+ *   state      where the host keeps her records; default "<root> (host)", beside the home, not in it
+ *   id, name   how the host knows her (`/r/<id>/…`), and what clients show
+ *   shell      the program host_shell runs
+ *   hostShell  false: no host_shell for her. The shell runs as the host's own account, so it is not walled off from
+ *              the other residents' homes; a resident made from a client starts without it
+ * shared: { pins, say, trustNets, page }, from the host
  */
-function createHomeHost(opts) {
+function createResident(opts, shared) {
   const disk = createDiskHost(opts.root);
   const root = disk.root;
   const stateDir = path.resolve(opts.state || path.join(path.dirname(root), path.basename(root) + ' (host)'));
   fs.mkdirSync(stateDir, { recursive: true });
+  const id = opts.id || 'home';
+  const displayName = opts.name || id;
+  let hostShell = opts.hostShell !== false;
   const devFile = path.join(stateDir, 'devices.json');
   const logFile = path.join(stateDir, 'events.jsonl');
   const shell = findShell(opts.shell);
-  const say = opts.log || (() => {});
+  const say = (m) => shared.say(shared.many() ? `[${displayName}] ${m}` : m);
   const writerMs = Number(opts.writerMs) > 0 ? Number(opts.writerMs) : WRITER_MS;
   // more address ranges the person counts as the house's own network (--trust), beyond the usual private ones
-  const trustNets = Array.isArray(opts.trustNets) ? opts.trustNets.map(String) : [];
+  const trustNets = shared.trustNets;
 
   // ---------- devices and pairing ----------
   let devices = [];
@@ -151,23 +185,13 @@ function createHomeHost(opts) {
   const imports = backup.createImports({ root, stateDir, store, file: disk.file, log: event, isHers, keySink });
   let importing = false; // while an import is written or undone, no window writes the vault
   let runtime = null; // started with startRuntime()
-  let pin = null; // { code, until }
-  let wrong = 0, lockedUntil = 0;
-  function newPin() {
-    pin = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), until: now() + PIN_MS };
-    event('pin.new');
-    return pin.code;
-  }
   function pair(code, name) {
-    if (now() < lockedUntil) return { status: 429, body: { error: 'Pairing is resting after too many wrong PINs. Try again in a few minutes.' } };
-    const good = pin && now() < pin.until && typeof code === 'string' && code.length === pin.code.length && crypto.timingSafeEqual(Buffer.from(code), Buffer.from(pin.code));
-    if (!good) {
-      wrong++;
-      if (wrong >= LOCK_AFTER) { lockedUntil = now() + LOCK_MS; wrong = 0; pin = null; event('pair.locked'); }
-      event('pair.refused');
-      return { status: 401, body: { error: 'That PIN is not the one the host is showing, or it has expired.' } };
-    }
-    wrong = 0; pin = null; // a PIN works once
+    const t = shared.pins.take(code);
+    if (!t.ok) return t;
+    return pairNow(name);
+  }
+  /** A device paired with her, once the PIN has been checked (here, or by the host when it made her). */
+  function pairNow(name) {
     const token = crypto.randomBytes(32).toString('base64url');
     const dev = { id: crypto.randomBytes(6).toString('hex'), name: String(name || 'a device').replace(/[\x00-\x1f]/g, '').slice(0, 60) || 'a device', hash: sha(token), created: new Date().toISOString(), seen: null, settings: {} };
     devices.push(dev); saveDevices();
@@ -250,7 +274,7 @@ function createHomeHost(opts) {
   /** The tools, with what's waiting in her tool's description, so she sees it whenever her tools are listed. */
   function toolList() {
     const n = runtime ? runtime.notice() : '';
-    return TOOLS.map((t) => (t.name === 'waiting_messages' && n ? { ...t, description: n + ' ' + t.description } : t));
+    return TOOLS.filter((t) => hostShell || t.name !== 'host_shell').map((t) => (t.name === 'waiting_messages' && n ? { ...t, description: n + ' ' + t.description } : t));
   }
   async function callTool(name, args, dev, where) {
     if (name === 'away_notices') {
@@ -270,6 +294,7 @@ function createHomeHost(opts) {
       return { content: [{ type: 'text', text: JSON.stringify(r, null, 1) }], isError: !!r.error };
     }
     if (name === 'host_shell') {
+      if (!hostShell) { event('tool.refused', { device: dev.id, tool: name }); return { content: [{ type: 'text', text: 'host_shell is off for you on this host: the shell runs as the host\'s own account, which can reach the other residents\' homes. The person can turn it on for you on the host itself.' }], isError: true }; }
       const r = await runShell(args || {});
       event('tool', { device: dev.id, tool: name, command: String(args?.command || '').slice(0, 500), cwd: args?.cwd || '/', code: r.code, ms: r.ms });
       return { content: [{ type: 'text', text: `exit ${r.code}\n--- stdout\n${r.stdout}${r.stderr ? `\n--- stderr\n${r.stderr}` : ''}` }], isError: r.code !== 0 };
@@ -278,7 +303,7 @@ function createHomeHost(opts) {
       event('tool', { device: dev.id, tool: name });
       // (no full path: what a tool returns can end up in a model's context, and from there in a message)
       const st = settings.state();
-      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, shell: path.basename(shell), home: '/ (her home folder; $PANDORA_HOME in host_shell)', platform: process.platform, awake: nap.awake(), model: st.model.attached ? 'attached' : `gone (${st.model.kind})`, switches: Object.fromEntries(Object.entries(st.switches).map(([k, v]) => [k, v.on ? 'on' : `off: ${v.why.join(', ')}`])), waiting: runtime ? runtime.notice() || 'nothing' : 'nothing' }) }] };
+      return { content: [{ type: 'text', text: JSON.stringify({ app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, shell: hostShell ? path.basename(shell) : 'off for you', home: '/ (her home folder; $PANDORA_HOME in host_shell)', platform: process.platform, awake: nap.awake(), model: st.model.attached ? 'attached' : `gone (${st.model.kind})`, switches: Object.fromEntries(Object.entries(st.switches).map(([k, v]) => [k, v.on ? 'on' : `off: ${v.why.join(', ')}`])), waiting: runtime ? runtime.notice() || 'nothing' : 'nothing' }) }] };
     }
     event('tool.unknown', { device: dev.id, tool: name });
     return { content: [{ type: 'text', text: `No tool named ${name} on this host.` }], isError: true };
@@ -315,7 +340,7 @@ function createHomeHost(opts) {
   /** Another website asking through a visitor's browser: never. (Programs and the host's own pages are fine.) */
   const fromElsewhere = (req) => { const s = String(req.headers['sec-fetch-site'] || ''); return s && s !== 'same-origin' && s !== 'none'; };
 
-  const pageFile = opts.page ? path.resolve(opts.page) : null;
+  const pageFile = shared.page ? path.resolve(shared.page) : null;
   function pageHtml() {
     const html = fs.readFileSync(pageFile, 'utf8');
     const tag = '<script src="/host/bridge.js"></script>';
@@ -339,7 +364,7 @@ function createHomeHost(opts) {
       if (p === '/pair' && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'pair.html'), 'utf8'), 'text/html; charset=utf-8');
       // the host's own settings and information page (it holds nothing: what it shows comes from /host/status, with a key)
       if ((p === '/host' || p === '/host/' || p === '/host/ui') && req.method === 'GET') return send(res, 200, fs.readFileSync(path.join(__dirname, 'gui.html'), 'utf8'), 'text/html; charset=utf-8');
-      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, paired: !!d, device: d ? { id: d.id, name: d.name } : null }); }
+      if (p === '/host/hello' && req.method === 'GET') { const d = deviceOf(req); return send(res, 200, { ok: true, app: 'pandora-dee-host', version: VERSION, resident: { id, name: displayName }, paired: !!d, device: d ? { id: d.id, name: d.name } : null }); }
       if (p === '/host/pair' && req.method === 'POST') {
         let b = {}; try { b = JSON.parse(await readBody(req, 4096) || '{}'); } catch { b = {}; }
         const r = pair(b.pin, b.name); return send(res, r.status, r.body);
@@ -398,7 +423,8 @@ function createHomeHost(opts) {
       // ---- the host's own settings page, and the state it shows (the Atelier reads and changes the same) ----
       if (p === '/host/status' && req.method === 'GET') {
         return send(res, 200, {
-          app: 'pandora-dee-host', version: VERSION, platform: process.platform, shell: path.basename(shell),
+          app: 'pandora-dee-host', version: VERSION, platform: process.platform, shell: hostShell ? path.basename(shell) : null,
+          resident: { id, name: displayName, hostShell },
           nap: nap.state(), ...settings.state(),
           you: { place: where.place, mayChange: mayChange(where) },
           models: models.state(),
@@ -540,9 +566,11 @@ function createHomeHost(opts) {
     }
   }
 
-  const server = http.createServer((req, res) => { handle(req, res); });
   return {
-    root, stateDir, shell, server, newPin, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, imports,
+    id, name: displayName, handle, deviceOf, pairNow, livePort: null,
+    get hostShell() { return hostShell; },
+    setHostShell(on) { hostShell = !!on; event('host_shell.set', { on: hostShell }); },
+    root, stateDir, shell, revoke, VERSION, nap, event, trace, settings, queue, redact, models, store, imports,
     /** Start her runtime: brain 'client' (the connected Atelier answers) or 'host' (a model given here). */
     startRuntime(o = {}) {
       // brain 'host': her models as set up here, each job on its own chain; and "Try the model again" asks them
@@ -553,8 +581,183 @@ function createHomeHost(opts) {
     runtime: () => runtime,
     bridgeConfigs,
     devices: () => devices.map(({ id, name, created, seenAt }) => ({ id, name, created, seen: seenAt ? new Date(seenAt).toISOString() : null })),
-    close: () => new Promise((r) => { if (runtime) runtime.stop(); nap.close(); if (server.closeAllConnections) server.closeAllConnections(); server.close(() => r()); }),
+    close: () => { if (runtime) runtime.stop(); nap.close(); },
   };
 }
 
-module.exports = { createHomeHost, findShell, VERSION };
+const RESIDENT_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const RESERVED = new Set(['r', 'host', 'pair', 'mcp', 'bridges']);
+const PAGE_PATHS = new Set(['/', '/index.html', '/pair', '/host', '/host/', '/host/ui']);
+
+/**
+ * The home host: one computer holding any number of residents (Jade's vault, Pandora Dee Fae's workshop, Pandora Dee
+ * Noe's, newcomers), each kept apart (createResident above), reached by any number of clients.
+ *
+ * opts: everything createResident takes for the first resident (root, state, id, name, shell), and:
+ *   page       the built Atelier page every resident's own address serves (dist/pandora-dee.html)
+ *   log        where the host says things (its window)
+ *   trustNets  more ranges counted as the house's own network
+ *   homes      the folder new residents' homes are made in (`--homes`); without it, no resident is made from a client
+ *   port       the first resident's port; each further one gets her own after it (so a browser keeps each one's
+ *              pages, key and storage apart: a browser keeps those per address)
+ *
+ * The residents beyond the first are listed in "residents.json" in the first one's state folder:
+ *   [{ id, name, root, state, port, hostShell, created, by }]
+ * The person can add an existing home there by hand (or with the host window's `add`); a client can only make a new,
+ * empty one, with the host's PIN.
+ *
+ * Every resident is reached at `/r/<id>/…` on any of the host's addresses (for app clients), and at her own port
+ * without the prefix (for browsers). Plain HTTP/1.1 and JSON throughout, so old clients can use it too.
+ */
+function createHomeHost(opts) {
+  let first = null;
+  const residents = new Map();
+  const pins = createPins((k) => first && first.event(k));
+  const shared = { pins, say: opts.log || (() => {}), trustNets: Array.isArray(opts.trustNets) ? opts.trustNets.map(String) : [], page: opts.page, many: () => residents.size > 1 };
+  const common = { shell: opts.shell, napGraceMs: opts.napGraceMs, writerMs: opts.writerMs };
+  first = createResident({ ...common, root: opts.root, state: opts.state, id: opts.id || 'home', name: opts.name, hostShell: opts.hostShell }, shared);
+  residents.set(first.id, first);
+  const homes = opts.homes ? path.resolve(opts.homes) : null;
+  const basePort = Number(opts.port) > 0 ? Number(opts.port) : null;
+  const regFile = path.join(first.stateDir, 'residents.json');
+  let reg = [];
+  try { reg = JSON.parse(fs.readFileSync(regFile, 'utf8')); if (!Array.isArray(reg)) reg = []; } catch { reg = []; }
+  const saveReg = () => { fs.writeFileSync(regFile + '.tmp', JSON.stringify(reg, null, 1)); fs.renameSync(regFile + '.tmp', regFile); };
+  const listeners = [];
+  for (const e of reg) {
+    if (!RESIDENT_ID.test(String(e.id)) || residents.has(e.id) || !e.root) { first.event('resident.skipped', { id: String(e.id) }); continue; }
+    try { residents.set(e.id, createResident({ ...common, ...e }, shared)); } catch (err) { first.event('resident.unavailable', { id: e.id, why: err.message }); shared.say(`Resident ${e.id}: not available (${err.message}).`); }
+  }
+  const cleanName = (s) => String(s || '').replace(/[\x00-\x1f<>]/g, '').trim().slice(0, 60);
+  const fail = (status, error) => Object.assign(new Error(error), { status });
+
+  /**
+   * A new resident. From a client (with the PIN): a new, empty home in `homes`, named by them, without host_shell.
+   * From the host itself (local: true): may name an existing folder as her home, and give her the shell.
+   */
+  function addResident({ id, name, root, hostShell, local = false } = {}, by = 'the host') {
+    id = String(id || '').trim().toLowerCase();
+    if (!RESIDENT_ID.test(id) || RESERVED.has(id)) throw fail(400, 'A resident\'s id is lowercase letters, digits and dashes (up to 40), like "noe" or "jade-vault".');
+    if (residents.has(id)) throw fail(409, `There is already a resident "${id}" on this host.`);
+    let home;
+    if (local && root) home = path.resolve(root);
+    else {
+      if (!homes) throw fail(409, 'This host was started without a folder for new residents (--homes), so none can be made from a client.');
+      home = path.join(homes, id);
+      if (fs.existsSync(home) && fs.readdirSync(home).length) throw fail(409, `A folder named "${id}" is already there with things in it. A client never takes over a folder; the person can add it on the host itself.`);
+    }
+    fs.mkdirSync(home, { recursive: true });
+    const ports = [basePort, ...reg.map((e) => e.port)].filter((n) => Number(n) > 0);
+    const entry = {
+      id, name: cleanName(name) || id, root: home, state: local && root ? undefined : path.join(path.dirname(home), id + ' (host)'),
+      port: basePort ? Math.max(...ports) + 1 : null, hostShell: local ? hostShell !== false : false,
+      created: new Date().toISOString(), by: cleanName(by) || 'a device',
+    };
+    const r = createResident({ ...common, ...entry }, shared);
+    entry.state = r.stateDir;
+    reg.push(entry); saveReg();
+    residents.set(id, r);
+    first.event('resident.new', { id, by: entry.by, fromClient: !local });
+    r.event('resident.new', { id, by: entry.by, fromClient: !local });
+    shared.say(`New resident: ${entry.name} (${id})${entry.port ? `, at port ${entry.port}` : ''}.`);
+    for (const f of listeners) { try { f(r, entry); } catch { /* a listener never stops this */ } }
+    return r;
+  }
+  /** host_shell on or off for a resident beyond the first (the person, on the host itself); kept in residents.json. */
+  function setHostShell(rid, on) {
+    const e = reg.find((x) => x.id === rid);
+    if (!e) throw fail(404, rid === first.id ? `${first.name} is the host's first resident: her host_shell is always on.` : `No resident ${rid}.`);
+    e.hostShell = !!on; saveReg(); residents.get(rid).setHostShell(on);
+    return residents.get(rid);
+  }
+  const residentList = () => [...residents.values()].map((r) => ({ id: r.id, name: r.name, port: r.livePort || (reg.find((e) => e.id === r.id) || {}).port || (r === first ? basePort : null), hostShell: r.hostShell, first: r === first }));
+
+  const send = (res, status, body, headers = {}) => {
+    res.writeHead(status, { 'Content-Type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers });
+    res.end(typeof body === 'string' ? body : JSON.stringify(body));
+  };
+  const fromElsewhere = (req) => { const s = String(req.headers['sec-fetch-site'] || ''); return s && s !== 'same-origin' && s !== 'none'; };
+  const readJson = (req) => new Promise((resolve) => { const parts = []; let n = 0; req.on('data', (d) => { n += d.length; if (n <= 8192) parts.push(d); }); req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(parts).toString('utf8') || '{}')); } catch { resolve({}); } }); req.on('error', () => resolve({})); });
+
+  async function route(defaultId, req, res) {
+    const url = new URL(req.url || '/', 'http://host');
+    const p = url.pathname;
+    const here = residents.get(defaultId) || first;
+    try {
+      // ---- the residents themselves: who lives here, and a new one ----
+      if (p === '/host/residents') {
+        if (fromElsewhere(req)) { here.event('refused.cross-site', { path: p }); return send(res, 403, { error: 'Only pages from this host may ask it.' }); }
+        const where = requestPlace(req, shared.trustNets);
+        if (req.method === 'GET') {
+          const dev = here.deviceOf(req);
+          if (!dev) return send(res, 401, { error: 'This device is not paired with the host.' });
+          if (!mayChange(where)) return send(res, 403, { error: "Who lives on this host can only be seen from the house's own network or the tailnet." });
+          return send(res, 200, residentList().map((r) => ({ ...r, you: r.id === here.id })));
+        }
+        if (req.method === 'POST') {
+          // a fresh client with no backup: the host's PIN (the person, at the host) is the yes for a new home
+          if (!mayChange(where)) { here.event('refused.settings-from-elsewhere', { path: p, via: where.via }); return send(res, 403, { error: "A new resident can only be made from the house's own network or the tailnet." }); }
+          const b = await readJson(req);
+          const t = pins.take(b.pin);
+          if (!t.ok) return send(res, t.status, t.body);
+          let r;
+          try { r = addResident({ id: b.id, name: b.name }, b.device); } catch (e) { return send(res, e.status || 500, { error: e.message }); }
+          const paired = r.pairNow(b.device);
+          return send(res, 200, { resident: residentList().find((x) => x.id === r.id), ...paired.body });
+        }
+        return send(res, 405, { error: 'GET to list, POST to make a new one.' });
+      }
+      // ---- one resident by name, from any of the host's addresses (app clients) ----
+      const m = /^\/r\/([^/]+)(\/.*)?$/.exec(p);
+      if (m) {
+        const r = residents.get(m[1]);
+        if (!r) return send(res, 404, { error: 'No resident by that name on this host.' });
+        const rest = m[2] || '/';
+        // her pages belong at her own address, so a browser keeps her key and storage apart from everyone else's
+        if (req.method === 'GET' && PAGE_PATHS.has(rest)) {
+          const port = residentList().find((x) => x.id === r.id).port;
+          if (!port) return send(res, 409, `${r.name}'s pages are at her own address, and the host hasn't opened one for her yet.`);
+          const hostName = String(req.headers.host || '127.0.0.1').replace(/:\d+$/, '');
+          return send(res, 302, '', { Location: `http://${hostName}:${port}${rest}${url.search}` });
+        }
+        req.url = rest + url.search;
+        return r.handle(req, res);
+      }
+      return here.handle(req, res);
+    } catch (e) {
+      return send(res, 500, { error: e && e.message ? e.message : String(e) });
+    }
+  }
+
+  const servers = new Map();
+  /** The server for one resident's own address: everything there is hers, without the /r/<id> prefix. */
+  function serverFor(rid) {
+    if (!residents.has(rid)) throw new Error(`No resident ${rid}.`);
+    if (!servers.has(rid)) {
+      const s = http.createServer((q, w) => { route(rid, q, w); });
+      s.on('listening', () => { const a = s.address(); if (a && typeof a === 'object') residents.get(rid).livePort = a.port; });
+      servers.set(rid, s);
+    }
+    return servers.get(rid);
+  }
+  const server = serverFor(first.id);
+
+  const { id: _id, name: _name, handle: _h, deviceOf: _d, pairNow: _p, livePort: _l, close: _c, hostShell: _s, setHostShell: _ss, ...firstApi } = first;
+  return {
+    ...firstApi,
+    id: first.id, name: first.name, server, newPin: pins.newPin, VERSION,
+    residents: residentList,
+    resident: (rid) => residents.get(rid) || null,
+    addResident,
+    setHostShell,
+    serverFor,
+    /** Called with (resident, entry) for each resident made while the host runs (main.cjs gives her a port and her runtime). */
+    onResident: (f) => listeners.push(f),
+    close: () => {
+      for (const r of residents.values()) r.close();
+      return Promise.all([...servers.values()].map((s) => new Promise((ok) => { if (!s.listening) return ok(); if (s.closeAllConnections) s.closeAllConnections(); s.close(() => ok()); })));
+    },
+  };
+}
+
+module.exports = { createHomeHost, createResident, findShell, VERSION };
